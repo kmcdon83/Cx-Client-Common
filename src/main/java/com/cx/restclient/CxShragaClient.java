@@ -1,4 +1,4 @@
-package com.cx.restclient;
+package com.cx.restclient
 
 import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
