@@ -25,8 +25,3 @@ steps:
     ArtifactName: 'drop'
     publishLocation: 'Container'
 - task: Bash@3
-  inputs:
-    targetType: 'inline'
-    script: |
-      echo 'Hello world'
-  condition: succeeded()
