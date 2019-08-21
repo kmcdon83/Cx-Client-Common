@@ -30,6 +30,6 @@ steps:
     repositoryName: '$(Build.Repository.Name)'
     action: 'create'
     target: '$(Build.SourceVersion)'
-    tagSource: 'auto'
-    tagPattern: '$(MajorVersion).$(MinorVersion).$(PatchVersion)'
+    tagSource: 'manual'
+    tag: 'Release_9.00.0'
     compareWith: 'lastFullRelease'
