@@ -29,7 +29,7 @@ steps:
     gitHubConnection: 'GithubService'
     repositoryName: '$(Build.Repository.Name)'
     action: 'create'
-    target: '$(Build.SourceVersion)'
+    target: 'target/cx-client-common-9.20.0.jar'
     tagSource: 'manual'
     tag: 'Release_9.00.0'
     compareWith: 'lastFullRelease'
