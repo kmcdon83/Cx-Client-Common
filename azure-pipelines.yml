@@ -24,3 +24,11 @@ steps:
     PathtoPublish: 'target/cx-client-common-9.20.0.jar'
     ArtifactName: 'drop'
     publishLocation: 'Container'
+- task: GitHubRelease@0
+  inputs:
+    gitHubConnection: 'GithubService'
+    repositoryName: '$(Build.Repository.Name)'
+    action: 'create'
+    target: '$(Build.SourceVersion)'
+    tagSource: 'auto'
+    compareWith: 'lastFullRelease'
