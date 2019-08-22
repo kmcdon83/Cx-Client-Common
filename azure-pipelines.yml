@@ -24,3 +24,11 @@ steps:
     PathtoPublish: 'target/cx-client-common-9.20.0.jar'
     ArtifactName: 'drop'
     publishLocation: 'Container'
+- task: S3Upload@1
+  inputs:
+    awsCredentials: 'CxSLDC bucket'
+    regionName: 'eu-west-1'
+    bucketName: 'cxsdlc'
+    sourceFolder: 'target/cx-client-common-9.20.0.jar'
+    globExpressions: '**'
+    filesAcl: 'bucket-owner-full-control'
