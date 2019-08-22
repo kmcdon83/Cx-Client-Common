@@ -19,11 +19,6 @@ steps:
     jdkArchitectureOption: 'x64'
     publishJUnitResults: false
     goals: 'package'
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: 'target/cx-client-common-9.20.0.jar'
-    ArtifactName: 'drop'
-    publishLocation: 'Container'
 - task: S3Upload@1
   inputs:
     awsCredentials: 'CxSLDC bucket'
