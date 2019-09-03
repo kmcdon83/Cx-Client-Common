@@ -20,8 +20,6 @@ import java.net.URLEncoder;
 import java.util.List;
 import java.util.Properties;
 
-import org.whitesource.fs.FSAConfigProperties;
-
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V1;
@@ -263,7 +261,7 @@ public class CxShragaClient {
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
     }
 
-    public void setOsaFSAProperties(FSAConfigProperties fsaConfig) {  //For CxMaven plugin
+    public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
         config.setOsaFsaConfig(fsaConfig);
     }
 
