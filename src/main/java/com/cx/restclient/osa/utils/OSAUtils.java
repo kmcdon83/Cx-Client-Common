@@ -16,9 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.whitesource.fs.FSAConfigProperties;
-
-
 import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
 
 /**
@@ -50,8 +47,8 @@ public abstract class OSAUtils {
         return String.format(url + "/CxWebClient/SPA/#/viewer/project/%s", projectId);
     }
 
-    public static FSAConfigProperties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, String mvnPath, Logger log) {
-        FSAConfigProperties ret = new FSAConfigProperties();
+    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, String mvnPath, Logger log) {
+        Properties ret = new Properties();
         filterPatterns = StringUtils.defaultString(filterPatterns);
         archiveIncludes = StringUtils.defaultString(archiveIncludes);
 
