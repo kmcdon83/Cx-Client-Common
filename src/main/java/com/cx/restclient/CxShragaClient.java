@@ -20,6 +20,8 @@ import java.net.URLEncoder;
 import java.util.List;
 import java.util.Properties;
 
+import org.whitesource.fs.FSAConfigProperties;
+
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V1;
@@ -195,8 +197,7 @@ public class CxShragaClient {
                 if (config.getCxVersion().getHotFix() != null && Integer.parseInt(config.getCxVersion().getHotFix()) > 0) {
                     hotfix = " Hotfix [" + config.getCxVersion().getHotFix() + "].";
                 }
-            } catch (Exception ex) {
-            }
+            }  catch (Exception ex){}
 
             log.info("Checkmarx server version [" + config.getCxVersion().getVersion() + "]." + hotfix);
 
@@ -218,7 +219,7 @@ public class CxShragaClient {
     }
 
     private String replaceDelimiters(String teamName) {
-        while (teamName.contains("\\") || teamName.contains("//")) {
+        while(teamName.contains("\\") || teamName.contains("//")) {
             teamName = teamName.replace("\\", "/");
             teamName = teamName.replace("//", "/");
         }
@@ -262,7 +263,7 @@ public class CxShragaClient {
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
     }
 
-    public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
+    public void setOsaFSAProperties(FSAConfigProperties fsaConfig) {  //For CxMaven plugin
         config.setOsaFsaConfig(fsaConfig);
     }
 
