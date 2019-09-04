@@ -47,7 +47,7 @@ public abstract class OSAUtils {
         return String.format(url + "/CxWebClient/SPA/#/viewer/project/%s", projectId);
     }
 
-    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, String mvnPath, Logger log) {
+    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, Logger log) {
         Properties ret = new Properties();
         filterPatterns = StringUtils.defaultString(filterPatterns);
         archiveIncludes = StringUtils.defaultString(archiveIncludes);
@@ -64,10 +64,6 @@ public abstract class OSAUtils {
             ret.put("includes", includesString);
         } else {
             ret.put("includes", INCLUDE_ALL_EXTENSIONS);
-        }
-
-        if (StringUtils.isNotEmpty(mvnPath)) {
-            ret.put("maven.environmentPath", mvnPath);
         }
 
         if (StringUtils.isNotEmpty(excludesString)) {
