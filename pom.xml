@@ -10,7 +10,6 @@
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
     <url>https://www.checkmarx.com</url>
     <scm>
-
         <connection>scm:git:git://github.com/CxRepositories/Cx-Client-Common.git</connection>
         <developerConnection>scm:git:ssh://github.com/CxRepositories/Cx-Client-Common.git</developerConnection>
         <url>https://github.com/CxRepositories/Cx-Client-Common/tree/master</url>
