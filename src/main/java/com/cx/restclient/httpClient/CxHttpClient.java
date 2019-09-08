@@ -234,10 +234,15 @@ public class CxHttpClient {
             HttpPost post = new HttpPost(rootUri + SSO_AUTHENTICATION);
             request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), new StringEntity(""), TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
         } else {
-            UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity();
-            HttpPost post = new HttpPost(rootUri + AUTHENTICATION);
-            token = request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity, TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
+            token = generateToken();
         }
+    }
+
+    public TokenLoginResponse generateToken() throws IOException, CxClientException {
+        UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity();
+        HttpPost post = new HttpPost(rootUri + AUTHENTICATION);
+        return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
+                TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
     }
 
     private UrlEncodedFormEntity generateUrlEncodedFormEntity() throws UnsupportedEncodingException {
