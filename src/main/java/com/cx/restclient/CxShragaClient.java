@@ -5,9 +5,11 @@ import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.CxArmConfig;
 import com.cx.restclient.dto.CxVersion;
 import com.cx.restclient.dto.Team;
+import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
+import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.*;
 import org.apache.http.client.HttpResponseException;
@@ -54,6 +56,7 @@ public class CxShragaClient {
                 config.getUsername(),
                 config.getPassword(),
                 config.getCxOrigin(),
+                config.getRefreshToken(),
                 config.isDisableCertificateValidation(), config.isUseSSOLogin(), log);
         sastClient = new CxSASTClient(httpClient, log, config);
         osaClient = new CxOSAClient(httpClient, log, config);
@@ -187,6 +190,15 @@ public class CxShragaClient {
         httpClient.login();
     }
 
+    public String getToken() throws IOException, CxClientException {
+        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(ClientType.CLI);
+        return tokenLoginResponse.getRefresh_token();
+    }
+
+    public void revokeToken(String token) throws IOException, CxClientException {
+        httpClient.revokeToken(token);
+    }
+
     public void getCxVersion() throws IOException, CxClientException {
         try {
             config.setCxVersion(httpClient.getRequest(CX_VERSION, CONTENT_TYPE_APPLICATION_JSON_V1, CxVersion.class, 200, "cx Version", false));
@@ -195,7 +207,8 @@ public class CxShragaClient {
                 if (config.getCxVersion().getHotFix() != null && Integer.parseInt(config.getCxVersion().getHotFix()) > 0) {
                     hotfix = " Hotfix [" + config.getCxVersion().getHotFix() + "].";
                 }
-            }  catch (Exception ex){}
+            } catch (Exception ex) {
+            }
 
             log.info("Checkmarx server version [" + config.getCxVersion().getVersion() + "]." + hotfix);
 
@@ -217,7 +230,7 @@ public class CxShragaClient {
     }
 
     private String replaceDelimiters(String teamName) {
-        while(teamName.contains("\\") || teamName.contains("//")) {
+        while (teamName.contains("\\") || teamName.contains("//")) {
             teamName = teamName.replace("\\", "/");
             teamName = teamName.replace("//", "/");
         }

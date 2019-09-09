@@ -26,6 +26,7 @@ public class CxScanConfig implements Serializable {
     private File reportsDir;
     private String username;
     private String password;
+    private String refreshToken;
     private String url;
     private String projectName;
     private String teamPath;
@@ -88,6 +89,13 @@ public class CxScanConfig implements Serializable {
         this.url = url;
         this.username = username;
         this.password = password;
+        this.cxOrigin = cxOrigin;
+        this.disableCertificateValidation = disableCertificateValidation;
+    }
+
+    public CxScanConfig(String url, String refreshToken, String cxOrigin, boolean disableCertificateValidation) {
+        this.url = url;
+        this.refreshToken = refreshToken;
         this.cxOrigin = cxOrigin;
         this.disableCertificateValidation = disableCertificateValidation;
     }
@@ -158,6 +166,14 @@ public class CxScanConfig implements Serializable {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public void setRefreshToken(String token) {
+        this.refreshToken = token;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
     }
 
     public String getPassword() {
