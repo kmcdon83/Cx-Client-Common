@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>9.00.5</version>
+    <version>9.20.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
@@ -254,70 +254,4 @@
             </build>
         </profile>
     </profiles>
-    <developers>
-        <developer>
-            <name>Gal Or Nussbaum</name>
-            <email>gal.nussbaum@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>https://www.linkedin.com/in/gal-nussbaum-68b3a76a/de</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Dor Golan</name>
-            <email>dor.golan@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Shaul Valero</name>
-            <email>shaul.valero@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Dev TL</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Eyal Amor</name>
-            <email>eyal.amor@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Yair David</name>
-            <email>Yair.David@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>QA Manager</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/EVIS8LO.jpg</picUrl>
-            </properties>
-        </developer>
-    </developers>
 </project>
