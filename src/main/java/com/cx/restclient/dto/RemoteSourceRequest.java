@@ -13,7 +13,7 @@ public class RemoteSourceRequest {
     private String userName;
     private String password;
     private RemoteSourceTypes type;
-    private  transient String browseMode;
+    private transient String browseMode;
     ;
 
     public RemoteSourceRequest() {
@@ -24,7 +24,7 @@ public class RemoteSourceRequest {
         this.password = config.getRemoteSrcPass();
         this.url = config.getRemoteSrcUrl();
         this.port = config.getRemoteSrcPort();
-        this.privateKey = config.getRemoteSrcKeyFile();
+        this.privateKey = config.getRemoteSrcKeyFile() == null ? new byte[0] : config.getRemoteSrcKeyFile();
         this.paths = config.getPaths();
         this.type = config.getRemoteType();
     }

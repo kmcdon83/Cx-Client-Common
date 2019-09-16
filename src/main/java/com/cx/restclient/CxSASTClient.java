@@ -159,6 +159,7 @@ class CxSASTClient {
         HttpEntity entity;
         RemoteSourceRequest req = new RemoteSourceRequest(config);
         RemoteSourceTypes type = req.getType();
+        boolean isSSH = false;
 
         switch (type) {
             case SVN:
@@ -182,16 +183,17 @@ class CxSASTClient {
                 entity = new StringEntity(new Gson().toJson(req), StandardCharsets.UTF_8);
                 break;
             case GIT:
-                if (req.getPrivateKey().length < 1) {
+                if (req.getPrivateKey().length == 0) {
                     Map<String, String> content = new HashMap<>();
                     content.put("url", config.getRemoteSrcUrl());
                     content.put("branch", config.getRemoteSrcBranch());
                     entity = new StringEntity(new JSONObject(content).toString(), StandardCharsets.UTF_8);
                 } else {
+                    isSSH = true;
                     builder = MultipartEntityBuilder.create();
                     builder.addTextBody("url", req.getUrl(), ContentType.APPLICATION_JSON);
                     builder.addTextBody("branch", config.getRemoteSrcBranch(), ContentType.APPLICATION_JSON); //todo add branch to req OR using without this else??
-                    builder.addBinaryBody("privateKey", req.getPrivateKey(), ContentType.MULTIPART_FORM_DATA, null);
+                    builder.addBinaryBody("privateKey", new byte[0], ContentType.MULTIPART_FORM_DATA, null);
                     entity = builder.build();
                 }
                 break;
@@ -200,7 +202,14 @@ class CxSASTClient {
                 entity = new StringEntity("", StandardCharsets.UTF_8);
 
         }
-        return createRemoteSourceScan(projectId, entity, type.value()).getId();
+        createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
+
+        CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
+        log.info("Sending SAST scan request");
+        CxID createScanResponse = createScan(scanRequest);
+        log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
+
+        return createScanResponse.getId();
     }
 
 
@@ -330,8 +339,11 @@ class CxSASTClient {
         return httpClient.postRequest(SAST_CREATE_SCAN, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 201, "create new SAST Scan");
     }
 
-    private CxID createRemoteSourceScan(long projectId, HttpEntity entity, String sourceType) throws IOException, CxClientException {
-        return httpClient.postRequest(SAST_CREATE_REMOTE_SOURCE_SCAN.replace("{projectId}", Long.toString(projectId)).replace("{sourceType}", sourceType), CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
+    private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
+        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), CONTENT_TYPE_APPLICATION_JSON_V1,
+                entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
+
+        return cxID;
     }
 
     private SASTStatisticsResponse getScanStatistics(long scanId) throws CxClientException, IOException {
