@@ -18,7 +18,7 @@ public class SASTParam {
     public static final String SAST_GET_QUEUED_SCANS = "sast/scansQueue?projectId={projectId}";
 
 
-    public static final String SAST_CREATE_REMOTE_SOURCE_SCAN = "projects/{projectId}/sourceCode/remoteSettings/{sourceType}";//todo maybe with ssh?
+    public static final String SAST_CREATE_REMOTE_SOURCE_SCAN = "projects/%s/sourceCode/remoteSettings/%s/%s";
 
 
 
