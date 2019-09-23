@@ -45,9 +45,9 @@ public abstract class ShragaUtils {
             thresholdExceeded |= isSeverityExceeded(sastResults.getLow(), config.getSastLowThreshold(), res, "low", "CxSAST ");
         }
         if (config.isOSAThresholdEffectivelyEnabled() && osaResults != null && osaResults.isOsaResultsReady()) {
-            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalHighVulnerabilities(), config.getOsaHighThreshold(), res, "high", "CxOSA  ");
-            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalMediumVulnerabilities(), config.getOsaMediumThreshold(), res, "medium", "CxOSA  ");
-            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalLowVulnerabilities(), config.getOsaLowThreshold(), res, "low", "CxOSA  ");
+            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalHighVulnerabilities(), config.getOsaHighThreshold(), res, "high", "CxOSA ");
+            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalMediumVulnerabilities(), config.getOsaMediumThreshold(), res, "medium", "CxOSA ");
+            thresholdExceeded |= isSeverityExceeded(osaResults.getResults().getTotalLowVulnerabilities(), config.getOsaLowThreshold(), res, "low", "CxOSA ");
         }
         return thresholdExceeded;
     }
