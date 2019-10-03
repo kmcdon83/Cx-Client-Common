@@ -23,6 +23,7 @@ public class CxScanConfig implements Serializable {
     private boolean useSSOLogin = false;
 
     private String sourceDir;
+    private String osaLocationPath;
     private File reportsDir;
     private String username;
     private String password;
@@ -150,6 +151,14 @@ public class CxScanConfig implements Serializable {
 
     public void setSourceDir(String sourceDir) {
         this.sourceDir = sourceDir;
+    }
+
+    public String getOsaLocationPath() {
+        return osaLocationPath;
+    }
+
+    public void setOsaLocationPath(String osaLocationPath) {
+        this.osaLocationPath = osaLocationPath;
     }
 
     public File getReportsDir() {
