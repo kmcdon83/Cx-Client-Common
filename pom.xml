@@ -139,9 +139,9 @@
             <version>27.0-jre</version>
         </dependency>
         <dependency>
-            <groupId>org.whitesource</groupId>
-            <artifactId>whitesource-fs-agent</artifactId>
-            <version>18.7.2</version>
+            <groupId>com.checkmarx</groupId>
+            <artifactId>cx-ws-fs-agent</artifactId>
+            <version>18.7.2.3</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.xml.bind</groupId>

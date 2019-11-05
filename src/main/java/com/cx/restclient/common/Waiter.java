@@ -13,13 +13,14 @@ import java.util.Date;
  */
 public abstract class Waiter<T> {
 
-    private int retry = 3;
+    private int retry;
     private String scanType;
     private int sleepIntervalSec;
 
-    public Waiter(String scanType, int interval) {
+    public Waiter(String scanType, int interval, int retry) {
         this.scanType = scanType;
         this.sleepIntervalSec = interval;
+        this.retry = retry;
     }
 
     private long startTimeSec;
