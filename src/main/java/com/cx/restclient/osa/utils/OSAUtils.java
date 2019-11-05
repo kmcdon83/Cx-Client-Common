@@ -48,7 +48,7 @@ public abstract class OSAUtils {
         return String.format(url + "/CxWebClient/SPA/#/viewer/project/%s", projectId);
     }
 
-    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, String osaLocationPath, Logger log) {
+    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, String osaLocationPath, String osaScanDepth, Logger log) {
         Properties ret = new Properties();
         filterPatterns = StringUtils.defaultString(filterPatterns);
         archiveIncludes = StringUtils.defaultString(archiveIncludes);
@@ -86,7 +86,7 @@ public abstract class OSAUtils {
             ret.put("archiveIncludes", DEFAULT_ARCHIVE_INCLUDES);
         }
 
-        ret.put("archiveExtractionDepth", "4");
+        ret.put("archiveExtractionDepth", StringUtils.isNotEmpty(osaScanDepth) ? osaScanDepth : "4");
 
         if (installBeforeScan) {
             ret.put("npm.runPreStep", "true");
@@ -132,15 +132,52 @@ public abstract class OSAUtils {
         log.info("-----------------------------------------------------------------------------------------");
     }
 
-    public static void writeJsonToFile(String name, Object jsonObj, File workDirectory, Logger log) {
+    public static File getWorkDirectory(File filePath, Boolean osaGenerateJsonReport) {
+        if (filePath == null) {
+            return null;
+        }
+
+        if (!osaGenerateJsonReport) {
+            return filePath;
+        }
+
+        File workDirectory;
+        if (!filePath.isAbsolute()) {
+            workDirectory = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION);
+        }
+        else {
+            workDirectory = filePath.getParentFile();
+        }
+        if (!workDirectory.exists()) {
+            workDirectory.mkdirs();
+        }
+
+        return workDirectory;
+    }
+
+    public static void writeJsonToFile(String name, Object jsonObj, File workDirectory, Boolean cliOsaGenerateJsonReport, Logger log) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());
-            String fileName = name + "_" + now + ".json";
-            File jsonFile = new File(workDirectory + CX_REPORT_LOCATION, fileName);
             String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObj);
-            FileUtils.writeStringToFile(jsonFile, json);
-            log.info(name + " json location: " + workDirectory + CX_REPORT_LOCATION + File.separator + fileName);
+
+            if(cliOsaGenerateJsonReport) {
+                workDirectory = new File(workDirectory.getPath().replace(".json", "_" + name + ".json"));
+                if (!workDirectory.isAbsolute()) {
+                    workDirectory = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION + File.separator + workDirectory);
+                }
+                if (!workDirectory.getParentFile().exists()) {
+                    workDirectory.getParentFile().mkdirs();
+                }
+                FileUtils.writeStringToFile(workDirectory, json);
+                log.info(name + " json location: " + workDirectory);
+            }
+            else {
+                String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());
+                String fileName = name + "_" + now + ".json";
+                File jsonFile = new File(workDirectory + CX_REPORT_LOCATION, fileName);
+                FileUtils.writeStringToFile(jsonFile, json);
+                log.info(name + " json location: " + workDirectory + CX_REPORT_LOCATION + File.separator + fileName);
+            }
         } catch (Exception ex) {
             log.warn("Failed to write OSA JSON report (" + name + ") to file: " + ex.getMessage());
         }

@@ -33,28 +33,30 @@ class CxOSAClient {
     private CxHttpClient httpClient;
     private Logger log;
     private CxScanConfig config;
-
-    private Waiter<OSAScanStatus> osaWaiter = new Waiter<OSAScanStatus>("CxOSA scan", 20) {
-        @Override
-        public OSAScanStatus getStatus(String id) throws CxClientException, IOException {
-            return getOSAScanStatus(id);
-        }
-
-        @Override
-        public void printProgress(OSAScanStatus scanStatus) {
-            printOSAProgress(scanStatus, getStartTimeSec());
-        }
-
-        @Override
-        public OSAScanStatus resolveStatus(OSAScanStatus scanStatus) throws CxClientException {
-            return resolveOSAStatus(scanStatus);
-        }
-    };
+    private Waiter<OSAScanStatus> osaWaiter;
 
     public CxOSAClient(CxHttpClient client, Logger log, CxScanConfig config) {
         this.log = log;
         this.httpClient = client;
         this.config = config;
+        int interval = config.getOsaProgressInterval() != null ? config.getOsaProgressInterval() : 20;
+        int retry = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
+        osaWaiter = new Waiter<OSAScanStatus>("CxOSA scan", interval, retry) {
+            @Override
+            public OSAScanStatus getStatus(String id) throws CxClientException, IOException {
+                return getOSAScanStatus(id);
+            }
+
+            @Override
+            public void printProgress(OSAScanStatus scanStatus) {
+                printOSAProgress(scanStatus, getStartTimeSec());
+            }
+
+            @Override
+            public OSAScanStatus resolveStatus(OSAScanStatus scanStatus) throws CxClientException {
+                return resolveOSAStatus(scanStatus);
+            }
+        };
     }
 
     //API
@@ -83,13 +85,14 @@ class CxOSAClient {
                     config.getSourceDir(),
                     config.getOsaRunInstall(),
                     config.getOsaLocationPath(),
+                    config.getOsaScanDepth(),
                     log);
         }
         ObjectMapper mapper = new ObjectMapper();
         log.info("Scanner properties: " + mapper.writerWithDefaultPrettyPrinter().writeValueAsString(scannerProperties.toString()));
         ComponentScan componentScan = new ComponentScan(scannerProperties);
         String osaDependenciesJson = componentScan.scan();
-        OSAUtils.writeToOsaListToFile(config.getReportsDir(), osaDependenciesJson, log);
+        OSAUtils.writeToOsaListToFile(OSAUtils.getWorkDirectory(config.getReportsDir(), config.getOsaGenerateJsonReport()), osaDependenciesJson, log);
         return osaDependenciesJson;
     }
 
@@ -109,9 +112,9 @@ class CxOSAClient {
         OSAUtils.printOSAResultsToConsole(osaResults, config.getEnablePolicyViolations(), log);
 
         if (config.getReportsDir() != null) {
-            writeJsonToFile(OSA_SUMMARY_NAME, osaResults.getResults(), config.getReportsDir(), log);
-            writeJsonToFile(OSA_LIBRARIES_NAME, osaResults.getOsaLibraries(), config.getReportsDir(), log);
-            writeJsonToFile(OSA_VULNERABILITIES_NAME, osaResults.getOsaVulnerabilities(), config.getReportsDir(), log);
+            writeJsonToFile(OSA_SUMMARY_NAME, osaResults.getResults(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+            writeJsonToFile(OSA_LIBRARIES_NAME, osaResults.getOsaLibraries(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+            writeJsonToFile(OSA_VULNERABILITIES_NAME, osaResults.getOsaVulnerabilities(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
         }
 
         return osaResults;

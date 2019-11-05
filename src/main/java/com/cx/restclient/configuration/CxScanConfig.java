@@ -2,10 +2,13 @@ package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
 import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -25,6 +28,8 @@ public class CxScanConfig implements Serializable {
     private String sourceDir;
     private String osaLocationPath;
     private File reportsDir;
+    // Map<reportType, reportPath> / (e.g. PDF to its file path)
+    private Map<ReportType, String> reports = new HashMap<>();
     private String username;
     private String password;
     private String refreshToken;
@@ -81,7 +86,15 @@ public class CxScanConfig implements Serializable {
     private int remoteSrcPort;
     private byte[] remoteSrcKeyFile;
     private String remoteSrcBranch;
-    private String preforceMode;
+    private String perforceMode;
+
+    // CLI config properties
+    private Integer progressInterval;
+    private Integer osaProgressInterval;
+    private Integer connectionRetries;
+    private String osaScanDepth;
+    private Integer maxZipSize;
+    private String defaultProjectName;
 
     public CxScanConfig() {
     }
@@ -593,12 +606,12 @@ public class CxScanConfig implements Serializable {
         this.remoteSrcBranch = remoteSrcBranch;
     }
 
-    public String getPreforceMode() {
-        return preforceMode;
+    public String getPerforceMode() {
+        return perforceMode;
     }
 
-    public void setPreforceMode(String preforceMode) {
-        this.preforceMode = preforceMode;
+    public void setPerforceMode(String perforceMode) {
+        this.perforceMode = perforceMode;
     }
 
     public Boolean getGenerateXmlReport() {
@@ -615,5 +628,73 @@ public class CxScanConfig implements Serializable {
 
     public void setCxVersion(CxVersion cxVersion) {
         this.cxVersion = cxVersion;
+    }
+
+    public Integer getProgressInterval() {
+        return progressInterval;
+    }
+
+    public void setProgressInterval(Integer progressInterval) {
+        this.progressInterval = progressInterval;
+    }
+
+    public Integer getOsaProgressInterval() {
+        return osaProgressInterval;
+    }
+
+    public void setOsaProgressInterval(Integer osaProgressInterval) {
+        this.osaProgressInterval = osaProgressInterval;
+    }
+
+    public Integer getConnectionRetries() {
+        return connectionRetries;
+    }
+
+    public void setConnectionRetries(Integer connectionRetries) {
+        this.connectionRetries = connectionRetries;
+    }
+
+    public String getOsaScanDepth() {
+        return osaScanDepth;
+    }
+
+    public void setOsaScanDepth(String osaScanDepth) {
+        this.osaScanDepth = osaScanDepth;
+    }
+
+    public Integer getMaxZipSize() {
+        return maxZipSize;
+    }
+
+    public void setMaxZipSize(Integer maxZipSize) {
+        this.maxZipSize = maxZipSize;
+    }
+
+    public String getDefaultProjectName() {
+        return defaultProjectName;
+    }
+
+    public void setDefaultProjectName(String defaultProjectName) {
+        this.defaultProjectName = defaultProjectName;
+    }
+
+    public Map<ReportType, String> getReports() {
+        return reports;
+    }
+
+    public void addPDFReport(String pdfReportPath) {
+        reports.put(ReportType.PDF, pdfReportPath);
+    }
+
+    public void addXMLReport(String xmlReportPath) {
+        reports.put(ReportType.XML, xmlReportPath);
+    }
+
+    public void addCSVReport(String csvReportPath) {
+        reports.put(ReportType.CSV, csvReportPath);
+    }
+
+    public void addRTFReport(String rtfReportPath) {
+        reports.put(ReportType.RTF, rtfReportPath);
     }
 }

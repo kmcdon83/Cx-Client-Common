@@ -77,4 +77,23 @@ public abstract class SASTUtils {
         }
         return pdfFileName;
     }
+
+    // CLI Report/s
+    public static void writeReport(byte[] scanReport, String reportName, Logger log) {
+        try {
+            File reportFile = new File(reportName);
+            if (!reportFile.isAbsolute()) {
+                reportFile = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION + File.separator + reportFile);
+            }
+
+            if (!reportFile.getParentFile().exists()) {
+                reportFile.getParentFile().mkdirs();
+            }
+
+            FileUtils.writeByteArrayToFile(reportFile, scanReport);
+            log.info("report location: " + reportFile.getAbsolutePath());
+        } catch (Exception e) {
+            log.error("Failed to write report: ", e.getMessage());
+        }
+    }
 }
