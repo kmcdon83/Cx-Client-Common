@@ -3,11 +3,12 @@ package com.cx.restclient.sast.utils;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.CxXMLResults;
 import com.cx.restclient.sast.dto.SASTResults;
+import com.sun.xml.bind.v2.JAXBContextFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
-
+import java.util.Collections;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
@@ -36,7 +37,10 @@ public abstract class SASTUtils {
         CxXMLResults reportObj = null;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport);
         try {
-            JAXBContext jaxbContext = JAXBContext.newInstance(CxXMLResults.class);
+
+            JAXBContextFactory jaxbContextFactory = new JAXBContextFactory();
+            JAXBContext jaxbContext = jaxbContextFactory.createContext(CxXMLResults.class.getPackage().getName(),
+                    CxXMLResults.class.getClassLoader(),Collections.<String,Object>emptyMap());
             Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
 
             reportObj = (CxXMLResults) unmarshaller.unmarshal(byteArrayInputStream);
