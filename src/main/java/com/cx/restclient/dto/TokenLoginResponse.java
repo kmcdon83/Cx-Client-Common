@@ -10,6 +10,7 @@ public class TokenLoginResponse {
     private String access_token;
     private long expires_in;
     private String token_type;
+    private String refresh_token;
 
     public String getAccess_token() {
         return access_token;
@@ -33,5 +34,13 @@ public class TokenLoginResponse {
 
     public void setToken_type(String token_type) {
         this.token_type = token_type;
+    }
+
+    public String getRefresh_token() {
+        return refresh_token;
+    }
+
+    public void setRefresh_token(String refresh_token) {
+        this.refresh_token = refresh_token;
     }
 }

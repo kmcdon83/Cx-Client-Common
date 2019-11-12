@@ -11,7 +11,6 @@ import com.cx.restclient.sast.dto.*;
 import com.cx.restclient.sast.utils.SASTUtils;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.google.gson.Gson;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -49,24 +48,9 @@ class CxSASTClient {
     private CxScanConfig config;
     private int reportTimeoutSec = 5000;
     private int cxARMTimeoutSec = 1000;
-    private Waiter<ResponseQueueScanStatus> sastWaiter = new Waiter<ResponseQueueScanStatus>("CxSAST scan", 20) {
-        @Override
-        public ResponseQueueScanStatus getStatus(String id) throws CxClientException, IOException {
-            return getSASTScanStatus(id);
-        }
+    private Waiter<ResponseQueueScanStatus> sastWaiter;
 
-        @Override
-        public void printProgress(ResponseQueueScanStatus scanStatus) {
-            printSASTProgress(scanStatus, getStartTimeSec());
-        }
-
-        @Override
-        public ResponseQueueScanStatus resolveStatus(ResponseQueueScanStatus scanStatus) throws CxClientException {
-            return resolveSASTStatus(scanStatus);
-        }
-    };
-
-    private Waiter<ReportStatus> reportWaiter = new Waiter<ReportStatus>("Scan report", 10) {
+    private Waiter<ReportStatus> reportWaiter = new Waiter<ReportStatus>("Scan report", 10, 3) {
         @Override
         public ReportStatus getStatus(String id) throws CxClientException, IOException {
             return getReportStatus(id);
@@ -83,7 +67,7 @@ class CxSASTClient {
         }
     };
 
-    private Waiter<CxARMStatus> cxARMWaiter = new Waiter<CxARMStatus>("CxARM policy violations", 20) {
+    private Waiter<CxARMStatus> cxARMWaiter = new Waiter<CxARMStatus>("CxARM policy violations", 20, 3) {
         @Override
         public CxARMStatus getStatus(String id) throws CxClientException, IOException {
             return getCxARMStatus(id);
@@ -104,6 +88,24 @@ class CxSASTClient {
         this.log = log;
         this.httpClient = client;
         this.config = config;
+        int interval = config.getProgressInterval() != null ? config.getProgressInterval() : 20;
+        int retry = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
+        sastWaiter = new Waiter<ResponseQueueScanStatus>("CxSAST scan", interval, retry) {
+            @Override
+            public ResponseQueueScanStatus getStatus(String id) throws CxClientException, IOException {
+                return getSASTScanStatus(id);
+            }
+
+            @Override
+            public void printProgress(ResponseQueueScanStatus scanStatus) {
+                printSASTProgress(scanStatus, getStartTimeSec());
+            }
+
+            @Override
+            public ResponseQueueScanStatus resolveStatus(ResponseQueueScanStatus scanStatus) throws CxClientException {
+                return resolveSASTStatus(scanStatus);
+            }
+        };
     }
 
     //**------ API  ------**//
@@ -137,7 +139,8 @@ class CxSASTClient {
         //prepare sources for scan
         if (config.getZipFile() == null) {
             log.info("Zipping sources");
-            File zipTempFile = CxZipUtils.zipWorkspaceFolder(config, MAX_ZIP_SIZE_BYTES, log);
+            Long maxZipSize = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
+            File zipTempFile = CxZipUtils.zipWorkspaceFolder(config, maxZipSize, log);
             //Upload zipped source file
             uploadZipFile(zipTempFile, projectId);
             deleteTempZipFile(zipTempFile, log);
@@ -159,19 +162,27 @@ class CxSASTClient {
         HttpEntity entity;
         RemoteSourceRequest req = new RemoteSourceRequest(config);
         RemoteSourceTypes type = req.getType();
+        boolean isSSH = false;
 
         switch (type) {
             case SVN:
+                if (req.getPrivateKey() != null && req.getPrivateKey().length > 1) {
+                    isSSH = true;
+                    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+                    builder.addBinaryBody("privateKey", req.getPrivateKey(), ContentType.APPLICATION_JSON, null)
+                            .addTextBody("absoluteUrl", req.getUri().getAbsoluteUrl())
+                            .addTextBody("port", String.valueOf(req.getUri().getPort()))
+                            .addTextBody("paths", config.getSourceDir());   //todo add paths to req OR using without
+                    entity = builder.build();
+                } else {
+                    entity = new StringEntity(convertToJson(req), ContentType.APPLICATION_JSON);
+                }
+                break;
             case TFS:
-                MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-                builder.addBinaryBody("privateKey", req.getPrivateKey(), ContentType.APPLICATION_JSON, null);
-                builder.addTextBody("absoluteUrl", req.getUrl(), ContentType.APPLICATION_JSON);
-                builder.addTextBody("port", String.valueOf(req.getPort()), ContentType.APPLICATION_JSON);
-                builder.addTextBody("paths", StringUtils.join(req.getPaths(), ";"), ContentType.APPLICATION_JSON);
-                entity = builder.build();
+                entity = new StringEntity(convertToJson(req), ContentType.APPLICATION_JSON);
                 break;
             case PERFORCE:
-                if (config.getPreforceMode() != null) {
+                if (config.getPerforceMode() != null) {
                     req.setBrowseMode("Workspace");
                 } else {
                     req.setBrowseMode("Depot");
@@ -182,14 +193,15 @@ class CxSASTClient {
                 entity = new StringEntity(new Gson().toJson(req), ContentType.APPLICATION_JSON);
                 break;
             case GIT:
-                if (req.getPrivateKey().length < 1) {
+                if (req.getPrivateKey() == null || req.getPrivateKey().length < 1) {
                     Map<String, String> content = new HashMap<>();
-                    content.put("url", config.getRemoteSrcUrl());
+                    content.put("url", req.getUri().getAbsoluteUrl());
                     content.put("branch", config.getRemoteSrcBranch());
                     entity = new StringEntity(new JSONObject(content).toString(), ContentType.APPLICATION_JSON);
                 } else {
-                    builder = MultipartEntityBuilder.create();
-                    builder.addTextBody("url", req.getUrl(), ContentType.APPLICATION_JSON);
+                    isSSH = true;
+                    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+                    builder.addTextBody("url", req.getUri().getAbsoluteUrl(), ContentType.APPLICATION_JSON);
                     builder.addTextBody("branch", config.getRemoteSrcBranch(), ContentType.APPLICATION_JSON); //todo add branch to req OR using without this else??
                     builder.addBinaryBody("privateKey", req.getPrivateKey(), ContentType.MULTIPART_FORM_DATA, null);
                     entity = builder.build();
@@ -200,7 +212,14 @@ class CxSASTClient {
                 entity = new StringEntity("");
 
         }
-        return createRemoteSourceScan(projectId, entity, type.value()).getId();
+        createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
+
+        CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
+        log.info("Sending SAST scan request");
+        CxID createScanResponse = createScan(scanRequest);
+        log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
+
+        return createScanResponse.getId();
     }
 
 
@@ -231,6 +250,20 @@ class CxSASTClient {
                 String pdfFileName = PDF_REPORT_NAME + "_" + now + ".pdf";
                 pdfFileName = writePDFReport(pdfReport, config.getReportsDir(), pdfFileName, log);
                 sastResults.setPdfFileName(pdfFileName);
+            }
+        }
+        // CLI report/s
+        else if (!config.getReports().isEmpty()) {
+            for (Map.Entry<ReportType, String> report : config.getReports().entrySet()) {
+                if (report != null) {
+                    log.info("Generating " + report.getKey().value() + " report");
+                    byte[] scanReport = getScanReport(sastResults.getScanId(), report.getKey(), CONTENT_TYPE_APPLICATION_PDF_V1);
+                    writeReport(scanReport, report.getValue(), log);
+                    if (report.getKey().value().equals("PDF")) {
+                        sastResults.setPDFReport(scanReport);
+                        sastResults.setPdfFileName(report.getValue());
+                    }
+                }
             }
         }
         return sastResults;
@@ -331,8 +364,11 @@ class CxSASTClient {
         return httpClient.postRequest(SAST_CREATE_SCAN, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 201, "create new SAST Scan");
     }
 
-    private CxID createRemoteSourceScan(long projectId, HttpEntity entity, String sourceType) throws IOException, CxClientException {
-        return httpClient.postRequest(SAST_CREATE_REMOTE_SOURCE_SCAN.replace("{projectId}", Long.toString(projectId)).replace("{sourceType}", sourceType), CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
+    private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
+        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), CONTENT_TYPE_APPLICATION_JSON_V1,
+                entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
+
+        return cxID;
     }
 
     private SASTStatisticsResponse getScanStatistics(long scanId) throws CxClientException, IOException {

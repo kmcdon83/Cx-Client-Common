@@ -1,48 +1,100 @@
 package com.cx.restclient.dto;
 
 import com.cx.restclient.configuration.CxScanConfig;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * Created by Galn on 11/25/2018.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties({ "type" })
 public class RemoteSourceRequest {
-    String url;
-    int port;
+
+    public class Credentials {
+        private String userName;
+        private String password;
+
+        public Credentials(String userName, String password) {
+            this.userName = userName;
+            this.password = password;
+        }
+
+        public String getUserName() {
+            return userName;
+        }
+
+        public void setUserName(String userName) {
+            this.userName = userName;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+    }
+
+    public class Uri {
+        private String absoluteUrl;
+        private int port;
+
+        public Uri(String absoluteUrl, int port) {
+            this.absoluteUrl = absoluteUrl;
+            this.port = port;
+        }
+
+        public String getAbsoluteUrl() {
+            return absoluteUrl;
+        }
+
+        public void setAbsoluteUrl(String absoluteUrl) {
+            this.absoluteUrl = absoluteUrl;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+    }
+
+    private Credentials credentials;
+    private Uri uri;
     private byte[] privateKey;
     private String[] paths;
-    private String userName;
-    private String password;
     private RemoteSourceTypes type;
-    private  transient String browseMode;
-    ;
+    private String browseMode;
 
     public RemoteSourceRequest() {
     }
 
     public RemoteSourceRequest(CxScanConfig config) {
-        this.userName = config.getRemoteSrcUser();
-        this.password = config.getRemoteSrcPass();
-        this.url = config.getRemoteSrcUrl();
-        this.port = config.getRemoteSrcPort();
-        this.privateKey = config.getRemoteSrcKeyFile();
-        this.paths = config.getPaths();
-        this.type = config.getRemoteType();
+        credentials = new Credentials(config.getRemoteSrcUser(), config.getRemoteSrcPass());
+        uri = new Uri(config.getRemoteSrcUrl(), config.getRemoteSrcPort());
+        privateKey = config.getRemoteSrcKeyFile() == null ? new byte[0] : config.getRemoteSrcKeyFile();
+        paths = config.getPaths();
+        type = config.getRemoteType();
     }
 
-    public String getUrl() {
-        return url;
+    public Credentials getCredentials() {
+        return credentials;
     }
 
-    public void setUrl(String absoluteUrl) {
-        this.url = absoluteUrl;
+    public void setCredentials(Credentials credentials) {
+        this.credentials = credentials;
     }
 
-    public int getPort() {
-        return port;
+    public Uri getUri() {
+        return uri;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public void setUri(Uri uri) {
+        this.uri = uri;
     }
 
     public byte[] getPrivateKey() {
@@ -61,22 +113,6 @@ public class RemoteSourceRequest {
         this.paths = paths;
     }
 
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
     public RemoteSourceTypes getType() {
         return type;
     }
@@ -92,5 +128,4 @@ public class RemoteSourceRequest {
     public void setBrowseMode(String browseMode) {
         this.browseMode = browseMode;
     }
-
 }

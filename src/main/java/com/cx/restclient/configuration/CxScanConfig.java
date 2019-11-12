@@ -2,10 +2,13 @@ package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
 import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -22,12 +25,14 @@ public class CxScanConfig implements Serializable {
     private boolean disableCertificateValidation = false;
     private boolean useSSOLogin = false;
 
-    private String mvnPath = "";
-
     private String sourceDir;
+    private String osaLocationPath;
     private File reportsDir;
+    // Map<reportType, reportPath> / (e.g. PDF to its file path)
+    private Map<ReportType, String> reports = new HashMap<>();
     private String username;
     private String password;
+    private String refreshToken;
     private String url;
     private String projectName;
     private String teamPath;
@@ -81,7 +86,15 @@ public class CxScanConfig implements Serializable {
     private int remoteSrcPort;
     private byte[] remoteSrcKeyFile;
     private String remoteSrcBranch;
-    private String preforceMode;
+    private String perforceMode;
+
+    // CLI config properties
+    private Integer progressInterval;
+    private Integer osaProgressInterval;
+    private Integer connectionRetries;
+    private String osaScanDepth;
+    private Integer maxZipSize;
+    private String defaultProjectName;
 
     public CxScanConfig() {
     }
@@ -90,6 +103,13 @@ public class CxScanConfig implements Serializable {
         this.url = url;
         this.username = username;
         this.password = password;
+        this.cxOrigin = cxOrigin;
+        this.disableCertificateValidation = disableCertificateValidation;
+    }
+
+    public CxScanConfig(String url, String refreshToken, String cxOrigin, boolean disableCertificateValidation) {
+        this.url = url;
+        this.refreshToken = refreshToken;
         this.cxOrigin = cxOrigin;
         this.disableCertificateValidation = disableCertificateValidation;
     }
@@ -146,6 +166,14 @@ public class CxScanConfig implements Serializable {
         this.sourceDir = sourceDir;
     }
 
+    public String getOsaLocationPath() {
+        return osaLocationPath;
+    }
+
+    public void setOsaLocationPath(String osaLocationPath) {
+        this.osaLocationPath = osaLocationPath;
+    }
+
     public File getReportsDir() {
         return reportsDir;
     }
@@ -160,6 +188,14 @@ public class CxScanConfig implements Serializable {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public void setRefreshToken(String token) {
+        this.refreshToken = token;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
     }
 
     public String getPassword() {
@@ -570,12 +606,12 @@ public class CxScanConfig implements Serializable {
         this.remoteSrcBranch = remoteSrcBranch;
     }
 
-    public String getPreforceMode() {
-        return preforceMode;
+    public String getPerforceMode() {
+        return perforceMode;
     }
 
-    public void setPreforceMode(String preforceMode) {
-        this.preforceMode = preforceMode;
+    public void setPerforceMode(String perforceMode) {
+        this.perforceMode = perforceMode;
     }
 
     public Boolean getGenerateXmlReport() {
@@ -594,12 +630,71 @@ public class CxScanConfig implements Serializable {
         this.cxVersion = cxVersion;
     }
 
-    public String getMvnPath() {
-        return mvnPath;
+    public Integer getProgressInterval() {
+        return progressInterval;
     }
 
-    public void setMvnPath(String mvnPath) {
-        this.mvnPath = mvnPath;
+    public void setProgressInterval(Integer progressInterval) {
+        this.progressInterval = progressInterval;
     }
 
+    public Integer getOsaProgressInterval() {
+        return osaProgressInterval;
+    }
+
+    public void setOsaProgressInterval(Integer osaProgressInterval) {
+        this.osaProgressInterval = osaProgressInterval;
+    }
+
+    public Integer getConnectionRetries() {
+        return connectionRetries;
+    }
+
+    public void setConnectionRetries(Integer connectionRetries) {
+        this.connectionRetries = connectionRetries;
+    }
+
+    public String getOsaScanDepth() {
+        return osaScanDepth;
+    }
+
+    public void setOsaScanDepth(String osaScanDepth) {
+        this.osaScanDepth = osaScanDepth;
+    }
+
+    public Integer getMaxZipSize() {
+        return maxZipSize;
+    }
+
+    public void setMaxZipSize(Integer maxZipSize) {
+        this.maxZipSize = maxZipSize;
+    }
+
+    public String getDefaultProjectName() {
+        return defaultProjectName;
+    }
+
+    public void setDefaultProjectName(String defaultProjectName) {
+        this.defaultProjectName = defaultProjectName;
+    }
+
+    public Map<ReportType, String> getReports() {
+        return reports;
+    }
+
+    public void addPDFReport(String pdfReportPath) {
+        reports.put(ReportType.PDF, pdfReportPath);
+    }
+
+    public void addXMLReport(String xmlReportPath) {
+        reports.put(ReportType.XML, xmlReportPath);
+    }
+
+    public void addCSVReport(String csvReportPath) {
+        reports.put(ReportType.CSV, csvReportPath);
+    }
+
+    public void addRTFReport(String rtfReportPath) {
+        reports.put(ReportType.RTF, rtfReportPath);
+    }
 }

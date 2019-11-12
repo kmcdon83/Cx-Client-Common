@@ -1,7 +1,6 @@
 package com.cx.restclient.sast.dto;
 
 import com.cx.restclient.cxArm.dto.Policy;
-import com.cx.restclient.cxArm.dto.Violation;
 
 import java.io.Serializable;
 import java.text.DateFormat;
