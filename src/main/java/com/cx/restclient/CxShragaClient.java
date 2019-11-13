@@ -1,9 +1,11 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.CxArmConfig;
 import com.cx.restclient.dto.CxVersion;
+import com.cx.restclient.dto.LoginSettings;
 import com.cx.restclient.dto.Team;
 import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
@@ -34,6 +36,7 @@ import static com.cx.restclient.sast.utils.SASTParam.*;
 //SHRAGA
 //System Holistic Rest Api Generic Application
 public class CxShragaClient {
+    private static final String DEFAULT_AUTH_API_PATH = "CxRestApi/auth/";
 
     private CxHttpClient httpClient;
     private Logger log;
@@ -42,6 +45,8 @@ public class CxShragaClient {
 
     private CxSASTClient sastClient;
     private CxOSAClient osaClient;
+    private final SCAClient scaClient;
+
     private long sastScanId;
     private String osaScanId;
     private SASTResults sastResults = new SASTResults();
@@ -53,13 +58,13 @@ public class CxShragaClient {
         this.log = log;
         this.httpClient = new CxHttpClient(
                 config.getUrl(),
-                config.getUsername(),
-                config.getPassword(),
                 config.getCxOrigin(),
-                config.getRefreshToken(),
-                config.isDisableCertificateValidation(), config.isUseSSOLogin(), log);
+                config.isDisableCertificateValidation(),
+                config.isUseSSOLogin(),
+                log);
         sastClient = new CxSASTClient(httpClient, log, config);
         osaClient = new CxOSAClient(httpClient, log, config);
+        scaClient = new SCAClient(log, config);
     }
 
     //For Test Connection
@@ -96,6 +101,10 @@ public class CxShragaClient {
             resolveCxARMUrl();
         }
         resolveProject();
+
+        if (config.getScaEnabled()) {
+            scaClient.login();
+        }
     }
 
     public long createSASTScan() throws IOException, CxClientException {
@@ -108,6 +117,10 @@ public class CxShragaClient {
         osaScanId = osaClient.createOSAScan(projectId);
         osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
         return osaScanId;
+    }
+
+    public void createSCAScan() {
+        // TODO
     }
 
     public void cancelSASTScan() throws IOException, CxClientException {
@@ -182,16 +195,20 @@ public class CxShragaClient {
     public void close() {
         httpClient.close();
     }
-
     //HELP config  Methods
+
     public void login() throws IOException, CxClientException {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
-        httpClient.login();
+
+        LoginSettings settings = getDefaultLoginSettings();
+        settings.setRefreshToken(config.getRefreshToken());
+        httpClient.login(settings);
     }
 
     public String getToken() throws IOException, CxClientException {
-        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(ClientType.CLI);
+        LoginSettings settings = getDefaultLoginSettings();
+        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(settings);
         return tokenLoginResponse.getRefresh_token();
     }
 
@@ -277,8 +294,8 @@ public class CxShragaClient {
     public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
         config.setOsaFsaConfig(fsaConfig);
     }
-
     //Private methods
+
     private void resolveTeam() throws CxClientException, IOException {
         if (config.getTeamId() == null) {
             config.setTeamId(getTeamIdByName(config.getTeamPath()));
@@ -356,5 +373,20 @@ public class CxShragaClient {
         String json = convertToJson(request);
         StringEntity entity = new StringEntity(json);
         return httpClient.postRequest(CREATE_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "create new project: " + request.getName());
+    }
+
+    private LoginSettings getDefaultLoginSettings() throws MalformedURLException {
+        LoginSettings result = new LoginSettings();
+
+        String baseUrl = UrlUtils.parseURLToString(config.getUrl(), DEFAULT_AUTH_API_PATH);
+        result.setAccessControlBaseUrl(baseUrl);
+
+        result.setUsername(config.getUsername());
+        result.setPassword(config.getPassword());
+
+        result.setClientTypeForPasswordAuth(ClientType.RESOURCE_OWNER);
+        result.setClientTypeForRefreshToken(ClientType.CLI);
+
+        return result;
     }
 }

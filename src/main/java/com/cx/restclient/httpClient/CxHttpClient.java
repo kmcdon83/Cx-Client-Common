@@ -2,11 +2,13 @@ package com.cx.restclient.httpClient;
 
 import com.cx.restclient.common.ErrorMessage;
 import com.cx.restclient.common.UrlUtils;
+import com.cx.restclient.dto.LoginSettings;
 import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.exception.CxTokenExpiredException;
 import com.cx.restclient.osa.dto.ClientType;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
@@ -52,9 +54,6 @@ public class CxHttpClient {
     private HttpClient apacheClient;
     private TokenLoginResponse tokenLoginResponse;
     private String rootUri;
-    private final String username;
-    private final String password;
-    private final String refreshtoken;
     private String cxOrigin;
 
     private CookieStore cookieStore;
@@ -63,6 +62,7 @@ public class CxHttpClient {
 
     private Boolean useSSo = false;
 
+    private LoginSettings lastLoginSettings;
 
     private final HttpRequestInterceptor requestFilter = new HttpRequestInterceptor() {
         public void process(HttpRequest httpRequest, HttpContext httpContext) throws HttpException, IOException {
@@ -96,12 +96,8 @@ public class CxHttpClient {
         }
     };
 
-
-    public CxHttpClient(String hostname, String username, String password, String origin, String refreshToken, boolean disableSSLValidation, boolean isSSO, Logger logi) throws MalformedURLException {
+    public CxHttpClient(String hostname, String origin, boolean disableSSLValidation, boolean isSSO, Logger logi) throws MalformedURLException {
         this.logi = logi;
-        this.username = username;
-        this.password = password;
-        this.refreshtoken = refreshToken;
         this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
         this.cxOrigin = origin;
         //create httpclient
@@ -120,24 +116,22 @@ public class CxHttpClient {
         apacheClient = builder.build();
     }
 
-    public void login() throws IOException, CxClientException {
-        if (refreshtoken != null) {
-            tokenLoginResponse = getAccessTokenFromRefreshToken();
+    public void login(LoginSettings settings) throws IOException, CxClientException {
+        lastLoginSettings = settings;
+        if (settings.getRefreshToken() != null) {
+            tokenLoginResponse = getAccessTokenFromRefreshToken(settings);
         } else if (useSSo) {
             HttpPost post = new HttpPost(rootUri + SSO_AUTHENTICATION);
             request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), new StringEntity(""), TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
         } else {
-            tokenLoginResponse = generateToken();
+            tokenLoginResponse = generateToken(settings);
         }
     }
 
-    public TokenLoginResponse generateToken() throws IOException, CxClientException {
-        return generateToken(ClientType.RESOURCE_OWNER);
-    }
-
-    public TokenLoginResponse generateToken(ClientType clientType) throws IOException, CxClientException {
-        UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity(clientType);
-        HttpPost post = new HttpPost(rootUri + AUTHENTICATION);
+    public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
+        UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity(settings);
+        String fullUrl = UrlUtils.parseURLToString(settings.getAccessControlBaseUrl(), AUTHENTICATION);
+        HttpPost post = new HttpPost(fullUrl);
         try {
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
@@ -146,9 +140,10 @@ public class CxHttpClient {
         }
     }
 
-    private TokenLoginResponse getAccessTokenFromRefreshToken() throws IOException, CxClientException {
-        UrlEncodedFormEntity requestEntity = generateTokenFromRefreshEntity(ClientType.CLI);
-        HttpPost post = new HttpPost(rootUri + AUTHENTICATION);
+    private TokenLoginResponse getAccessTokenFromRefreshToken(LoginSettings settings) throws IOException, CxClientException {
+        UrlEncodedFormEntity requestEntity = generateTokenFromRefreshEntity(settings);
+        String fullUrl = UrlUtils.parseURLToString(settings.getAccessControlBaseUrl(), AUTHENTICATION);
+        HttpPost post = new HttpPost(fullUrl);
         try {
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
@@ -179,24 +174,31 @@ public class CxHttpClient {
 
     }
 
-    private UrlEncodedFormEntity generateUrlEncodedFormEntity(ClientType clientType) throws UnsupportedEncodingException {
+    private UrlEncodedFormEntity generateUrlEncodedFormEntity(LoginSettings settings) throws UnsupportedEncodingException {
+        ClientType clientType = settings.getClientTypeForPasswordAuth();
         List<BasicNameValuePair> parameters = new ArrayList<>();
-        parameters.add(new BasicNameValuePair("username", username));
-        parameters.add(new BasicNameValuePair("password", password));
+        parameters.add(new BasicNameValuePair("username", settings.getUsername()));
+        parameters.add(new BasicNameValuePair("password", settings.getPassword()));
         parameters.add(new BasicNameValuePair("grant_type", "password"));
         parameters.add(new BasicNameValuePair("scope", clientType.getScopes()));
         parameters.add(new BasicNameValuePair("client_id", clientType.getClientId()));
         parameters.add(new BasicNameValuePair("client_secret", clientType.getClientSecret()));
 
+        if (!StringUtils.isEmpty(settings.getTenant())) {
+            String authContext = String.format("Tenant:%s", settings.getTenant());
+            parameters.add(new BasicNameValuePair("acr_values", authContext));
+        }
+
         return new UrlEncodedFormEntity(parameters, "utf-8");
     }
 
-    private UrlEncodedFormEntity generateTokenFromRefreshEntity(ClientType clientType) throws UnsupportedEncodingException {
+    private UrlEncodedFormEntity generateTokenFromRefreshEntity(LoginSettings settings) throws UnsupportedEncodingException {
+        ClientType clientType = settings.getClientTypeForRefreshToken();
         List<BasicNameValuePair> parameters = new ArrayList<>();
         parameters.add(new BasicNameValuePair("grant_type", "refresh_token"));
         parameters.add(new BasicNameValuePair("client_id", clientType.getClientId()));
         parameters.add(new BasicNameValuePair("client_secret", clientType.getClientSecret()));
-        parameters.add(new BasicNameValuePair("refresh_token", refreshtoken));
+        parameters.add(new BasicNameValuePair("refresh_token", settings.getRefreshToken()));
 
         return new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8.name());
     }
@@ -254,7 +256,7 @@ public class CxHttpClient {
         } catch (CxTokenExpiredException ex) {
             if (retry) {
                 logi.warn("Access token expired, requesting a new token");
-                login();
+                login(lastLoginSettings);
                 return request(httpMethod, contentType, entity, responseType, expectStatus, failedMsg, isCollection, false);
             }
             throw ex;
@@ -293,5 +295,4 @@ public class CxHttpClient {
             log.warn("Failed to set SSL TLS : " + e.getMessage());
         }
     }
-
 }

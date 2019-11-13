@@ -1,6 +1,6 @@
 import com.cx.restclient.CxShragaClient;
-import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.SCAConfig;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
 import org.apache.commons.io.FileUtils;
@@ -30,9 +30,6 @@ public class testi {
 
 
     public static void main(String[] args) throws Exception {
-
-
-
         SASTResults sastResults = null;
         // SASTResults lastSastResults = null;
         OSAResults osaResults = null;
@@ -50,6 +47,8 @@ public class testi {
         try {
             if (config.getOsaEnabled()) {
                 shraga.createOSAScan();
+            } else if (config.getScaEnabled()) {
+                shraga.createSCAScan();
             }
         } catch (Exception ex) {
             logi.error(ex.getMessage());
@@ -86,7 +85,7 @@ public class testi {
         }
         //String buildFailedResult = ShragaUtils.getBuildFailureResult(config, sastResults, osaResults);
         String s = shraga.generateHTMLSummary();
-        File file = new File("C:\\Users\\galn\\Desktop\\New folder\\a.html");
+        File file = new File("c:\\cxdev\\reports\\report.html");
         FileUtils.writeStringToFile(file, s);
 
         shraga.close();
@@ -95,25 +94,26 @@ public class testi {
 
     private static CxScanConfig setConfigi() {
         CxScanConfig config = new CxScanConfig();
+
+        configureSca(config);
+
         config.setSastEnabled(true);
-         config.setSourceDir("C:\\cxdev\\CxPlugins\\Bamboo-Plugin");
-        //config.setSourceDir("C:\\Users\\galn\\Desktop\\restiDir\\srcDir\\SAST\\Folder1\\Folder2\\Folder3");
-        config.setReportsDir(new File("C:\\Users\\galn\\Desktop\\restiDir\\reportsDir"));
-        //config.setReportsDir(new File("C:\\Users\\galn\\Desktop\\restiDir\\srcDir\\SAST\\ss"));
-        config.setUsername("adi.gido@checkmarx.com");
-        //config.setPassword("Cx123456!");
-        config.setPassword("Cx@123456");
+
+        config.setSourceDir("c:\\cxdev\\projectsToScan\\BookStore_Small_CLI\\");
+        config.setReportsDir(new File("c:\\cxdev\\reports\\"));
+
+        config.setUrl("http://10.32.1.57");
+        config.setUsername("myusername");
+        config.setPassword("mypassword");
+
         config.setAvoidDuplicateProjectScans(false);
 
-       // config.setUrl("http://10.32.1.91");
-        config.setUrl("https://sast.checkmarx.net");
         config.setCxOrigin("common");
-        config.setProjectName("Bamboo Plugin - Main");
-        //config.setProjectName("OSAPROJ");
+        config.setProjectName("CommonClientTest1");
         config.setPresetName("Default");
-        //config.setPresetId(7);
-        config.setTeamPath("\\CxServer\\SP\\Plugins\\Plugins_Team");
-        //config.setTeamId("00000000-1111-1111-b111-989c9070eb11");
+
+        config.setTeamPath("\\CxServer");
+
         config.setSastFolderExclusions("");
         config.setSastFilterPattern(DEFAULT_FILTER_PATTERNS);
         config.setSastScanTimeoutInMinutes(null);
@@ -145,4 +145,15 @@ public class testi {
         return config;
     }
 
+    private static void configureSca(CxScanConfig parentConfig) {
+        parentConfig.setScaEnabled(false);
+
+        SCAConfig config = new SCAConfig();
+        config.setApiUrl("http://scaapp.lumodev.com");
+        config.setAccessControlUrl("http://upgrade.dev-ac-checkmarx.com");
+        config.setUsername("myusername");
+        config.setPassword("mypassword");
+        config.setTenant("Checkmarx");
+        parentConfig.setScaConfig(config);
+    }
 }

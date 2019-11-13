@@ -6,7 +6,7 @@ import java.io.File;
  * Created by Galn on 14/02/2018.
  */
 public abstract class CxPARAM {
-    public static final String AUTHENTICATION = "auth/identity/connect/token";
+    public static final String AUTHENTICATION = "identity/connect/token";
     public static final String REVOCATION = "auth/identity/connect/revocation";
     public static final String SSO_AUTHENTICATION = "auth/ssologin";
     public static final String CXPRESETS = "sast/presets";

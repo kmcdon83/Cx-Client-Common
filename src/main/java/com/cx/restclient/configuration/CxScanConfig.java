@@ -2,6 +2,7 @@ package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
 import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
 
@@ -95,6 +96,9 @@ public class CxScanConfig implements Serializable {
     private String osaScanDepth;
     private Integer maxZipSize;
     private String defaultProjectName;
+
+    private boolean scaEnabled;
+    private SCAConfig scaConfig;
 
     public CxScanConfig() {
     }
@@ -696,5 +700,21 @@ public class CxScanConfig implements Serializable {
 
     public void addRTFReport(String rtfReportPath) {
         reports.put(ReportType.RTF, rtfReportPath);
+    }
+
+    public void setScaEnabled(boolean scaEnabled) {
+        this.scaEnabled = scaEnabled;
+    }
+
+    public boolean getScaEnabled() {
+        return scaEnabled;
+    }
+
+    public SCAConfig getScaConfig() {
+        return scaConfig;
+    }
+
+    public void setScaConfig(SCAConfig scaConfig) {
+        this.scaConfig = scaConfig;
     }
 }
