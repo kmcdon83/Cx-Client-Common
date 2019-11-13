@@ -83,17 +83,17 @@ public class CxHttpClient {
     private String rootUri;
     private final String username;
     private final String password;
-    private final String refreshtoken;
+    private final String refreshToken;
     private String cxOrigin;
     private Boolean useSSo;
 
     public CxHttpClient(String hostname, String username, String password, String origin,
-                        boolean disableSSLValidation, boolean isSSO, String refreshtoken, Logger logi,
+                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi,
                         String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException {
         this.log = logi;
         this.username = username;
         this.password = password;
-        this.refreshtoken = refreshtoken;
+        this.refreshToken = refreshToken;
         this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
         this.cxOrigin = origin;
         this.useSSo = isSSO;
@@ -124,7 +124,7 @@ public class CxHttpClient {
         this.log = logi;
         this.username = username;
         this.password = password;
-        this.refreshtoken = refreshToken;
+        this.refreshToken = refreshToken;
         this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
         this.cxOrigin = origin;
         this.useSSo = isSSO;
@@ -235,7 +235,7 @@ public class CxHttpClient {
     }
 
     public void login() throws IOException, CxClientException {
-        if (refreshtoken != null) {
+        if (refreshToken != null) {
             token = getAccessTokenFromRefreshToken();
         } else if (useSSo) {
             HttpPost post = new HttpPost(rootUri + SSO_AUTHENTICATION);
@@ -310,7 +310,7 @@ public class CxHttpClient {
         parameters.add(new BasicNameValuePair("grant_type", "refresh_token"));
         parameters.add(new BasicNameValuePair("client_id", clientType.getClientId()));
         parameters.add(new BasicNameValuePair("client_secret", clientType.getClientSecret()));
-        parameters.add(new BasicNameValuePair("refresh_token", refreshtoken));
+        parameters.add(new BasicNameValuePair("refresh_token", refreshToken));
 
         return new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8.name());
     }

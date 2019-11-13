@@ -57,7 +57,8 @@ public class CxShragaClient {
                 config.getUsername(),
                 config.getPassword(),
                 config.getCxOrigin(),
-                config.isDisableCertificateValidation(), config.isUseSSOLogin(),
+                config.isDisableCertificateValidation(),
+                config.isUseSSOLogin(),
                 config.getRefreshToken(),
                 log,
                 proxyHost, proxyPort, proxyUser, proxyPassword);
@@ -76,7 +77,7 @@ public class CxShragaClient {
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 config.getRefreshToken(),
-                config.isDisableCertificateValidation(), config.isUseSSOLogin(), log);
+                log);
         sastClient = new CxSASTClient(httpClient, log, config);
         osaClient = new CxOSAClient(httpClient, log, config);
     }
