@@ -1,7 +1,6 @@
 package com.cx.restclient.httpClient.utils;
 
 
-import com.cx.restclient.common.ErrorMessage;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.fasterxml.jackson.databind.JavaType;
@@ -9,8 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.entity.StringEntity;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.List;
 
@@ -56,6 +57,10 @@ public abstract class HttpClientHelper {
         } catch (Exception e) {
             throw new CxClientException("Failed convert object to json: " + e.getMessage());
         }
+    }
+
+    public static StringEntity convertToStringEntity(Object o) throws CxClientException, UnsupportedEncodingException {
+        return new StringEntity(convertToJson(o));
     }
 
     private static <T> T convertToCollectionObject(HttpResponse response, JavaType javaType) throws CxClientException {

@@ -2,7 +2,7 @@ package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
 import com.cx.restclient.dto.RemoteSourceTypes;
-import com.cx.restclient.dto.SCAConfig;
+import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
 

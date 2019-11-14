@@ -57,7 +57,7 @@ public class CxShragaClient {
         this.config = config;
         this.log = log;
         this.httpClient = new CxHttpClient(
-                config.getUrl(),
+                UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
@@ -103,7 +103,7 @@ public class CxShragaClient {
         resolveProject();
 
         if (config.getScaEnabled()) {
-            scaClient.login();
+            scaClient.init();
         }
     }
 

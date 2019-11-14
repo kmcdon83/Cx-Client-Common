@@ -96,9 +96,9 @@ public class CxHttpClient {
         }
     };
 
-    public CxHttpClient(String hostname, String origin, boolean disableSSLValidation, boolean isSSO, Logger logi) throws MalformedURLException {
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger logi) throws MalformedURLException {
         this.logi = logi;
-        this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
+        this.rootUri = rootUri;
         this.cxOrigin = origin;
         //create httpclient
         HttpClientBuilder builder = HttpClientBuilder.create().addInterceptorFirst(requestFilter);

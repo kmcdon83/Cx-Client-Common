@@ -1,6 +1,6 @@
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.SCAConfig;
+import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
 import org.apache.commons.io.FileUtils;
@@ -36,9 +36,7 @@ public class testi {
         //  OSAResults lastOsaResults = null;
         Logger logi = LoggerFactory.getLogger("testush");
 
-
         CxScanConfig config = setConfigi();
-
 
         CxShragaClient shraga = new CxShragaClient(config, logi);
        // shraga.getClientVersion();
@@ -146,7 +144,7 @@ public class testi {
     }
 
     private static void configureSca(CxScanConfig parentConfig) {
-        parentConfig.setScaEnabled(false);
+        parentConfig.setScaEnabled(true);
 
         SCAConfig config = new SCAConfig();
         config.setApiUrl("http://scaapp.lumodev.com");
@@ -154,6 +152,7 @@ public class testi {
         config.setUsername("myusername");
         config.setPassword("mypassword");
         config.setTenant("Checkmarx");
+        config.setProjectName("CommonClientScaTest3");
         parentConfig.setScaConfig(config);
     }
 }
