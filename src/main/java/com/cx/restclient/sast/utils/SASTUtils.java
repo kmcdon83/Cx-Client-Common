@@ -6,32 +6,21 @@ import com.cx.restclient.sast.dto.SASTResults;
 import com.sun.xml.bind.v2.JAXBContextFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
-import java.util.Collections;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.Collections;
 
 import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
-import static com.cx.restclient.sast.utils.SASTParam.PDF_REPORT_NAME;
 
 /**
  * Created by Galn on 07/02/2018.
  */
 public abstract class SASTUtils {
-
-    public static void deleteTempZipFile(File zipTempFile, Logger log) {
-        if (zipTempFile.exists() && !zipTempFile.delete()) {
-            log.warn("Failed to delete temporary zip file: " + zipTempFile.getAbsolutePath());
-        } else {
-            log.info("Temporary file deleted");
-        }
-    }
 
     public static CxXMLResults convertToXMLResult(byte[] cxReport) throws CxClientException {
         CxXMLResults reportObj = null;

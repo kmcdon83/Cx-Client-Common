@@ -1,6 +1,7 @@
 package com.cx.restclient.sast.utils.zip;
 
 
+import com.cx.restclient.dto.PathFilter;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
@@ -23,7 +24,7 @@ public class CxZip {
         this.maxZipSizeInBytes = maxZipSizeInBytes;
     }
 
-    public File zipWorkspaceFolder(File baseDir, String[] includes, String[] excludes)
+    public File zipWorkspaceFolder(File baseDir, PathFilter filter)
             throws IOException {
         log.info("Zipping workspace: '" + baseDir + "'");
 
@@ -38,7 +39,7 @@ public class CxZip {
         OutputStream fileOutputStream = new FileOutputStream(tempFile);
 
         try {
-            new Zipper(log).zip(baseDir, includes, excludes, fileOutputStream, maxZipSizeInBytes, zipListener);
+            new Zipper(log).zip(baseDir, filter.getIncludes(), filter.getExcludes(), fileOutputStream, maxZipSizeInBytes, zipListener);
         } catch (Zipper.MaxZipSizeReached e) {
             tempFile.delete();
             throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeInBytes));

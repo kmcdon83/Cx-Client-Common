@@ -119,8 +119,8 @@ public class CxShragaClient {
         return osaScanId;
     }
 
-    public void createSCAScan() {
-        // TODO
+    public void createSCAScan() throws IOException, CxClientException {
+        scaClient.createScan();
     }
 
     public void cancelSASTScan() throws IOException, CxClientException {
