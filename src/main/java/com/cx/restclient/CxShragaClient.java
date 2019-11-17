@@ -1,13 +1,11 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.DependencyScanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.CxArmConfig;
-import com.cx.restclient.dto.CxVersion;
-import com.cx.restclient.dto.LoginSettings;
-import com.cx.restclient.dto.Team;
-import com.cx.restclient.dto.TokenLoginResponse;
+import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
@@ -44,14 +42,15 @@ public class CxShragaClient {
     private long projectId;
 
     private CxSASTClient sastClient;
-    private CxOSAClient osaClient;
-    private final SCAClient scaClient;
+//    private CxOSAClient osaClient;
+//    private final SCAClient scaClient;
 
     private long sastScanId;
     private String osaScanId;
     private SASTResults sastResults = new SASTResults();
     private OSAResults osaResults = new OSAResults();
 
+    private DependencyScanner dependencyScanner;
 
     public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException {
         this.config = config;
@@ -63,8 +62,15 @@ public class CxShragaClient {
                 config.isUseSSOLogin(),
                 log);
         sastClient = new CxSASTClient(httpClient, log, config);
-        osaClient = new CxOSAClient(httpClient, log, config);
-        scaClient = new SCAClient(log, config);
+
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
+            dependencyScanner = new CxOSAClient(httpClient, log, config);
+        } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
+            dependencyScanner = new SCAClient(log, config);
+        }
+
+//        osaClient = new CxOSAClient(httpClient, log, config);
+//        scaClient = new SCAClient(log, config);
     }
 
     //For Test Connection
@@ -89,7 +95,6 @@ public class CxShragaClient {
     }
 
     public void init() throws CxClientException, IOException {
-
         log.info("Initializing Cx client [" + getClientVersion() + "]");
         getCxVersion();
         login();
@@ -102,8 +107,8 @@ public class CxShragaClient {
         }
         resolveProject();
 
-        if (config.getScaEnabled()) {
-            scaClient.init();
+        if (dependencyScanner != null) {
+            dependencyScanner.init();
         }
     }
 
@@ -113,14 +118,25 @@ public class CxShragaClient {
         return sastScanId;
     }
 
-    public String createOSAScan() throws IOException, CxClientException {
-        osaScanId = osaClient.createOSAScan(projectId);
-        osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
-        return osaScanId;
-    }
+//    public String createOSAScan() throws IOException, CxClientException {
+//        osaScanId = osaClient.createOSAScan(projectId);
+//        osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
+//        return osaScanId;
+//    }
+//
+//    public void createSCAScan() throws IOException, CxClientException {
+//        scaClient.createScan();
+//    }
 
-    public void createSCAScan() throws IOException, CxClientException {
-        scaClient.createScan();
+    public String createDependencyScan() throws CxClientException {
+        if (dependencyScanner != null) {
+            osaScanId = dependencyScanner.createScan();
+            osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
+        }
+        else {
+            osaScanId = null;
+        }
+        return osaScanId;
     }
 
     public void cancelSASTScan() throws IOException, CxClientException {
@@ -137,13 +153,13 @@ public class CxShragaClient {
         return sastResults;
     }
 
-    public OSAResults waitForOSAResults() throws InterruptedException, CxClientException, IOException {
-        osaResults = osaClient.getOSAResults(osaScanId, projectId);
+    public OSAResults waitForDependencyScanResults() throws CxClientException {
+        osaResults = dependencyScanner.waitForScanResults();
         return osaResults;
     }
 
-    public OSAResults getLatestOSAResults() throws InterruptedException, CxClientException, IOException {
-        osaResults = osaClient.getLatestOSAResults(projectId);
+    public OSAResults getLatestDependencyScanResults() throws CxClientException {
+        osaResults = dependencyScanner.getLatestScanResults();
         return osaResults;
     }
 
@@ -352,6 +368,11 @@ public class CxShragaClient {
 
         } else {
             projectId = projects.get(0).getId();
+        }
+
+        // SAST and OSA share the same project ID.
+        if (dependencyScanner instanceof CxOSAClient) {
+            ((CxOSAClient) dependencyScanner).setProjectId(projectId);
         }
     }
 

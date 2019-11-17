@@ -1,14 +1,16 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.DependencyScanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.dto.LoginSettings;
+import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
+import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.dto.CreateProjectRequest;
 import com.cx.restclient.sca.dto.Project;
@@ -23,14 +25,17 @@ import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.slf4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.util.List;
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
-class SCAClient {
+class SCAClient implements DependencyScanner {
     private static final String API_PATH = "api/";
 
     private final Logger log;
@@ -55,24 +60,45 @@ class SCAClient {
                 log);
     }
 
-    void init() throws IOException, CxClientException {
-        login();
-        resolveProject();
+    @Override
+    public void init() throws CxClientException {
+        try {
+            login();
+            resolveProject();
+        } catch (IOException e) {
+            throw new CxClientException("Failed to init SCA Client.", e);
+        }
     }
 
-    void createScan() throws IOException, CxClientException {
+    @Override
+    public String createScan() throws CxClientException {
         log.info("----------------------------------- Create SCA Scan:------------------------------------");
         log.info("Creating SCA scan");
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
-        File zipFile = CxZipUtils.getZippedSources(config, filter, log);
+        String scanId;
+        try {
+            File zipFile = CxZipUtils.getZippedSources(config, filter, log);
+            scanId = uploadZipFile(zipFile);
+            CxZipUtils.deleteZippedSources(zipFile, config, log);
+        } catch (IOException e) {
+            throw new CxClientException("Error creating SCA scan.", e);
+        }
 
-        uploadZipFile(zipFile);
-
-        CxZipUtils.deleteZippedSources(zipFile, config, log);
+        return scanId;
     }
 
-    void login() throws IOException, CxClientException {
+    @Override
+    public OSAResults waitForScanResults() {
+        return new OSAResults();
+    }
+
+    @Override
+    public OSAResults getLatestScanResults() throws CxClientException {
+        return null;
+    }
+
+    private void login() throws IOException, CxClientException {
         log.info("Logging into SCA.");
         SCAConfig scaConfig = config.getScaConfig();
 
@@ -131,7 +157,7 @@ class SCAClient {
         return newProject.getId();
     }
 
-    private void uploadZipFile(File zipFile) throws IOException, CxClientException {
+    private String uploadZipFile(File zipFile) throws IOException, CxClientException {
         log.info("Uploading zipped sources.");
 
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -148,5 +174,7 @@ class SCAClient {
 
         String scanId = httpClient.postRequest("scans/zip", null, entity, String.class, HttpStatus.SC_OK, "upload ZIP file");
         log.debug("Scan ID: " + scanId);
+
+        return scanId;
     }
 }

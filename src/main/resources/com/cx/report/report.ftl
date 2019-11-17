@@ -947,17 +947,17 @@
                     <#if config.sastEnabled && !sast.sastResultsReady>
                         <li>SAST Scan Failed</li>
                     </#if>
-                    <#if  config.osaEnabled && !osa.osaResultsReady>
+                    <#if config.dependencyScannerType != "NONE" && !osa.osaResultsReady>
                         <li>OSA Scan Failed</li>
                     </#if>
                     <#if policyViolated>
                         <li>${policyViolatedCount} ${policyLabel}  Violated</li>
                     </#if>
-                    <#if config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && config.osaEnabled && osa.osaResultsReady && osaThresholdExceeded>
+                    <#if config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && config.dependencyScannerType != "NONE" && osa.osaResultsReady && osaThresholdExceeded>
                         <li>Exceeded CxSAST and CxOSA Vulnerability Thresholds</li>
                     <#elseif config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded)>
                         <li>Exceeded CxSAST Vulnerability Threshold</li>
-                    <#elseif config.osaEnabled && osa.osaResultsReady && osaThresholdExceeded>
+                    <#elseif config.dependencyScannerType != "NONE" && osa.osaResultsReady && osaThresholdExceeded>
                         <li>Exceeded CxOSA Vulnerability Threshold</li>
                     </#if>
                 </ul>
@@ -1011,7 +1011,7 @@
             <div id="summary-results" class="summary-results">
 
             <#if config.sastEnabled>
-                <div class="sast-summary <#if !config.osaEnabled>chart-large</#if>" id="sast-summary">
+                <div class="sast-summary <#if config.dependencyScannerType == "NONE">chart-large</#if>" id="sast-summary">
                     <div class="summary-report-title sast">
                         <div class="summary-title-text sast">CxSAST Vulnerabilities Status</div>
                         <#if sast.sastResultsReady>
@@ -1307,7 +1307,7 @@
                 </div>
             </#if>
 
-            <#if config.osaEnabled>
+            <#if config.dependencyScannerType != "NONE">
                 <div class="osa-summary <#if !config.sastEnabled>sast-summary chart-large</#if>" id="osa-summary">
                     <div class="summary-report-title osa">
                         <div class="summary-title-text osa">CxOSA Vulnerabilities & Libraries</div>
@@ -1963,7 +1963,7 @@
         </#if>
     </#if>
 
-    <#if config.osaEnabled && osa.osaResultsReady>
+    <#if config.dependencyScannerType != "NONE" && osa.osaResultsReady>
         <#if osa.osaHighCVEReportTable?size gt 0 || osa.osaMediumCVEReportTable?size gt 0 || osa.osaLowCVEReportTable?size gt 0>
             <div id="osa-full" class="osa-full full-results-section">
                 <div class="summary-table-row cxosa-full">
@@ -2305,7 +2305,7 @@
         </#if>
     </#if>
 
-    <#if (config.osaEnabled || config.sastEnabled) &&  policyViolated>
+    <#if (config.dependencyScannerType != "NONE" || config.sastEnabled) &&  policyViolated>
 
         <#if policyViolatedCount gt 0>
         <div class="osa-full full-results-section">

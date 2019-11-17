@@ -1,5 +1,6 @@
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
@@ -39,15 +40,11 @@ public class testi {
         CxScanConfig config = setConfigi();
 
         CxShragaClient shraga = new CxShragaClient(config, logi);
-       // shraga.getClientVersion();
+        // shraga.getClientVersion();
         shraga.init();
 
         try {
-            if (config.getOsaEnabled()) {
-                shraga.createOSAScan();
-            } else if (config.getScaEnabled()) {
-                shraga.createSCAScan();
-            }
+            shraga.createDependencyScan();
         } catch (Exception ex) {
             logi.error(ex.getMessage());
         }
@@ -69,16 +66,14 @@ public class testi {
         }
 
         try {
-            if (config.getOsaEnabled()) {
-                osaResults = shraga.waitForOSAResults();
-            }
+            osaResults = shraga.waitForDependencyScanResults();
         } catch (Exception ex) {
             logi.error(ex.getMessage());
         }
 
         //lastSastResults = shraga.getLatestSASTResults();
-     //   lastOsaResults = shraga.getLatestOSAResults();
-       if (config.getEnablePolicyViolations()) {
+        //lastOsaResults = shraga.getLatestDependencyScanResults();
+        if (config.getEnablePolicyViolations()) {
             shraga.printIsProjectViolated();
         }
         //String buildFailedResult = ShragaUtils.getBuildFailureResult(config, sastResults, osaResults);
@@ -93,11 +88,13 @@ public class testi {
     private static CxScanConfig setConfigi() {
         CxScanConfig config = new CxScanConfig();
 
+        config.setDependencyScannerType(DependencyScannerType.SCA);
         configureSca(config);
+        configureOsa(config);
 
         config.setSastEnabled(true);
 
-        config.setSourceDir("c:\\cxdev\\projectsToScan\\BookStore_Small_CLI\\");
+        config.setSourceDir("c:\\cxdev\\projectsToScan\\SastAndOsaSource\\");
         config.setReportsDir(new File("c:\\cxdev\\reports\\"));
 
         config.setUrl("http://10.32.1.57");
@@ -123,16 +120,7 @@ public class testi {
         config.setSastMediumThreshold(1);
         config.setSastLowThreshold(1);
         config.setGeneratePDFReport(true);
-        config.setOsaEnabled(false);
 
-
-        config.setOsaFilterPattern("");//TODO check
-        config.setOsaArchiveIncludePatterns(DEFAULT_OSA_ARCHIVE_INCLUDE_PATTERNS);
-        config.setOsaRunInstall(true);
-        config.setOsaThresholdsEnabled(true);
-        config.setOsaHighThreshold(10);
-        config.setOsaMediumThreshold(0);
-        config.setOsaLowThreshold(0);
         config.setDenyProject(false);
         config.setPublic(true);
         //config.setUseSSOLogin(false);
@@ -143,9 +131,17 @@ public class testi {
         return config;
     }
 
-    private static void configureSca(CxScanConfig parentConfig) {
-        parentConfig.setScaEnabled(true);
+    private static void configureOsa(CxScanConfig config) {
+        config.setOsaFilterPattern("");//TODO check
+        config.setOsaArchiveIncludePatterns(DEFAULT_OSA_ARCHIVE_INCLUDE_PATTERNS);
+        config.setOsaRunInstall(true);
+        config.setOsaThresholdsEnabled(true);
+        config.setOsaHighThreshold(10);
+        config.setOsaMediumThreshold(0);
+        config.setOsaLowThreshold(0);
+    }
 
+    private static void configureSca(CxScanConfig parentConfig) {
         SCAConfig config = new SCAConfig();
         config.setApiUrl("http://scaapp.lumodev.com");
         config.setAccessControlUrl("http://upgrade.dev-ac-checkmarx.com");

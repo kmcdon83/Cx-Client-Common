@@ -1,6 +1,7 @@
 package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
+import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.dto.RemoteSourceTypes;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
@@ -18,7 +19,6 @@ import java.util.Properties;
 public class CxScanConfig implements Serializable {
 
     private Boolean sastEnabled = false;
-    private Boolean osaEnabled = false;
 
     private String cxOrigin;
     private CxVersion cxVersion;
@@ -97,8 +97,9 @@ public class CxScanConfig implements Serializable {
     private Integer maxZipSize;
     private String defaultProjectName;
 
-    private boolean scaEnabled;
+    //    private boolean scaEnabled;
     private SCAConfig scaConfig;
+    private DependencyScannerType dependencyScannerType;
 
     public CxScanConfig() {
     }
@@ -124,14 +125,6 @@ public class CxScanConfig implements Serializable {
 
     public void setSastEnabled(Boolean sastEnabled) {
         this.sastEnabled = sastEnabled;
-    }
-
-    public Boolean getOsaEnabled() {
-        return osaEnabled;
-    }
-
-    public void setOsaEnabled(Boolean osaEnabled) {
-        this.osaEnabled = osaEnabled;
     }
 
     public String getCxOrigin() {
@@ -494,7 +487,9 @@ public class CxScanConfig implements Serializable {
     }
 
     public boolean isOSAThresholdEffectivelyEnabled() {
-        return getOsaEnabled() && getOsaThresholdsEnabled() && (getOsaHighThreshold() != null || getOsaMediumThreshold() != null || getOsaLowThreshold() != null);
+        return getDependencyScannerType() != DependencyScannerType.NONE &&
+                getOsaThresholdsEnabled() &&
+                (getOsaHighThreshold() != null || getOsaMediumThreshold() != null || getOsaLowThreshold() != null);
     }
 
     public void setOsaDependenciesJson(String osaDependenciesJson) {
@@ -702,19 +697,19 @@ public class CxScanConfig implements Serializable {
         reports.put(ReportType.RTF, rtfReportPath);
     }
 
-    public void setScaEnabled(boolean scaEnabled) {
-        this.scaEnabled = scaEnabled;
-    }
-
-    public boolean getScaEnabled() {
-        return scaEnabled;
-    }
-
     public SCAConfig getScaConfig() {
         return scaConfig;
     }
 
     public void setScaConfig(SCAConfig scaConfig) {
         this.scaConfig = scaConfig;
+    }
+
+    public DependencyScannerType getDependencyScannerType() {
+        return dependencyScannerType;
+    }
+
+    public void setDependencyScannerType(DependencyScannerType scannerType) {
+        this.dependencyScannerType = scannerType;
     }
 }

@@ -3,6 +3,7 @@ package com.cx.restclient.common.summary;
 import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.Policy;
+import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
@@ -76,7 +77,7 @@ public abstract class SummaryUtils {
         }
 
         //osa:
-        if (config.getOsaEnabled()) {
+        if (config.getDependencyScannerType() != DependencyScannerType.NONE) {
             if (osaResults.isOsaResultsReady()) {
                 boolean osaThresholdExceeded = ShragaUtils.isThresholdExceeded(config, null, osaResults, new StringBuilder());
                 templateData.put("osaThresholdExceeded", osaThresholdExceeded);
@@ -117,13 +118,14 @@ public abstract class SummaryUtils {
                         ));
             }
 
-            if (config.getOsaEnabled() && osaResults.getOsaPolicies().size() > 0) {
+            if (config.getDependencyScannerType() != DependencyScannerType.NONE &&
+                    osaResults.getOsaPolicies().size() > 0) {
                 policyViolated = true;
                 policies.putAll(osaResults.getOsaPolicies().stream().collect(
                         Collectors.toMap(Policy::getPolicyName, Policy::getRuleName,
-                        (left, right) -> {
-                            return left;
-                        })));
+                                (left, right) -> {
+                                    return left;
+                                })));
             }
 
             policyViolatedCount = policies.size();
