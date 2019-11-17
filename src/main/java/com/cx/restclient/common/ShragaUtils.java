@@ -167,4 +167,15 @@ public abstract class ShragaUtils {
         }
         return ret;
     }
+
+    public static String getTimestampSince(long startTimeSec) {
+        long elapsedSec = System.currentTimeMillis() / 1000 - startTimeSec;
+        long hours = elapsedSec / 3600;
+        long minutes = elapsedSec % 3600 / 60;
+        long seconds = elapsedSec % 60;
+        String hoursStr = (hours < 10) ? ("0" + hours) : (Long.toString(hours));
+        String minutesStr = (minutes < 10) ? ("0" + minutes) : (Long.toString(minutes));
+        String secondsStr = (seconds < 10) ? ("0" + seconds) : (Long.toString(seconds));
+        return String.format("%s:%s:%s", hoursStr, minutesStr, secondsStr);
+    }
 }

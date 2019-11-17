@@ -1,5 +1,6 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.PathFilter;
@@ -409,16 +410,10 @@ class CxSASTClient {
     }
 
     private void printSASTProgress(ResponseQueueScanStatus scanStatus, long startTime) {
-        long elapsedSec = System.currentTimeMillis() / 1000 - startTime;
-        long hours = elapsedSec / 3600;
-        long minutes = elapsedSec % 3600 / 60;
-        long seconds = elapsedSec % 60;
-        String hoursStr = (hours < 10) ? ("0" + Long.toString(hours)) : (Long.toString(hours));
-        String minutesStr = (minutes < 10) ? ("0" + Long.toString(minutes)) : (Long.toString(minutes));
-        String secondsStr = (seconds < 10) ? ("0" + Long.toString(seconds)) : (Long.toString(seconds));
+        String timestamp = ShragaUtils.getTimestampSince(startTime);
 
         String prefix = (scanStatus.getTotalPercent() < 10) ? " " : "";
-        log.info("Waiting for SAST scan results. Elapsed time: " + hoursStr + ":" + minutesStr + ":" + secondsStr + ". " + prefix +
+        log.info("Waiting for SAST scan results. Elapsed time: " + timestamp + ". " + prefix +
                 scanStatus.getTotalPercent() + "% processed. Status: " + scanStatus.getStage().getValue() + ".");
     }
 

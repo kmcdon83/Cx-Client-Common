@@ -2,6 +2,7 @@ package com.cx.restclient;
 
 import com.cx.restclient.common.DependencyScanner;
 import com.cx.restclient.common.UrlUtils;
+import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.LoginSettings;
 import com.cx.restclient.dto.PathFilter;
@@ -12,9 +13,11 @@ import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
+import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.CreateProjectRequest;
 import com.cx.restclient.sca.dto.Project;
 import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.sca.dto.ScanStatusResponse;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
@@ -45,10 +48,15 @@ class SCAClient implements DependencyScanner {
     private final CxHttpClient httpClient;
 
     private String projectId;
+    private final Waiter<ScanStatusResponse> waiter;
+    private String scanId;
 
     SCAClient(Logger log, CxScanConfig config) throws MalformedURLException {
         this.log = log;
         this.config = config;
+
+        int pollInterval = config.getOsaProgressInterval() != null ? config.getOsaProgressInterval() : 20;
+        int marRetries = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
 
         SCAConfig scaConfig = config.getScaConfig();
         String apiBaseUrl = UrlUtils.parseURLToString(scaConfig.getApiUrl(), API_PATH);
@@ -58,6 +66,8 @@ class SCAClient implements DependencyScanner {
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 log);
+
+        waiter = new SCAWaiter("SCA scan", pollInterval, marRetries, httpClient, log);
     }
 
     @Override
@@ -76,7 +86,7 @@ class SCAClient implements DependencyScanner {
         log.info("Creating SCA scan");
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
-        String scanId;
+        scanId = null;
         try {
             File zipFile = CxZipUtils.getZippedSources(config, filter, log);
             scanId = uploadZipFile(zipFile);
@@ -89,7 +99,12 @@ class SCAClient implements DependencyScanner {
     }
 
     @Override
-    public OSAResults waitForScanResults() {
+    public OSAResults waitForScanResults() throws CxClientException {
+        log.info("------------------------------------Get SCA Results:-----------------------------------");
+        log.info("Waiting for SCA scan to finish");
+
+        waiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
+
         return new OSAResults();
     }
 

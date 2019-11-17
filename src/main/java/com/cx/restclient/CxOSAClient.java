@@ -1,6 +1,7 @@
 package com.cx.restclient;
 
 import com.cx.restclient.common.DependencyScanner;
+import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.Status;
@@ -128,11 +129,7 @@ class CxOSAClient implements DependencyScanner {
         log.info("Waiting for OSA scan to finish");
 
         OSAScanStatus osaScanStatus;
-        try {
-            osaScanStatus = osaWaiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
-        } catch (InterruptedException e) {
-            throw new CxClientException("Error while waiting for OSA scan to finish.", e);
-        }
+        osaScanStatus = osaWaiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
         log.info("OSA scan finished successfully. Retrieving OSA scan results");
 
         log.info("Creating OSA reports");
@@ -147,7 +144,7 @@ class CxOSAClient implements DependencyScanner {
             resolveOSAViolation(osaResults, projectId);
         }
 
-        OSAUtils.printOSAResultsToConsole(osaResults, config.getEnablePolicyViolations(),  log);
+        OSAUtils.printOSAResultsToConsole(osaResults, config.getEnablePolicyViolations(), log);
 
         if (config.getReportsDir() != null) {
             writeJsonToFile(OSA_SUMMARY_NAME, osaResults.getResults(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
@@ -168,11 +165,11 @@ class CxOSAClient implements DependencyScanner {
         return results;
     }
 
-    private void resolveOSAViolation(OSAResults osaResults, long projectId){
+    private void resolveOSAViolation(OSAResults osaResults, long projectId) {
         try {
             getProjectViolatedPolicies(httpClient, config.getCxARMUrl(), projectId, OPEN_SOURCE.value())
                     .forEach(osaResults::addPolicy);
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             log.error("CxARM is not available. Policy violations for OSA cannot be calculated: " + ex.getMessage());
         }
     }
@@ -247,19 +244,14 @@ class CxOSAClient implements DependencyScanner {
     }
 
     private void printOSAProgress(OSAScanStatus scanStatus, long startTime) {
-        long elapsedSec = System.currentTimeMillis() / 1000 - startTime;
-        long hours = elapsedSec / 3600;
-        long minutes = elapsedSec % 3600 / 60;
-        long seconds = elapsedSec % 60;
-        String hoursStr = (hours < 10) ? ("0" + Long.toString(hours)) : (Long.toString(hours));
-        String minutesStr = (minutes < 10) ? ("0" + Long.toString(minutes)) : (Long.toString(minutes));
-        String secondsStr = (seconds < 10) ? ("0" + Long.toString(seconds)) : (Long.toString(seconds));
-        log.info("Waiting for OSA scan results. Elapsed time: " + hoursStr + ":" + minutesStr + ":" + secondsStr + ". " +
+        String timestamp = ShragaUtils.getTimestampSince(startTime);
+
+        log.info("Waiting for OSA scan results. Elapsed time: " + timestamp + ". " +
                 "Status: " + scanStatus.getState().getName());
     }
 
     private OSAScanStatus resolveOSAStatus(OSAScanStatus scanStatus) throws CxClientException {
-        if (scanStatus ==null || Status.FAILED == scanStatus.getBaseStatus()) {
+        if (scanStatus == null || Status.FAILED == scanStatus.getBaseStatus()) {
             String failedMsg = scanStatus.getState() == null ? "" : "status [" + scanStatus.getState().getName() + "]. Reason: " + scanStatus.getState().getFailureReason();
             throw new CxClientException("OSA scan cannot be completed. " + failedMsg);
         }
