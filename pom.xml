@@ -1,16 +1,15 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>9.00.2</version>
+    <version>9.00.5</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
     <url>https://www.checkmarx.com</url>
     <scm>
-
         <connection>scm:git:git://github.com/CxRepositories/Cx-Client-Common.git</connection>
         <developerConnection>scm:git:ssh://github.com/CxRepositories/Cx-Client-Common.git</developerConnection>
         <url>https://github.com/CxRepositories/Cx-Client-Common/tree/master</url>
@@ -79,7 +78,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.6.1</version>
+            <version>1.7.28</version>
         </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>
@@ -89,7 +88,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.4.1</version>
+            <version>4.5.4</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -99,12 +98,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.9.9.3</version>
+            <version>2.9.10.1</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.60</version>
+            <version>1.64</version>
         </dependency>
         <dependency>
             <artifactId>plexus-utils</artifactId>
@@ -114,7 +113,7 @@
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-archiver</artifactId>
-            <version>3.6.0</version>
+            <version>4.1.0</version>
             <exclusions>
                 <exclusion>
                     <artifactId>commons-compress</artifactId>
@@ -137,9 +136,9 @@
             <version>27.0-jre</version>
         </dependency>
         <dependency>
-            <groupId>org.whitesource</groupId>
-            <artifactId>whitesource-fs-agent</artifactId>
-            <version>18.7.2-fix</version>
+            <groupId>com.checkmarx</groupId>
+            <artifactId>cx-ws-fs-agent</artifactId>
+            <version>18.7.2.4</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.xml.bind</groupId>
