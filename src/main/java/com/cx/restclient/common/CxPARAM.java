@@ -24,7 +24,7 @@ public abstract class CxPARAM {
     public static final String ORIGIN_HEADER = "cxOrigin";
     public static final String CSRF_TOKEN_HEADER = "CXCSRFToken";
     public static final String PROJECT_POLICY_VIOLATED_STATUS = "Project policy status : violated";
-    public static final String PROJECT_POLICY_COMPLAINT_STATUS = "Project policy status : compliant";
+    public static final String PROJECT_POLICY_COMPLIANT_STATUS = "Project policy status : compliant";
 
     public static final String DENY_NEW_PROJECT_ERROR = "Creation of the new project [{projectName}] is not authorized. " +
             "Please use an existing project. \nYou can enable the creation of new projects by disabling" + "" +

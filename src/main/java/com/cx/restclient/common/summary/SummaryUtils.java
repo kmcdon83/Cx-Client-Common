@@ -3,6 +3,7 @@ package com.cx.restclient.common.summary;
 import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.Policy;
+import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
@@ -20,7 +21,8 @@ import java.util.stream.Collectors;
 
 public abstract class SummaryUtils {
 
-    public static String generateSummary(SASTResults sastResults, OSAResults osaResults, CxScanConfig config) throws IOException, TemplateException {
+    public static String generateSummary(SASTResults sastResults, DependencyScanResults dependencyScanResults, CxScanConfig config) throws IOException, TemplateException {
+        OSAResults osaResults = dependencyScanResults.getOsaResults();
 
         Configuration cfg = new Configuration(new Version("2.3.23"));
         cfg.setClassForTemplateLoading(SummaryUtils.class, "/com/cx/report");
@@ -79,7 +81,7 @@ public abstract class SummaryUtils {
         //osa:
         if (config.getDependencyScannerType() != DependencyScannerType.NONE) {
             if (osaResults.isOsaResultsReady()) {
-                boolean osaThresholdExceeded = ShragaUtils.isThresholdExceeded(config, null, osaResults, new StringBuilder());
+                boolean osaThresholdExceeded = ShragaUtils.isThresholdExceeded(config, null, dependencyScanResults, new StringBuilder());
                 templateData.put("osaThresholdExceeded", osaThresholdExceeded);
                 buildFailed |= osaThresholdExceeded;
 

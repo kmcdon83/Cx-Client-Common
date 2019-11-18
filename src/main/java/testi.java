@@ -44,7 +44,9 @@ public class testi {
         shraga.init();
 
         try {
-            shraga.createDependencyScan();
+            if (config.getDependencyScannerType() != DependencyScannerType.NONE) {
+                shraga.createDependencyScan();
+            }
         } catch (Exception ex) {
             logi.error(ex.getMessage());
         }
@@ -66,7 +68,9 @@ public class testi {
         }
 
         try {
-            osaResults = shraga.waitForDependencyScanResults();
+            if (config.getDependencyScannerType() != DependencyScannerType.NONE) {
+                shraga.waitForDependencyScanResults();
+            }
         } catch (Exception ex) {
             logi.error(ex.getMessage());
         }

@@ -28,7 +28,8 @@ public class SCAWaiter extends Waiter<ScanStatusResponse> {
 
         ScanStatusResponse response = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                ScanStatusResponse.class, HttpStatus.SC_OK,
+                ScanStatusResponse.class,
+                HttpStatus.SC_OK,
                 "SCA scan status",
                 false);
 

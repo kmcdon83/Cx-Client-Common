@@ -8,7 +8,7 @@ import java.io.Serializable;
 
 public class ScanResults implements Serializable {
     private SASTResults sastResults = new SASTResults();
-    private OSAResults osaResults = new OSAResults();
+    private DependencyScanResults dependencyScanResults = new DependencyScanResults();
 
     private Exception sastCreateException = null;
     private Exception sastWaitException = null;
@@ -27,12 +27,12 @@ public class ScanResults implements Serializable {
         this.sastResults = sastResults;
     }
 
-    public OSAResults getOsaResults() {
-        return osaResults;
+    public DependencyScanResults getDependencyScanResults() {
+        return dependencyScanResults;
     }
 
-    public void setOsaResults(OSAResults osaResults) {
-        this.osaResults = osaResults;
+    public void setDependencyScanResults(DependencyScanResults dependencyScanResults) {
+        this.dependencyScanResults = dependencyScanResults;
     }
 
     public Exception getSastCreateException() {

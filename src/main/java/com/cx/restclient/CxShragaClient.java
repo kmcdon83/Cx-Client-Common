@@ -10,7 +10,6 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.osa.dto.ClientType;
-import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.*;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.entity.StringEntity;
@@ -42,13 +41,10 @@ public class CxShragaClient {
     private long projectId;
 
     private CxSASTClient sastClient;
-//    private CxOSAClient osaClient;
-//    private final SCAClient scaClient;
 
     private long sastScanId;
-    private String osaScanId;
     private SASTResults sastResults = new SASTResults();
-    private OSAResults osaResults = new OSAResults();
+    private DependencyScanResults dependencyScanResults = new DependencyScanResults();
 
     private DependencyScanner dependencyScanner;
 
@@ -68,9 +64,6 @@ public class CxShragaClient {
         } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
             dependencyScanner = new SCAClient(log, config);
         }
-
-//        osaClient = new CxOSAClient(httpClient, log, config);
-//        scaClient = new SCAClient(log, config);
     }
 
     //For Test Connection
@@ -118,25 +111,10 @@ public class CxShragaClient {
         return sastScanId;
     }
 
-//    public String createOSAScan() throws IOException, CxClientException {
-//        osaScanId = osaClient.createOSAScan(projectId);
-//        osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
-//        return osaScanId;
-//    }
-//
-//    public void createSCAScan() throws IOException, CxClientException {
-//        scaClient.createScan();
-//    }
-
     public String createDependencyScan() throws CxClientException {
-        if (dependencyScanner != null) {
-            osaScanId = dependencyScanner.createScan();
-            osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
-        }
-        else {
-            osaScanId = null;
-        }
-        return osaScanId;
+        ensureDependencyScannerExists();
+        String scanId = dependencyScanner.createScan(dependencyScanResults);
+        return scanId;
     }
 
     public void cancelSASTScan() throws IOException, CxClientException {
@@ -153,14 +131,16 @@ public class CxShragaClient {
         return sastResults;
     }
 
-    public OSAResults waitForDependencyScanResults() throws CxClientException {
-        osaResults = dependencyScanner.waitForScanResults();
-        return osaResults;
+    public DependencyScanResults waitForDependencyScanResults() throws CxClientException {
+        ensureDependencyScannerExists();
+        dependencyScanner.waitForScanResults(dependencyScanResults);
+        return dependencyScanResults;
     }
 
-    public OSAResults getLatestDependencyScanResults() throws CxClientException {
-        osaResults = dependencyScanner.getLatestScanResults();
-        return osaResults;
+    public DependencyScanResults getLatestDependencyScanResults() throws CxClientException {
+        ensureDependencyScannerExists();
+        dependencyScanResults = dependencyScanner.getLatestScanResults();
+        return dependencyScanResults;
     }
 
     public void printIsProjectViolated() {
@@ -168,16 +148,22 @@ public class CxShragaClient {
             log.info("-----------------------------------------------------------------------------------------");
             log.info("Policy Management: ");
             log.info("--------------------");
-            if (sastResults.getSastPolicies().isEmpty() && osaResults.getOsaPolicies().isEmpty()) {
-                log.info(PROJECT_POLICY_COMPLAINT_STATUS);
+
+            boolean hasOsaViolations = dependencyScanResults != null &&
+                    dependencyScanResults.getOsaResults() != null &&
+                    dependencyScanResults.getOsaResults().getOsaPolicies() != null &&
+                    !dependencyScanResults.getOsaResults().getOsaPolicies().isEmpty();
+
+            if (sastResults.getSastPolicies().isEmpty() && !hasOsaViolations) {
+                log.info(PROJECT_POLICY_COMPLIANT_STATUS);
                 log.info("-----------------------------------------------------------------------------------------");
             } else {
                 log.info(PROJECT_POLICY_VIOLATED_STATUS);
                 if (!sastResults.getSastPolicies().isEmpty()) {
                     log.info("SAST violated policies names: " + getPoliciesNames(sastResults.getSastPolicies()));
                 }
-                if (!osaResults.getOsaPolicies().isEmpty()) {
-                    log.info("OSA violated policies names: " + getPoliciesNames(osaResults.getOsaPolicies()));
+                if (hasOsaViolations) {
+                    log.info("OSA violated policies names: " + getPoliciesNames(dependencyScanResults.getOsaResults().getOsaPolicies()));
                 }
                 log.info("-----------------------------------------------------------------------------------------");
             }
@@ -189,11 +175,11 @@ public class CxShragaClient {
     }
 
     public String generateHTMLSummary() throws Exception {
-        return SummaryUtils.generateSummary(sastResults, osaResults, config);
+        return SummaryUtils.generateSummary(sastResults, dependencyScanResults, config);
     }
 
-    public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults) throws Exception {
-        return SummaryUtils.generateSummary(sastResults, osaResults, config);
+    public String generateHTMLSummary(SASTResults sastResults, DependencyScanResults dependencyScanResults) throws Exception {
+        return SummaryUtils.generateSummary(sastResults, dependencyScanResults, config);
     }
 
     public List<Project> getAllProjects() throws IOException, CxClientException {
@@ -409,5 +395,13 @@ public class CxShragaClient {
         result.setClientTypeForRefreshToken(ClientType.CLI);
 
         return result;
+    }
+
+    private void ensureDependencyScannerExists() throws CxClientException {
+        if (dependencyScanner == null) {
+            throw new CxClientException(
+                    String.format("Unable to continue: dependency scanner type was set to %s in config.",
+                            DependencyScannerType.NONE));
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.cx.restclient.common.DependencyScanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.LoginSettings;
 import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.exception.CxClientException;
@@ -11,13 +12,9 @@ import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
-import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
-import com.cx.restclient.sca.dto.CreateProjectRequest;
-import com.cx.restclient.sca.dto.Project;
-import com.cx.restclient.sca.dto.SCAConfig;
-import com.cx.restclient.sca.dto.ScanStatusResponse;
+import com.cx.restclient.sca.dto.*;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
@@ -81,7 +78,7 @@ class SCAClient implements DependencyScanner {
     }
 
     @Override
-    public String createScan() throws CxClientException {
+    public String createScan(DependencyScanResults target) throws CxClientException {
         log.info("----------------------------------- Create SCA Scan:------------------------------------");
         log.info("Creating SCA scan");
 
@@ -99,17 +96,26 @@ class SCAClient implements DependencyScanner {
     }
 
     @Override
-    public OSAResults waitForScanResults() throws CxClientException {
+    public void waitForScanResults(DependencyScanResults target) throws CxClientException {
         log.info("------------------------------------Get SCA Results:-----------------------------------");
-        log.info("Waiting for SCA scan to finish");
 
+        log.info("Waiting for SCA scan to finish");
         waiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
 
-        return new OSAResults();
+        log.info("SCA scan finished successfully. Retrieving SCA scan results.");
+        SCAResults scaResult;
+        try {
+            scaResult = retrieveScanResults();
+        } catch (IOException e) {
+            throw new CxClientException("Error retrieving SCA scan results.", e);
+        }
+
+        target.setScaResults(scaResult);
     }
 
     @Override
-    public OSAResults getLatestScanResults() throws CxClientException {
+    public DependencyScanResults getLatestScanResults() {
+        // TODO
         return null;
     }
 
@@ -191,5 +197,43 @@ class SCAClient implements DependencyScanner {
         log.debug("Scan ID: " + scanId);
 
         return scanId;
+    }
+
+    private SCAResults retrieveScanResults() throws IOException, CxClientException {
+        String reportId = getReportId();
+        SCASummaryResults scanSummary = getSummaryReport(reportId);
+
+        SCAResults result = new SCAResults();
+        result.setScanId(scanId);
+        result.setSummary(scanSummary);
+        return result;
+    }
+
+    private String getReportId() throws IOException, CxClientException {
+        log.debug("Getting report ID by scan ID: " + scanId);
+        String path = String.format("scans/%s/riskReportId", scanId);
+        String reportId = httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                String.class,
+                HttpStatus.SC_OK,
+                "Risk report ID",
+                false);
+        log.debug("Found report ID: " + reportId);
+        return reportId;
+    }
+
+    private SCASummaryResults getSummaryReport(String reportId) throws IOException, CxClientException {
+        log.debug("Getting summary report.");
+
+        String path = String.format("riskReports/%s/summary", reportId);
+
+        SCASummaryResults result = httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                SCASummaryResults.class,
+                HttpStatus.SC_OK,
+                "SCA report summary",
+                false);
+
+        return result;
     }
 }
