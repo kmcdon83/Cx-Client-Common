@@ -89,7 +89,8 @@ public class SCAClient implements DependencyScanner {
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         scanId = null;
         try {
-            File zipFile = CxZipUtils.getZippedSources(config, filter, log);
+            String sourceDir = config.getEffectiveSourceDirForDependencyScan();
+            File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
             scanId = uploadZipFile(zipFile);
             CxZipUtils.deleteZippedSources(zipFile, config, log);
         } catch (IOException e) {

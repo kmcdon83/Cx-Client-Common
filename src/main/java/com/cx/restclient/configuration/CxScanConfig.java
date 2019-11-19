@@ -170,6 +170,10 @@ public class CxScanConfig implements Serializable {
         this.osaLocationPath = osaLocationPath;
     }
 
+    public String getEffectiveSourceDirForDependencyScan() {
+        return osaLocationPath != null ? osaLocationPath : sourceDir;
+    }
+
     public File getReportsDir() {
         return reportsDir;
     }

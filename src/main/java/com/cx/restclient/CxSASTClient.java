@@ -140,7 +140,7 @@ class CxSASTClient {
 
         //prepare sources for scan
         PathFilter filter = new PathFilter(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
-        File zipFile = CxZipUtils.getZippedSources(config, filter, log);
+        File zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
         uploadZipFile(zipFile, projectId);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 

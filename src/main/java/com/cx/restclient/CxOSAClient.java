@@ -109,9 +109,8 @@ class CxOSAClient implements DependencyScanner {
                     config.getOsaFolderExclusions(),
                     config.getOsaFilterPattern(),
                     config.getOsaArchiveIncludePatterns(),
-                    config.getSourceDir(),
+                    config.getEffectiveSourceDirForDependencyScan(),
                     config.getOsaRunInstall(),
-                    config.getOsaLocationPath(),
                     config.getOsaScanDepth(),
                     log);
         }
