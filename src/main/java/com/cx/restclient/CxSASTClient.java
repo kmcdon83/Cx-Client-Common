@@ -144,8 +144,6 @@ class CxSASTClient {
         uploadZipFile(zipFile, projectId);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
-        //Start a new createSASTScan
-        log.info("Uploading zip file");
         return createScan(projectId);
     }
 
@@ -336,6 +334,8 @@ class CxSASTClient {
     }
 
     private void uploadZipFile(File zipFile, long projectId) throws CxClientException, IOException {
+        log.info("Uploading zip file");
+
         InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);

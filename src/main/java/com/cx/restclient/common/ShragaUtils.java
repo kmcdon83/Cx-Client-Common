@@ -1,12 +1,5 @@
 package com.cx.restclient.common;
 
-import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.DependencyScanResults;
-import com.cx.restclient.osa.dto.OSAResults;
-import com.cx.restclient.osa.dto.OSASummaryResults;
-import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.SCASummaryResults;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
@@ -16,122 +9,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cx.restclient.common.CxPARAM.PROJECT_POLICY_VIOLATED_STATUS;
-
 /**
  * Created by: dorg.
  * Date: 4/12/2018.
  */
 public abstract class ShragaUtils {
-    //Util methods
-    public static String getBuildFailureResult(CxScanConfig config, SASTResults sastResults, DependencyScanResults dependencyScanResults) {
-        StringBuilder res = new StringBuilder();
-        isThresholdExceeded(config, sastResults, dependencyScanResults, res);
-        isThresholdForNewResultExceeded(config, sastResults, res);
-        isPolicyViolated(config, sastResults, dependencyScanResults, res);
-
-        return res.toString();
-    }
-
-    private static boolean isPolicyViolated(CxScanConfig config, SASTResults sastResults, DependencyScanResults dependencyScanResults, StringBuilder res) {
-        boolean isPolicyViolated = config.getEnablePolicyViolations() &&
-                ((dependencyScanResults != null &&
-                        dependencyScanResults.getOsaResults() != null &&
-                        dependencyScanResults.getOsaResults().getOsaPolicies() != null &&
-                        dependencyScanResults.getOsaResults().getOsaPolicies().size() > 0) ||
-                        (sastResults != null && sastResults.getSastPolicies().size() > 0));
-
-        if (isPolicyViolated) {
-            res.append(PROJECT_POLICY_VIOLATED_STATUS).append("\n");
-        }
-        return isPolicyViolated;
-    }
-
-    public static boolean isThresholdExceeded(CxScanConfig config, SASTResults sastResults, DependencyScanResults dependencyScanResults, StringBuilder res) {
-        boolean thresholdExceeded = false;
-        if (config.isSASTThresholdEffectivelyEnabled() && sastResults != null && sastResults.isSastResultsReady()) {
-            final String SEVERITY_TYPE = "CxSAST";
-            thresholdExceeded = isSeverityExceeded(sastResults.getHigh(), config.getSastHighThreshold(), res, "high", SEVERITY_TYPE);
-            thresholdExceeded |= isSeverityExceeded(sastResults.getMedium(), config.getSastMediumThreshold(), res, "medium", SEVERITY_TYPE);
-            thresholdExceeded |= isSeverityExceeded(sastResults.getLow(), config.getSastLowThreshold(), res, "low", SEVERITY_TYPE);
-        }
-
-        if (config.isOSAThresholdEffectivelyEnabled() && dependencyScanResults != null) {
-            SCAResults scaResults = dependencyScanResults.getScaResults();
-            OSAResults osaResults = dependencyScanResults.getOsaResults();
-            int totalHigh = 0, totalMedium = 0, totalLow = 0;
-            String severityType = null;
-
-            if (scaResults != null) {
-                SCASummaryResults summary = scaResults.getSummary();
-                if (summary != null) {
-                    severityType = "SCA";
-                    totalHigh = summary.getHighVulnerabilitiesCount();
-                    totalMedium = summary.getMediumVulnerabilitiesCount();
-                    totalLow = summary.getLowVulnerabilitiesCount();
-                }
-            } else if (osaResults != null && osaResults.isOsaResultsReady()) {
-                OSASummaryResults summary = osaResults.getResults();
-                if (summary != null) {
-                    severityType = "CxOSA";
-                    totalHigh = summary.getTotalHighVulnerabilities();
-                    totalMedium = summary.getTotalMediumVulnerabilities();
-                    totalLow = summary.getTotalLowVulnerabilities();
-                }
-            }
-
-            if (severityType != null) {
-                thresholdExceeded |= isSeverityExceeded(totalHigh, config.getOsaHighThreshold(), res, "high", severityType);
-                thresholdExceeded |= isSeverityExceeded(totalMedium, config.getOsaMediumThreshold(), res, "medium", severityType);
-                thresholdExceeded |= isSeverityExceeded(totalLow, config.getOsaLowThreshold(), res, "low", severityType);
-            }
-        }
-        return thresholdExceeded;
-    }
-
-    public static boolean isThresholdForNewResultExceeded(CxScanConfig config, SASTResults sastResults, StringBuilder res) {
-        boolean exceeded = false;
-
-        if (sastResults != null && sastResults.isSastResultsReady() && config.getSastNewResultsThresholdEnabled()) {
-            String severity = config.getSastNewResultsThresholdSeverity();
-
-            if ("LOW".equals(severity)) {
-                if (sastResults.getNewLow() > 0) {
-                    res.append("One or more new results of low severity\n");
-                    exceeded = true;
-                }
-                severity = "MEDIUM";
-            }
-
-            if ("MEDIUM".equals(severity)) {
-                if (sastResults.getNewMedium() > 0) {
-                    res.append("One or more new results of medium severity\n");
-                    exceeded = true;
-                }
-                severity = "HIGH";
-            }
-
-            if ("HIGH".equals(severity)) {
-                if (sastResults.getNewHigh() > 0) {
-                    res.append("One or more New results of high severity\n");
-                    exceeded = true;
-                }
-            }
-        }
-
-        return exceeded;
-    }
-
-    private static boolean isSeverityExceeded(int result, Integer threshold, StringBuilder res, String severity, String severityType) {
-        boolean fail = false;
-        if (threshold != null && result > threshold) {
-            res.append(String.format("%s %s severity results are above threshold. Results: %d. Threshold: %d.\n",
-                    severityType, severity, result, threshold));
-            fail = true;
-        }
-        return fail;
-    }
-
     public static Map<String, List<String>> generateIncludesExcludesPatternLists(String folderExclusions, String filterPattern, Logger log) {
 
         String excludeFoldersPattern = processExcludeFolders(folderExclusions, log);
