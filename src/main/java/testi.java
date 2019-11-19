@@ -147,8 +147,8 @@ public class testi {
 
     private static void configureSca(CxScanConfig parentConfig) {
         SCAConfig config = new SCAConfig();
-        config.setApiUrl("http://scaapp.lumodev.com");
-        config.setAccessControlUrl("http://upgrade.dev-ac-checkmarx.com");
+        config.setApiUrl("https://api.lumodev.com");
+        config.setAccessControlUrl("https://upgrade.dev-ac-checkmarx.com");
         config.setUsername("myusername");
         config.setPassword("mypassword");
         config.setTenant("Checkmarx");

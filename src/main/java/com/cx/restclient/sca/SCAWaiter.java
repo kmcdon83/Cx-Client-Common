@@ -14,17 +14,19 @@ import java.io.IOException;
 
 public class SCAWaiter extends Waiter<ScanStatusResponse> {
     private final CxHttpClient httpClient;
+    private final String scanStatusUrlPath;
     private final Logger log;
 
-    public SCAWaiter(String scanType, int interval, int retry, CxHttpClient httpClient, Logger log) {
+    public SCAWaiter(String scanType, int interval, int retry, CxHttpClient httpClient, String scanStatusUrlPath, Logger log) {
         super(scanType, interval, retry);
         this.httpClient = httpClient;
+        this.scanStatusUrlPath = scanStatusUrlPath;
         this.log = log;
     }
 
     @Override
     public ScanStatusResponse getStatus(String scanId) throws CxClientException, IOException {
-        String path = String.format("scans/%s/status", scanId);
+        String path = String.format(scanStatusUrlPath, scanId);
 
         ScanStatusResponse response = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,

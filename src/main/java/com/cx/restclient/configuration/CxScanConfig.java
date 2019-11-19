@@ -97,7 +97,6 @@ public class CxScanConfig implements Serializable {
     private Integer maxZipSize;
     private String defaultProjectName;
 
-    //    private boolean scaEnabled;
     private SCAConfig scaConfig;
     private DependencyScannerType dependencyScannerType;
 

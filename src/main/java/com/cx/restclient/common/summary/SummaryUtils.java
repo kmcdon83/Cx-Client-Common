@@ -79,7 +79,7 @@ public abstract class SummaryUtils {
         }
 
         //osa:
-        if (config.getDependencyScannerType() != DependencyScannerType.NONE) {
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
             if (osaResults.isOsaResultsReady()) {
                 boolean osaThresholdExceeded = ShragaUtils.isThresholdExceeded(config, null, dependencyScanResults, new StringBuilder());
                 templateData.put("osaThresholdExceeded", osaThresholdExceeded);
@@ -120,7 +120,7 @@ public abstract class SummaryUtils {
                         ));
             }
 
-            if (config.getDependencyScannerType() != DependencyScannerType.NONE &&
+            if (config.getDependencyScannerType() == DependencyScannerType.OSA &&
                     osaResults.getOsaPolicies().size() > 0) {
                 policyViolated = true;
                 policies.putAll(osaResults.getOsaPolicies().stream().collect(

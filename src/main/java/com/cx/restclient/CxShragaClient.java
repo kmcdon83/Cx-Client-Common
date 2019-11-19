@@ -48,7 +48,7 @@ public class CxShragaClient {
 
     private DependencyScanner dependencyScanner;
 
-    public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException {
+    public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException, CxClientException {
         this.config = config;
         this.log = log;
         this.httpClient = new CxHttpClient(
@@ -67,7 +67,7 @@ public class CxShragaClient {
     }
 
     //For Test Connection
-    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException {
+    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException, CxClientException {
         this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log);
     }
 

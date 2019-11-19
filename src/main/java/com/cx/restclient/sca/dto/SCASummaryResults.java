@@ -9,7 +9,7 @@ public class SCASummaryResults {
     private int lowVulnerabilitiesCount;
     private int totalPackages;
     private int directPackages;
-    private OffsetDateTime createdOn;
+    private String createdOn;
     private double riskScore;
     private int totalOutdatedPackages;
 
@@ -61,11 +61,11 @@ public class SCASummaryResults {
         this.directPackages = directPackages;
     }
 
-    public OffsetDateTime getCreatedOn() {
+    public String getCreatedOn() {
         return createdOn;
     }
 
-    public void setCreatedOn(OffsetDateTime createdOn) {
+    public void setCreatedOn(String createdOn) {
         this.createdOn = createdOn;
     }
 

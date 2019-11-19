@@ -1,7 +1,6 @@
 package com.cx.restclient;
 
 import com.cx.restclient.common.DependencyScanner;
-import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
@@ -35,8 +34,14 @@ import java.util.List;
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
-class SCAClient implements DependencyScanner {
-    private static final String API_PATH = "api/";
+public class SCAClient implements DependencyScanner {
+    private class ApiPaths {
+        private static final String PROJECTS = "/risk_management/api/projects";
+        private static final String SUMMARY_REPORT = "/risk_management/api/riskReports/%s/summary";
+        private static final String ZIP_UPLOAD = "/scans/api/scans/zip";
+        private static final String SCAN_STATUS = "/scans/api/scans/%s/status";
+        private static final String REPORT_ID = "/scans/api/scans/%s/riskReportId";
+    }
 
     private final Logger log;
     private final CxScanConfig config;
@@ -48,23 +53,22 @@ class SCAClient implements DependencyScanner {
     private final Waiter<ScanStatusResponse> waiter;
     private String scanId;
 
-    SCAClient(Logger log, CxScanConfig config) throws MalformedURLException {
+    SCAClient(Logger log, CxScanConfig config) throws MalformedURLException, CxClientException {
         this.log = log;
         this.config = config;
 
         int pollInterval = config.getOsaProgressInterval() != null ? config.getOsaProgressInterval() : 20;
-        int marRetries = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
+        int maxRetries = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
 
-        SCAConfig scaConfig = config.getScaConfig();
-        String apiBaseUrl = UrlUtils.parseURLToString(scaConfig.getApiUrl(), API_PATH);
+        SCAConfig scaConfig = safeGetScaConfig();
 
-        httpClient = new CxHttpClient(apiBaseUrl,
+        httpClient = new CxHttpClient(scaConfig.getApiUrl(),
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 log);
 
-        waiter = new SCAWaiter("SCA scan", pollInterval, marRetries, httpClient, log);
+        waiter = new SCAWaiter("SCA scan", pollInterval, maxRetries, httpClient, ApiPaths.SCAN_STATUS, log);
     }
 
     @Override
@@ -121,7 +125,7 @@ class SCAClient implements DependencyScanner {
 
     private void login() throws IOException, CxClientException {
         log.info("Logging into SCA.");
-        SCAConfig scaConfig = config.getScaConfig();
+        SCAConfig scaConfig = safeGetScaConfig();
 
         LoginSettings settings = new LoginSettings();
         settings.setAccessControlBaseUrl(scaConfig.getAccessControlUrl());
@@ -134,7 +138,7 @@ class SCAClient implements DependencyScanner {
     }
 
     private void resolveProject() throws IOException, CxClientException {
-        String projectName = config.getScaConfig().getProjectName();
+        String projectName = safeGetScaConfig().getProjectName();
         projectId = getProjectIdByName(projectName);
         if (projectId == null) {
             log.debug("Project not found, creating a new one.");
@@ -146,7 +150,7 @@ class SCAClient implements DependencyScanner {
     private String getProjectIdByName(String name) throws IOException, CxClientException {
         log.debug("Getting project by name: " + name);
 
-        List<Project> allProjects = (List<Project>) httpClient.getRequest("projects",
+        List<Project> allProjects = (List<Project>) httpClient.getRequest(ApiPaths.PROJECTS,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 Project.class,
                 HttpStatus.SC_OK,
@@ -168,7 +172,7 @@ class SCAClient implements DependencyScanner {
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
-        Project newProject = httpClient.postRequest("projects",
+        Project newProject = httpClient.postRequest(ApiPaths.PROJECTS,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 entity,
                 Project.class,
@@ -193,7 +197,7 @@ class SCAClient implements DependencyScanner {
 
         HttpEntity entity = builder.build();
 
-        String scanId = httpClient.postRequest("scans/zip", null, entity, String.class, HttpStatus.SC_OK, "upload ZIP file");
+        String scanId = httpClient.postRequest(ApiPaths.ZIP_UPLOAD, null, entity, String.class, HttpStatus.SC_OK, "upload ZIP file");
         log.debug("Scan ID: " + scanId);
 
         return scanId;
@@ -211,7 +215,7 @@ class SCAClient implements DependencyScanner {
 
     private String getReportId() throws IOException, CxClientException {
         log.debug("Getting report ID by scan ID: " + scanId);
-        String path = String.format("scans/%s/riskReportId", scanId);
+        String path = String.format(ApiPaths.REPORT_ID, scanId);
         String reportId = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 String.class,
@@ -225,7 +229,7 @@ class SCAClient implements DependencyScanner {
     private SCASummaryResults getSummaryReport(String reportId) throws IOException, CxClientException {
         log.debug("Getting summary report.");
 
-        String path = String.format("riskReports/%s/summary", reportId);
+        String path = String.format(ApiPaths.SUMMARY_REPORT, reportId);
 
         SCASummaryResults result = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
@@ -234,6 +238,14 @@ class SCAClient implements DependencyScanner {
                 "SCA report summary",
                 false);
 
+        return result;
+    }
+
+    private SCAConfig safeGetScaConfig() throws CxClientException {
+        SCAConfig result = config.getScaConfig();
+        if (result == null) {
+            throw new CxClientException("SCA scan configuration is missing.");
+        }
         return result;
     }
 }
