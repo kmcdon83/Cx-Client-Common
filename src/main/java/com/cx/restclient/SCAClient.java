@@ -158,13 +158,11 @@ public class SCAClient implements DependencyScanner {
                 "SCA projects",
                 true);
 
-        String result = allProjects.stream()
+        return allProjects.stream()
                 .filter((Project project) -> name.equals(project.getName()))
-                .map(project -> project.getId())
+                .map(Project::getId)
                 .findFirst()
                 .orElse(null);
-
-        return result;
     }
 
     private String createProject(String name) throws CxClientException, IOException {
@@ -239,7 +237,23 @@ public class SCAClient implements DependencyScanner {
                 "SCA report summary",
                 false);
 
+        printSummary(result);
+
         return result;
+    }
+
+    // This method is for demo purposes and probably should be replaced in the future.
+    private void printSummary(SCASummaryResults summary) {
+        log.info("\n----SCA risk report summary----");
+        log.info("Created on: " + summary.getCreatedOn());
+        log.info("Direct packages: " + summary.getDirectPackages());
+        log.info("High vulnerabilities: " + summary.getHighVulnerabilitiesCount());
+        log.info("Medium vulnerabilities: " + summary.getMediumVulnerabilitiesCount());
+        log.info("Low vulnerabilities: " + summary.getLowVulnerabilitiesCount());
+        log.info("Risk report ID: " + summary.getRiskReportId());
+        log.info("Risk score: " + summary.getRiskScore());
+        log.info("Total packages: " + summary.getTotalPackages());
+        log.info(String.format("Total outdated packages: %d\n", summary.getTotalOutdatedPackages()));
     }
 
     private SCAConfig safeGetScaConfig() throws CxClientException {
