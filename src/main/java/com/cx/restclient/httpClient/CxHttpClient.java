@@ -34,8 +34,8 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.ProxyAuthenticationStrategy;
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
@@ -82,42 +82,7 @@ public class CxHttpClient {
     private final String username;
     private final String password;
     private String cxOrigin;
-    private Boolean useSSo = false;
-
-
-//    private final HttpRequestInterceptor requestFilter = new HttpRequestInterceptor() {
-//        public void process(HttpRequest httpRequest, HttpContext httpContext) throws HttpException, IOException {
-//            httpRequest.addHeader(ORIGIN_HEADER, cxOrigin);
-//            if (token != null) {
-//                httpRequest.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
-//            }
-//            if (csrfToken != null) {
-//                httpRequest.addHeader(CSRF_TOKEN_HEADER, csrfToken);
-//            }
-//            if (cookies != null) {
-//                httpRequest.addHeader("cookie", cookies);
-//            }
-//        }
-//    };
-
-//
-//    private final HttpResponseInterceptor responseFilter = new HttpResponseInterceptor() {
-//
-//        public void process(HttpResponse httpResponse, HttpContext httpContext) throws HttpException, IOException {
-//            for (org.apache.http.cookie.Cookie c : cookieStore.getCookies()) {
-//                if (CSRF_TOKEN_HEADER.equals(c.getName())) {
-//                    csrfToken = c.getValue();
-//                }
-//            }
-//            Header[] setCookies = httpResponse.getHeaders("Set-Cookie");
-//            StringBuilder sb = new StringBuilder();
-//            for (Header h : setCookies) {
-//                sb.append(h.getValue()).append(";");
-//            }
-//            cookies = (cookies == null ? "" : cookies) + sb.toString();
-//        }
-//    };
-
+    private Boolean useSSo;
 
     public CxHttpClient(String hostname, String username, String password, String origin,
                         boolean disableSSLValidation, boolean isSSO, Logger logi,
@@ -132,23 +97,17 @@ public class CxHttpClient {
         HttpClientBuilder cb = HttpClients.custom();
         cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
         setSSLTls("TLSv1.2", logi);
-
-        /* TODO: verify that responseFilter is compatible (or needed) with refactor */
-
-//        if (isSSO) {
-//            this.useSSo = true;
-//            cookieStore = new BasicCookieStore();
-//            cb.addInterceptorLast(responseFilter).setDefaultCookieStore(cookieStore);
-//        }
-
         if (disableSSLValidation) {
             try {
                 cb.setSSLSocketFactory(getSSLSF());
-                cb.setConnectionManager(getHttpConnManager());
+                cb.setConnectionManager(getSSLHttpConnManager());
             } catch (CxClientException e) {
                 logi.warn("Failed to disable certificate verification: " + e.getMessage());
             }
+        } else {
+            cb.setConnectionManager(getHttpConnManager());
         }
+        cb.setConnectionManagerShared(true);
         setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, logi);
         cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
@@ -167,21 +126,19 @@ public class CxHttpClient {
 
         //create httpclient
         HttpClientBuilder cb = HttpClients.custom();
-//        if (isSSO) {
-//            this.useSSo = true;
-//            cookieStore = new BasicCookieStore();
-//            cb.addInterceptorLast(responseFilter).setDefaultCookieStore(cookieStore);
-//        }
         cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
         setSSLTls("TLSv1.2", logi);
         if (disableSSLValidation) {
             try {
                 cb.setSSLSocketFactory(getSSLSF());
-                cb.setConnectionManager(getHttpConnManager());
+                cb.setConnectionManager(getSSLHttpConnManager());
             } catch (CxClientException e) {
                 logi.warn("Failed to disable certificate verification: " + e.getMessage());
             }
+        } else {
+            cb.setConnectionManager(getHttpConnManager());
         }
+        cb.setConnectionManagerShared(true);
         setProxy(cb, logi);
         cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
@@ -243,12 +200,26 @@ public class CxHttpClient {
     }
 
 
-    private static BasicHttpClientConnectionManager getHttpConnManager() throws CxClientException {
+    private static PoolingHttpClientConnectionManager getSSLHttpConnManager() throws CxClientException {
         Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
                 .register("https", getSSLSF())
                 .register("http", new PlainConnectionSocketFactory())
                 .build();
-        return new BasicHttpClientConnectionManager(socketFactoryRegistry);
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+        connManager.setMaxTotal(50);
+        connManager.setDefaultMaxPerRoute(5);
+        return connManager;
+    }
+
+    private static PoolingHttpClientConnectionManager getHttpConnManager() {
+        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+                .register("https", new PlainConnectionSocketFactory())
+                .register("http", new PlainConnectionSocketFactory())
+                .build();
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+        connManager.setMaxTotal(50);
+        connManager.setDefaultMaxPerRoute(5);
+        return connManager;
     }
 
     private static Registry<AuthSchemeProvider> getAuthSchemeProviderRegistry() {
