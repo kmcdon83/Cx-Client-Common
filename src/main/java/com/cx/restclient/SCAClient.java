@@ -139,7 +139,7 @@ public class SCAClient implements DependencyScanner {
     }
 
     private void resolveProject() throws IOException, CxClientException {
-        String projectName = safeGetScaConfig().getProjectName();
+        String projectName = config.getProjectName();
         projectId = getProjectIdByName(projectName);
         if (projectId == null) {
             log.debug("Project not found, creating a new one.");

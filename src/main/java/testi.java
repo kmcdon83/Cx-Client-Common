@@ -152,7 +152,6 @@ public class testi {
         config.setUsername("myusername");
         config.setPassword("mypassword");
         config.setTenant("Checkmarx");
-        config.setProjectName("CommonClientScaTest3");
         parentConfig.setScaConfig(config);
     }
 }

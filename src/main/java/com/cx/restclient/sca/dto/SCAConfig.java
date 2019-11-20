@@ -8,7 +8,6 @@ public class SCAConfig implements Serializable {
     private String username;
     private String password;
     private String tenant;
-    private String projectName;
 
     public String getApiUrl() {
         return apiUrl;
@@ -48,13 +47,5 @@ public class SCAConfig implements Serializable {
 
     public String getTenant() {
         return tenant;
-    }
-
-    public String getProjectName() {
-        return projectName;
-    }
-
-    public void setProjectName(String projectName) {
-        this.projectName = projectName;
     }
 }
