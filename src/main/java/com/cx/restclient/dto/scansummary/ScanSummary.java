@@ -31,7 +31,7 @@ public class ScanSummary {
 
         addNewResultThresholdErrors(config, scanResults.getSastResults());
 
-        policyViolated = isPolicyViolated(config, scanResults);
+        policyViolated = determinePolicyViolation(config, scanResults);
     }
 
     @Override
@@ -65,6 +65,10 @@ public class ScanSummary {
 
     public boolean hasErrors() {
         return !thresholdErrors.isEmpty() || !newResultThresholdErrors.isEmpty() || policyViolated;
+    }
+
+    public boolean isPolicyViolated() {
+        return policyViolated;
     }
 
     public boolean isSastThresholdExceeded() {
@@ -148,7 +152,7 @@ public class ScanSummary {
         }
     }
 
-    private static boolean isPolicyViolated(CxScanConfig config, ScanResults scanResults) {
+    private static boolean determinePolicyViolation(CxScanConfig config, ScanResults scanResults) {
         DependencyScanResults dependencyScanResults = scanResults.getDependencyScanResults();
         SASTResults sastResults = scanResults.getSastResults();
 

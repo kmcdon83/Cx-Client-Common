@@ -1,7 +1,7 @@
 package com.cx.restclient.dto.scansummary;
 
 public enum Severity {
-    HIGH,
+    LOW,
     MEDIUM,
-    LOW
+    HIGH
 }
