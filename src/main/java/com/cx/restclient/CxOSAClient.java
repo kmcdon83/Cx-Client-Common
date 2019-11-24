@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.whitesource.fs.ComponentScan;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -41,6 +42,11 @@ class CxOSAClient implements DependencyScanner {
 
     public void setProjectId(long projectId) {
         this.projectId = projectId;
+    }
+
+    @Override
+    public OSAScanStatus getStatus(String id) throws CxClientException, IOException {
+        return getOSAScanStatus(id);
     }
 
     public CxOSAClient(CxHttpClient client, Logger log, CxScanConfig config) {
@@ -71,7 +77,6 @@ class CxOSAClient implements DependencyScanner {
     public void init() {
         // Empty for now
     }
-
     @Override
     public String createScan(DependencyScanResults target) throws CxClientException {
         ensureProjectIdSpecified();
@@ -214,7 +219,7 @@ class CxOSAClient implements DependencyScanner {
 
     private CreateOSAScanResponse sendOSARequest(long projectId, String osaDependenciesJson) throws IOException, CxClientException {
         CreateOSAScanRequest req = new CreateOSAScanRequest(projectId, osaDependenciesJson);
-        StringEntity entity = new StringEntity(convertToJson(req));
+        StringEntity entity = new StringEntity(convertToJson(req), StandardCharsets.UTF_8);
         return httpClient.postRequest(OSA_SCAN_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CreateOSAScanResponse.class, 201, "create OSA scan");
     }
 

@@ -19,6 +19,7 @@ import java.util.List;
  * Created by Galn on 06/02/2018.
  */
 public abstract class HttpClientHelper {
+
     public static <T> T convertToObject(HttpResponse response, Class<T> responseType, boolean isCollection) throws IOException, CxClientException {
         //No content
         if (responseType == null || response.getEntity() == null || response.getEntity().getContentLength() == 0) {
@@ -89,4 +90,5 @@ public abstract class HttpClientHelper {
             return "";
         }
     }
+
 }

@@ -6,9 +6,11 @@ import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.CxArmConfig;
 import com.cx.restclient.dto.*;
+import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
+import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.dto.*;
 import org.apache.http.client.HttpResponseException;
@@ -18,6 +20,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -48,7 +51,8 @@ public class CxShragaClient {
 
     private DependencyScanner dependencyScanner;
 
-    public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException, CxClientException {
+    public CxShragaClient(CxScanConfig config, Logger log, String proxyHost, int proxyPort,
+                          String proxyUser, String proxyPassword) throws MalformedURLException {
         this.config = config;
         this.log = log;
         this.httpClient = new CxHttpClient(
@@ -56,7 +60,8 @@ public class CxShragaClient {
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
-                log);
+                log,
+                proxyHost, proxyPort, proxyUser, proxyPassword);
         sastClient = new CxSASTClient(httpClient, log, config);
 
         if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
@@ -66,7 +71,11 @@ public class CxShragaClient {
         }
     }
 
-    //For Test Connection
+    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation,
+                          Logger log, String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException {
+        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log, proxyHost, proxyPort, proxyUser, proxyPassword);
+    }
+
     public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException, CxClientException {
         this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log);
     }
@@ -211,6 +220,15 @@ public class CxShragaClient {
     public String getToken() throws IOException, CxClientException {
         LoginSettings settings = getDefaultLoginSettings();
         final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(settings);
+        return tokenLoginResponse.getRefresh_token();
+    }
+
+    public void revokeToken(String token) throws IOException, CxClientException {
+        httpClient.revokeToken(token);
+    }
+
+    public String getToken() throws IOException, CxClientException {
+        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(ClientType.CLI);
         return tokenLoginResponse.getRefresh_token();
     }
 
@@ -378,7 +396,7 @@ public class CxShragaClient {
 
     private Project createNewProject(CreateProjectRequest request) throws CxClientException, IOException {
         String json = convertToJson(request);
-        StringEntity entity = new StringEntity(json);
+        StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);
         return httpClient.postRequest(CREATE_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "create new project: " + request.getName());
     }
 

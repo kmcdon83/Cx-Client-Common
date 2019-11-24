@@ -126,6 +126,14 @@ public class CxScanConfig implements Serializable {
         this.sastEnabled = sastEnabled;
     }
 
+    public Boolean getOsaEnabled() {
+        return osaEnabled;
+    }
+
+    public void setOsaEnabled(Boolean osaEnabled) {
+        this.osaEnabled = osaEnabled;
+    }
+
     public String getCxOrigin() {
         return cxOrigin;
     }
