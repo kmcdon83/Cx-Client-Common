@@ -83,75 +83,47 @@ public class CxHttpClient {
     private Logger log;
     private TokenLoginResponse token;
     private String rootUri;
-    private final String username;
-    private final String password;
-    private final String refreshToken;
     private String cxOrigin;
     private Boolean useSSo;
     private LoginSettings lastLoginSettings;
 
-    public CxHttpClient(String hostname, String username, String password, String origin,
-                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi,
+    public CxHttpClient(String rootUri, String origin,
+                        boolean disableSSLValidation, boolean isSSO, Logger log,
                         String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException {
-        this.log = logi;
-        this.username = username;
-        this.password = password;
-        this.refreshToken = refreshToken;
-        this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
+        this.log = log;
+        this.rootUri = rootUri;
         this.cxOrigin = origin;
         this.useSSo = isSSO;
         //create httpclient
         HttpClientBuilder cb = HttpClients.custom();
         cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
-        setSSLTls("TLSv1.2", logi);
+        setSSLTls("TLSv1.2", log);
         if (disableSSLValidation) {
             try {
                 cb.setSSLSocketFactory(getSSLSF());
                 cb.setConnectionManager(getSSLHttpConnManager());
             } catch (CxClientException e) {
-                logi.warn("Failed to disable certificate verification: " + e.getMessage());
+                log.warn("Failed to disable certificate verification: " + e.getMessage());
             }
         } else {
             cb.setConnectionManager(getHttpConnManager());
         }
         cb.setConnectionManagerShared(true);
-        setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, logi);
+
+        if (proxyHost != null) {
+            setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, log);
+        }
+        else {
+            setProxy(cb, log);
+        }
         cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
         cb.useSystemProperties();
         apacheClient = cb.build();
     }
 
-    public CxHttpClient(String hostname, String username, String password, String origin,
-                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi) throws MalformedURLException {
-        this.log = logi;
-        this.username = username;
-        this.password = password;
-        this.refreshToken = refreshToken;
-        this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
-        this.cxOrigin = origin;
-        this.useSSo = isSSO;
-
-        //create httpclient
-        HttpClientBuilder cb = HttpClients.custom();
-        cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
-        setSSLTls("TLSv1.2", logi);
-        if (disableSSLValidation) {
-            try {
-                cb.setSSLSocketFactory(getSSLSF());
-                cb.setConnectionManager(getSSLHttpConnManager());
-            } catch (CxClientException e) {
-                logi.warn("Failed to disable certificate verification: " + e.getMessage());
-            }
-        } else {
-            cb.setConnectionManager(getHttpConnManager());
-        }
-        cb.setConnectionManagerShared(true);
-        setProxy(cb, logi);
-        cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
-        cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
-        cb.useSystemProperties();
-        apacheClient = cb.build();
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger log) throws MalformedURLException {
+        this(rootUri, origin, disableSSLValidation, isSSO, log, null, 0, null, null);
     }
 
     private static void setCustomProxy(HttpClientBuilder cb, String proxyHost, int proxyPort, String proxyUser, String proxyPassword, Logger logi) {
@@ -239,8 +211,8 @@ public class CxHttpClient {
 
     public void login(LoginSettings settings) throws IOException, CxClientException {
         lastLoginSettings = settings;
-        if (refreshToken != null) {
-            token = getAccessTokenFromRefreshToken();
+        if (settings.getRefreshToken() != null) {
+            token = getAccessTokenFromRefreshToken(settings);
         } else if (useSSo) {
             HttpPost post = new HttpPost(rootUri + SSO_AUTHENTICATION);
             request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), new StringEntity(""), TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
@@ -258,17 +230,6 @@ public class CxHttpClient {
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
         } catch (CxClientException e) {
             throw new CxClientException(String.format("Failed to generate access token, failure error was: %s", e.getMessage()), e);
-        }
-    }
-
-    public void revokeToken(String token) throws IOException, CxClientException {
-        UrlEncodedFormEntity requestEntity = generateRevocationEntity(ClientType.CLI, token);
-        HttpPost post = new HttpPost(rootUri + REVOCATION);
-        try {
-            request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
-                    String.class, HttpStatus.SC_OK, "revocation", false, false);
-        } catch (CxClientException e) {
-            throw new CxClientException(String.format("Token revocation failure error was: %s", e.getMessage()), e);
         }
     }
 
@@ -309,8 +270,8 @@ public class CxHttpClient {
     private UrlEncodedFormEntity generateUrlEncodedFormEntity(LoginSettings settings) throws UnsupportedEncodingException {
         ClientType clientType = settings.getClientTypeForPasswordAuth();
         List<BasicNameValuePair> parameters = new ArrayList<>();
-        parameters.add(new BasicNameValuePair("username", username));
-        parameters.add(new BasicNameValuePair("password", password));
+        parameters.add(new BasicNameValuePair("username", settings.getUsername()));
+        parameters.add(new BasicNameValuePair("password", settings.getPassword()));
         parameters.add(new BasicNameValuePair("grant_type", "password"));
         parameters.add(new BasicNameValuePair("scope", clientType.getScopes()));
         parameters.add(new BasicNameValuePair("client_id", clientType.getClientId()));

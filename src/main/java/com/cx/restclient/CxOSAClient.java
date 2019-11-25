@@ -44,7 +44,6 @@ class CxOSAClient implements DependencyScanner {
         this.projectId = projectId;
     }
 
-    @Override
     public OSAScanStatus getStatus(String id) throws CxClientException, IOException {
         return getOSAScanStatus(id);
     }

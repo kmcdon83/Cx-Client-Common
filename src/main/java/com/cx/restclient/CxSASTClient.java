@@ -204,11 +204,6 @@ class CxSASTClient {
         }
         createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
 
-        CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
-        log.info("Sending SAST scan request");
-        CxID createScanResponse = createScan(scanRequest);
-        log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
-
         return createScan(projectId);
     }
 
@@ -350,7 +345,7 @@ class CxSASTClient {
         httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, entity, null, 204, "upload ZIP file");
     }
 
-    private CxID createScan(long projectId) throws CxClientException, IOException {
+    private long createScan(long projectId) throws CxClientException, IOException {
         CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
 
         log.info("Sending SAST scan request");
@@ -358,7 +353,7 @@ class CxSASTClient {
         CxID createScanResponse = httpClient.postRequest(SAST_CREATE_SCAN, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 201, "create new SAST Scan");
         log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
 
-        return createScanResponse;
+        return createScanResponse.getId();
     }
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {

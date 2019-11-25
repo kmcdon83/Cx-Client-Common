@@ -52,7 +52,7 @@ public class CxShragaClient {
     private DependencyScanner dependencyScanner;
 
     public CxShragaClient(CxScanConfig config, Logger log, String proxyHost, int proxyPort,
-                          String proxyUser, String proxyPassword) throws MalformedURLException {
+                          String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
         this.config = config;
         this.log = log;
         this.httpClient = new CxHttpClient(
@@ -71,8 +71,12 @@ public class CxShragaClient {
         }
     }
 
+    public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException, CxClientException {
+        this(config, log, null, 0, null, null);
+    }
+
     public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation,
-                          Logger log, String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException {
+                          Logger log, String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
         this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log, proxyHost, proxyPort, proxyUser, proxyPassword);
     }
 
@@ -220,15 +224,6 @@ public class CxShragaClient {
     public String getToken() throws IOException, CxClientException {
         LoginSettings settings = getDefaultLoginSettings();
         final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(settings);
-        return tokenLoginResponse.getRefresh_token();
-    }
-
-    public void revokeToken(String token) throws IOException, CxClientException {
-        httpClient.revokeToken(token);
-    }
-
-    public String getToken() throws IOException, CxClientException {
-        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(ClientType.CLI);
         return tokenLoginResponse.getRefresh_token();
     }
 
