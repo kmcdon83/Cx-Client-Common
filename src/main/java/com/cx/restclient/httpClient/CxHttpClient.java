@@ -67,17 +67,6 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
  * Created by Galn on 05/02/2018.
  */
 public class CxHttpClient {
-
-    private static String HTTP_HOST = System.getProperty("http.proxyHost");
-    private static String HTTP_PORT = System.getProperty("http.proxyPort");
-    private static String HTTP_USERNAME = System.getProperty("http.proxyUser");
-    private static String HTTP_PASSWORD = System.getProperty("http.proxyPassword");
-
-    private static String HTTPS_HOST = System.getProperty("https.proxyHost");
-    private static String HTTPS_PORT = System.getProperty("https.proxyPort");
-    private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
-    private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
-
     private static HttpClient apacheClient;
 
     private Logger log;
@@ -89,7 +78,7 @@ public class CxHttpClient {
 
     public CxHttpClient(String rootUri, String origin,
                         boolean disableSSLValidation, boolean isSSO, Logger log,
-                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException {
+                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) {
         this.log = log;
         this.rootUri = rootUri;
         this.cxOrigin = origin;
@@ -113,16 +102,14 @@ public class CxHttpClient {
         if (proxyHost != null) {
             setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, log);
         }
-        else {
-            setProxy(cb, log);
-        }
+
         cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
         cb.useSystemProperties();
         apacheClient = cb.build();
     }
 
-    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger log) throws MalformedURLException {
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger log) {
         this(rootUri, origin, disableSSLValidation, isSSO, log, null, 0, null, null);
     }
 
@@ -140,30 +127,6 @@ public class CxHttpClient {
             logi.info("Setting proxy for Checkmarx http client");
             cb.setProxy(proxy);
             cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
-            cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
-        }
-    }
-
-    private static void setProxy(HttpClientBuilder cb, Logger logi) {
-        HttpHost proxyHost = null;
-        CredentialsProvider credsProvider = new BasicCredentialsProvider();
-        if (!isEmpty(HTTPS_HOST) && !isEmpty(HTTPS_PORT)) {
-            proxyHost = new HttpHost(HTTPS_HOST, Integer.parseInt(HTTPS_PORT), "https");
-            if (!isEmpty(HTTPS_USERNAME) && !isEmpty(HTTPS_PASSWORD)) {
-                credsProvider.setCredentials(new AuthScope(HTTPS_HOST, Integer.parseInt(HTTPS_PORT)), new UsernamePasswordCredentials(HTTPS_USERNAME, HTTPS_PASSWORD));
-                cb.setDefaultCredentialsProvider(credsProvider);
-            }
-        } else if (!isEmpty(HTTP_HOST) && !isEmpty(HTTP_PORT)) {
-            proxyHost = new HttpHost(HTTP_HOST, Integer.parseInt(HTTP_PORT), "http");
-            if (!isEmpty(HTTP_USERNAME) && !isEmpty(HTTP_PASSWORD)) {
-                credsProvider.setCredentials(new AuthScope(HTTP_HOST, Integer.parseInt(HTTP_PORT)), new UsernamePasswordCredentials(HTTP_USERNAME, HTTP_PASSWORD));
-                cb.setDefaultCredentialsProvider(credsProvider);
-            }
-        }
-        if (proxyHost != null) {
-            logi.info("Setting proxy for Checkmarx http client");
-            cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxyHost));
-            cb.setProxy(proxyHost);
             cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
         }
     }
