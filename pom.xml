@@ -1,10 +1,10 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>9.20.0-SNAPSHOT</version>
+    <version>9.20.0-TEST-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
@@ -81,7 +81,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.6.2</version>
+            <version>1.7.28</version>
         </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>
@@ -91,7 +91,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.4.1</version>
+            <version>4.5.4</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -116,7 +116,7 @@
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-archiver</artifactId>
-            <version>3.6.0</version>
+            <version>4.1.0</version>
             <exclusions>
                 <exclusion>
                     <artifactId>commons-compress</artifactId>
@@ -277,70 +277,4 @@
             </build>
         </profile>
     </profiles>
-    <developers>
-        <developer>
-            <name>Gal Or Nussbaum</name>
-            <email>gal.nussbaum@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>https://www.linkedin.com/in/gal-nussbaum-68b3a76a/de</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Dor Golan</name>
-            <email>dor.golan@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Shaul Valero</name>
-            <email>shaul.valero@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Dev TL</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Eyal Amor</name>
-            <email>eyal.amor@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>Architect</role>
-                <role>Developer</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/44Iil53.png</picUrl>
-            </properties>
-        </developer>
-        <developer>
-            <name>Yair David</name>
-            <email>Yair.David@checkmarx.com</email>
-            <organization>Checkmarx</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-            <roles>
-                <role>QA Manager</role>
-            </roles>
-            <properties>
-                <picUrl>http://i.imgur.com/EVIS8LO.jpg</picUrl>
-            </properties>
-        </developer>
-    </developers>
 </project>
