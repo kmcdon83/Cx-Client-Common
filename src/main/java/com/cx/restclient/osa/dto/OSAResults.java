@@ -1,6 +1,7 @@
 package com.cx.restclient.osa.dto;
 
 import com.cx.restclient.cxArm.dto.Policy;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import static com.cx.restclient.cxArm.utils.CxARMUtils.getPolicyList;
 /**
  * Created by Galn on 07/02/2018.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OSAResults implements Serializable {
     private String osaScanId;
     private OSASummaryResults results;

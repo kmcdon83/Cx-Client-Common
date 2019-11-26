@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/java
 
 trigger:
-- master
+- Version_9.00
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -38,4 +38,3 @@ steps:
     globExpressions: 'cx-client-common-*.jar'
     filesAcl: 'bucket-owner-full-control'
     createBucket: true
-
