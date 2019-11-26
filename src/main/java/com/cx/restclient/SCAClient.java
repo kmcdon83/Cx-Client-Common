@@ -53,7 +53,7 @@ public class SCAClient implements DependencyScanner {
     private final Waiter<ScanStatusResponse> waiter;
     private String scanId;
 
-    SCAClient(Logger log, CxScanConfig config) throws MalformedURLException, CxClientException {
+    SCAClient(Logger log, CxScanConfig config) throws CxClientException {
         this.log = log;
         this.config = config;
 
@@ -247,9 +247,9 @@ public class SCAClient implements DependencyScanner {
         log.info("\n----SCA risk report summary----");
         log.info("Created on: " + summary.getCreatedOn());
         log.info("Direct packages: " + summary.getDirectPackages());
-        log.info("High vulnerabilities: " + summary.getHighVulnerabilitiesCount());
-        log.info("Medium vulnerabilities: " + summary.getMediumVulnerabilitiesCount());
-        log.info("Low vulnerabilities: " + summary.getLowVulnerabilitiesCount());
+        log.info("High vulnerabilities: " + summary.getHighVulnerabilityCount());
+        log.info("Medium vulnerabilities: " + summary.getMediumVulnerabilityCount());
+        log.info("Low vulnerabilities: " + summary.getLowVulnerabilityCount());
         log.info("Risk report ID: " + summary.getRiskReportId());
         log.info("Risk score: " + summary.getRiskScore());
         log.info("Total packages: " + summary.getTotalPackages());

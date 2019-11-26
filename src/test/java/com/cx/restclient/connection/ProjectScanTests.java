@@ -146,14 +146,10 @@ public class ProjectScanTests {
         config.setProjectName("scaOnlyScan");
         config.setTeamPath("\\CxServer");
 
-        // Disabling certificate validation, otherwise we'll get an error during SCA login.
-        // TODO: fix HTTPS logic in CxHttpClient.
-        config.setDisableCertificateValidation(true);
-
         SCAConfig sca = new SCAConfig();
-        sca.setApiUrl("https://api.lumodev.com");
-        sca.setAccessControlUrl("https://upgrade.dev-ac-checkmarx.com");
-        sca.setTenant("Checkmarx");
+        sca.setApiUrl(props.getProperty("sca.apiUrl"));
+        sca.setAccessControlUrl(props.getProperty("sca.accessControlUrl"));
+        sca.setTenant(props.getProperty("sca.tenant"));
         sca.setUsername(props.getProperty("sca.username"));
         sca.setPassword(props.getProperty("sca.password"));
         config.setScaConfig(sca);

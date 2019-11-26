@@ -4,9 +4,9 @@ import java.time.OffsetDateTime;
 
 public class SCASummaryResults {
     private String riskReportId;
-    private int highVulnerabilitiesCount;
-    private int mediumVulnerabilitiesCount;
-    private int lowVulnerabilitiesCount;
+    private int highVulnerabilityCount;
+    private int mediumVulnerabilityCount;
+    private int lowVulnerabilityCount;
     private int totalPackages;
     private int directPackages;
     private String createdOn;
@@ -21,28 +21,28 @@ public class SCASummaryResults {
         this.riskReportId = riskReportId;
     }
 
-    public int getHighVulnerabilitiesCount() {
-        return highVulnerabilitiesCount;
+    public int getHighVulnerabilityCount() {
+        return highVulnerabilityCount;
     }
 
-    public void setHighVulnerabilitiesCount(int highVulnerabilitiesCount) {
-        this.highVulnerabilitiesCount = highVulnerabilitiesCount;
+    public void setHighVulnerabilityCount(int highVulnerabilityCount) {
+        this.highVulnerabilityCount = highVulnerabilityCount;
     }
 
-    public int getMediumVulnerabilitiesCount() {
-        return mediumVulnerabilitiesCount;
+    public int getMediumVulnerabilityCount() {
+        return mediumVulnerabilityCount;
     }
 
-    public void setMediumVulnerabilitiesCount(int mediumVulnerabilitiesCount) {
-        this.mediumVulnerabilitiesCount = mediumVulnerabilitiesCount;
+    public void setMediumVulnerabilityCount(int mediumVulnerabilityCount) {
+        this.mediumVulnerabilityCount = mediumVulnerabilityCount;
     }
 
-    public int getLowVulnerabilitiesCount() {
-        return lowVulnerabilitiesCount;
+    public int getLowVulnerabilityCount() {
+        return lowVulnerabilityCount;
     }
 
-    public void setLowVulnerabilitiesCount(int lowVulnerabilitiesCount) {
-        this.lowVulnerabilitiesCount = lowVulnerabilitiesCount;
+    public void setLowVulnerabilityCount(int lowVulnerabilityCount) {
+        this.lowVulnerabilityCount = lowVulnerabilityCount;
     }
 
     public int getTotalPackages() {

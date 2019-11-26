@@ -104,9 +104,9 @@ public class ScanSummary {
                 SCASummaryResults summary = scaResults.getSummary();
                 if (summary != null) {
                     severityType = "SCA";
-                    totalHigh = summary.getHighVulnerabilitiesCount();
-                    totalMedium = summary.getMediumVulnerabilitiesCount();
-                    totalLow = summary.getLowVulnerabilitiesCount();
+                    totalHigh = summary.getHighVulnerabilityCount();
+                    totalMedium = summary.getMediumVulnerabilityCount();
+                    totalLow = summary.getLowVulnerabilityCount();
                 }
             } else if (osaResults != null && osaResults.isOsaResultsReady()) {
                 OSASummaryResults summary = osaResults.getResults();
