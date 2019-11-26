@@ -310,11 +310,11 @@ public class CxShragaClient {
         printTeamPath();
     }
 
-    private void resolveCxARMUrl() {
+    private void resolveCxARMUrl() throws CxClientException {
         try {
             this.config.setCxARMUrl(getCxARMConfig().getCxARMPolicyURL());
         } catch (Exception ex) {
-            log.error("CxARM is not available. Policy violations cannot be calculated: " + ex.getMessage());
+            throw new CxClientException("CxARM is not available. Policy violations cannot be calculated: " + ex.getMessage());
         }
     }
 

@@ -25,6 +25,10 @@ public enum ClientType {
         return scopes;
     }
 
+    public void setScopes(String scopes) {
+        this.scopes = scopes;
+    }
+
     public String getClientId() {
         return clientId;
     }
