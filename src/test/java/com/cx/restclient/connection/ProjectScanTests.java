@@ -35,7 +35,7 @@ public class ProjectScanTests {
     }
 
     @Test
-    public void runOsaScan() throws MalformedURLException {
+    public void runOsaScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initOsaConfig();
         client = new CxShragaClient(config, log);
         try {
@@ -52,7 +52,7 @@ public class ProjectScanTests {
     }
 
     @Test
-    public void runSastScan() throws MalformedURLException {
+    public void runSastScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initSastConfig();
         client = new CxShragaClient(config, log);
         try {

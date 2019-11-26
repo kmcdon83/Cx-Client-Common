@@ -89,7 +89,7 @@ public class CxHttpClient {
 
     public CxHttpClient(String hostname, String username, String password, String origin,
                         boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi,
-                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException {
+                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
         this.log = logi;
         this.username = username;
         this.password = password;
@@ -103,16 +103,23 @@ public class CxHttpClient {
         setSSLTls("TLSv1.2", logi);
         if (disableSSLValidation) {
             try {
-                cb.setSSLSocketFactory(getSSLSF());
-                cb.setConnectionManager(getSSLHttpConnManager());
+                cb.setSSLSocketFactory(getTrustAllSSLSocketFactory());
+                cb.setConnectionManager(getHttpConnectionManager(true));
             } catch (CxClientException e) {
                 logi.warn("Failed to disable certificate verification: " + e.getMessage());
             }
         } else {
-            cb.setConnectionManager(getHttpConnManager());
+            cb.setConnectionManager(getHttpConnectionManager(false));
         }
         cb.setConnectionManagerShared(true);
-        setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, logi);
+
+        if (proxyHost != null) {
+            setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, logi);
+        }
+        else {
+            setProxy(cb, logi);
+        }
+
         cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
         cb.useSystemProperties();
@@ -120,35 +127,8 @@ public class CxHttpClient {
     }
 
     public CxHttpClient(String hostname, String username, String password, String origin,
-                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi) throws MalformedURLException {
-        this.log = logi;
-        this.username = username;
-        this.password = password;
-        this.refreshToken = refreshToken;
-        this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
-        this.cxOrigin = origin;
-        this.useSSo = isSSO;
-
-        //create httpclient
-        HttpClientBuilder cb = HttpClients.custom();
-        cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
-        setSSLTls("TLSv1.2", logi);
-        if (disableSSLValidation) {
-            try {
-                cb.setSSLSocketFactory(getSSLSF());
-                cb.setConnectionManager(getSSLHttpConnManager());
-            } catch (CxClientException e) {
-                logi.warn("Failed to disable certificate verification: " + e.getMessage());
-            }
-        } else {
-            cb.setConnectionManager(getHttpConnManager());
-        }
-        cb.setConnectionManagerShared(true);
-        setProxy(cb, logi);
-        cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
-        cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
-        cb.useSystemProperties();
-        apacheClient = cb.build();
+                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi) throws MalformedURLException, CxClientException {
+        this(hostname, username, password, origin, disableSSLValidation, isSSO, refreshToken, logi, null, 0, null, null);
     }
 
     private static void setCustomProxy(HttpClientBuilder cb, String proxyHost, int proxyPort, String proxyUser, String proxyPassword, Logger logi) {
@@ -193,7 +173,7 @@ public class CxHttpClient {
         }
     }
 
-    private static SSLConnectionSocketFactory getSSLSF() throws CxClientException {
+    private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() throws CxClientException {
         TrustStrategy acceptingTrustStrategy = new TrustAllStrategy();
         SSLContext sslContext;
         try {
@@ -204,21 +184,15 @@ public class CxHttpClient {
         return new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
     }
 
-
-    private static PoolingHttpClientConnectionManager getSSLHttpConnManager() throws CxClientException {
+    private static PoolingHttpClientConnectionManager getHttpConnectionManager(boolean disableSSLValidation) throws CxClientException {
+        ConnectionSocketFactory factory;
+        if (disableSSLValidation) {
+            factory = getTrustAllSSLSocketFactory();
+        } else {
+            factory = new SSLConnectionSocketFactory(SSLContexts.createDefault());
+        }
         Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-                .register("https", getSSLSF())
-                .register("http", new PlainConnectionSocketFactory())
-                .build();
-        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-        connManager.setMaxTotal(50);
-        connManager.setDefaultMaxPerRoute(5);
-        return connManager;
-    }
-
-    private static PoolingHttpClientConnectionManager getHttpConnManager() {
-        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-                .register("https", new PlainConnectionSocketFactory())
+                .register("https", factory)
                 .register("http", new PlainConnectionSocketFactory())
                 .build();
         PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
