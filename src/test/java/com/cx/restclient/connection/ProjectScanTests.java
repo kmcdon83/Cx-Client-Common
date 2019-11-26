@@ -41,15 +41,13 @@ public class ProjectScanTests {
         try {
             client.init();
             client.createDependencyScan();
-            client.waitForDependencyScanResults();
-            final DependencyScanResults results = client.getLatestDependencyScanResults();
+            DependencyScanResults results = client.waitForDependencyScanResults();
+            Assert.assertNotNull(results);
             Assert.assertNull(results.getScaResults());
             Assert.assertNotNull(results.getOsaResults());
             Assert.assertNotNull("Expected valid osa scan id", results.getOsaResults().getOsaScanId());
-        } catch (IOException | CxClientException e) {
-            e.printStackTrace();
-            log.error("Error running  osa scan: " + e.getMessage());
-            Assert.fail(e.getMessage());
+        } catch (Exception e) {
+            failOnException(e);
         }
     }
 
@@ -60,13 +58,11 @@ public class ProjectScanTests {
         try {
             client.init();
             client.createSASTScan();
-            client.waitForSASTResults();
-            SASTResults latestSASTResults = client.getLatestSASTResults();
-            Assert.assertNotEquals("Expected valid SAST scan id", 0, latestSASTResults.getScanId());
-        } catch (IOException | CxClientException | InterruptedException e) {
-            e.printStackTrace();
-            log.error("Error running sast scan: " + e.getMessage());
-            Assert.fail(e.getMessage());
+            SASTResults results = client.waitForSASTResults();
+            Assert.assertNotNull(results);
+            Assert.assertNotEquals("Expected valid SAST scan id", 0, results.getScanId());
+        } catch (Exception e) {
+            failOnException(e);
         }
     }
 
@@ -84,8 +80,7 @@ public class ProjectScanTests {
             Assert.assertNotNull(results.getScaResults().getSummary());
             Assert.assertNotNull(results.getScaResults().getScanId());
         } catch (Exception e) {
-            log.error("Error running SCA scan: " + e);
-            Assert.fail(e.getMessage());
+            failOnException(e);
         }
     }
 
@@ -136,15 +131,11 @@ public class ProjectScanTests {
 
     private CxScanConfig initScaConfig() {
         CxScanConfig config = new CxScanConfig();
-        config.setUrl(props.getProperty("serverUrl"));
-        config.setUsername(props.getProperty("username"));
-        config.setPassword(props.getProperty("password"));
         config.setDependencyScannerType(DependencyScannerType.SCA);
         config.setSastEnabled(false);
         config.setSourceDir(props.getProperty("dependencyScanSourceDir"));
         config.setOsaThresholdsEnabled(true);
         config.setProjectName("scaOnlyScan");
-        config.setTeamPath("\\CxServer");
 
         SCAConfig sca = new SCAConfig();
         sca.setApiUrl(props.getProperty("sca.apiUrl"));
@@ -155,5 +146,10 @@ public class ProjectScanTests {
         config.setScaConfig(sca);
 
         return config;
+    }
+
+    private void failOnException(Exception e) {
+        log.error("Error running scan.", e);
+        Assert.fail(e.getMessage());
     }
 }

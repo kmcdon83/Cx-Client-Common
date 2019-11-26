@@ -55,18 +55,23 @@ public class CxShragaClient {
                           String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
         this.config = config;
         this.log = log;
-        this.httpClient = new CxHttpClient(
-                UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                log,
-                proxyHost, proxyPort, proxyUser, proxyPassword);
-        sastClient = new CxSASTClient(httpClient, log, config);
 
-        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
-            dependencyScanner = new CxOSAClient(httpClient, log, config);
-        } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
+        if (config.isSastOrOSAEnabled()) {
+            this.httpClient = new CxHttpClient(
+                    UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
+                    config.getCxOrigin(),
+                    config.isDisableCertificateValidation(),
+                    config.isUseSSOLogin(),
+                    log,
+                    proxyHost, proxyPort, proxyUser, proxyPassword);
+            sastClient = new CxSASTClient(httpClient, log, config);
+
+            if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
+                dependencyScanner = new CxOSAClient(httpClient, log, config);
+            }
+        }
+
+        if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
             dependencyScanner = new SCAClient(log, config);
         }
     }
@@ -102,16 +107,18 @@ public class CxShragaClient {
 
     public void init() throws CxClientException, IOException {
         log.info("Initializing Cx client [" + getClientVersion() + "]");
-        getCxVersion();
-        login();
-        resolveTeam();
-        if (config.getSastEnabled()) {
-            resolvePreset();
+        if (config.isSastOrOSAEnabled()) {
+            getCxVersion();
+            login();
+            resolveTeam();
+            if (config.getSastEnabled()) {
+                resolvePreset();
+            }
+            if (config.getEnablePolicyViolations()) {
+                resolveCxARMUrl();
+            }
+            resolveProject();
         }
-        if (config.getEnablePolicyViolations()) {
-            resolveCxARMUrl();
-        }
-        resolveProject();
 
         if (dependencyScanner != null) {
             dependencyScanner.init();
@@ -119,40 +126,37 @@ public class CxShragaClient {
     }
 
     public long createSASTScan() throws IOException, CxClientException {
-        sastScanId = sastClient.createSASTScan(projectId);
+        sastScanId = getSastClient().createSASTScan(projectId);
         sastResults.setSastScanLink(config.getUrl(), sastScanId, projectId);
         return sastScanId;
     }
 
     public String createDependencyScan() throws CxClientException {
-        ensureDependencyScannerExists();
-        String scanId = dependencyScanner.createScan(dependencyScanResults);
+        String scanId = getDependencyScanner().createScan(dependencyScanResults);
         return scanId;
     }
 
     public void cancelSASTScan() throws IOException, CxClientException {
-        sastClient.cancelSASTScan(sastScanId);
+        getSastClient().cancelSASTScan(sastScanId);
     }
 
     public SASTResults waitForSASTResults() throws InterruptedException, CxClientException, IOException {
-        sastResults = sastClient.waitForSASTResults(sastScanId, projectId);
+        sastResults = getSastClient().waitForSASTResults(sastScanId, projectId);
         return sastResults;
     }
 
     public SASTResults getLatestSASTResults() throws InterruptedException, CxClientException, IOException {
-        sastResults = sastClient.getLatestSASTResults(projectId);
+        sastResults = getSastClient().getLatestSASTResults(projectId);
         return sastResults;
     }
 
     public DependencyScanResults waitForDependencyScanResults() throws CxClientException {
-        ensureDependencyScannerExists();
-        dependencyScanner.waitForScanResults(dependencyScanResults);
+        getDependencyScanner().waitForScanResults(dependencyScanResults);
         return dependencyScanResults;
     }
 
     public DependencyScanResults getLatestDependencyScanResults() throws CxClientException {
-        ensureDependencyScannerExists();
-        dependencyScanResults = dependencyScanner.getLatestScanResults();
+        dependencyScanResults = getDependencyScanner().getLatestScanResults();
         return dependencyScanResults;
     }
 
@@ -410,11 +414,20 @@ public class CxShragaClient {
         return result;
     }
 
-    private void ensureDependencyScannerExists() throws CxClientException {
+    private DependencyScanner getDependencyScanner() throws CxClientException {
         if (dependencyScanner == null) {
-            throw new CxClientException(
-                    String.format("Unable to continue: dependency scanner type was set to %s in config.",
-                            DependencyScannerType.NONE));
+            String message = String.format("The action can't be performed, because dependency scanner type is set to %s in scan configuration.",
+                    DependencyScannerType.NONE);
+
+            throw new CxClientException(message);
         }
+        return dependencyScanner;
+    }
+
+    private CxSASTClient getSastClient() throws CxClientException {
+        if (sastClient == null) {
+            throw new CxClientException("The action can't be performed, because SAST is disabled in scan configuration.");
+        }
+        return sastClient;
     }
 }

@@ -715,4 +715,8 @@ public class CxScanConfig implements Serializable {
     public void setDependencyScannerType(DependencyScannerType scannerType) {
         this.dependencyScannerType = scannerType;
     }
+
+    public boolean isSastOrOSAEnabled() {
+        return sastEnabled || dependencyScannerType == DependencyScannerType.OSA;
+    }
 }

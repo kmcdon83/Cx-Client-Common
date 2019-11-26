@@ -14,6 +14,7 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.*;
+import com.google.common.base.Strings;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
@@ -150,6 +151,10 @@ public class SCAClient implements DependencyScanner {
 
     private String getProjectIdByName(String name) throws IOException, CxClientException {
         log.debug("Getting project by name: " + name);
+
+        if (Strings.isNullOrEmpty(name)) {
+            throw new CxClientException("Non-empty project name must be provided.");
+        }
 
         List<Project> allProjects = (List<Project>) httpClient.getRequest(ApiPaths.PROJECTS,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
