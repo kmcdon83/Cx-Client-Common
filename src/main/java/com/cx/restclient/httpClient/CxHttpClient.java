@@ -78,7 +78,7 @@ public class CxHttpClient {
 
     public CxHttpClient(String rootUri, String origin,
                         boolean disableSSLValidation, boolean isSSO, Logger log,
-                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) {
+                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws CxClientException {
         this.log = log;
         this.rootUri = rootUri;
         this.cxOrigin = origin;
@@ -109,7 +109,7 @@ public class CxHttpClient {
         apacheClient = cb.build();
     }
 
-    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger log) {
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger log) throws CxClientException {
         this(rootUri, origin, disableSSLValidation, isSSO, log, null, 0, null, null);
     }
 
