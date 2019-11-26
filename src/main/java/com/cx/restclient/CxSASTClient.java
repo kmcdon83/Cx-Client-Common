@@ -270,13 +270,13 @@ class CxSASTClient {
         return sastResults;
     }
 
-    private void resolveSASTViolation(SASTResults sastResults, long projectId) {
+    private void resolveSASTViolation(SASTResults sastResults, long projectId) throws CxClientException {
         try {
             cxARMWaiter.waitForTaskToFinish(Long.toString(projectId), cxARMTimeoutSec, log);
             getProjectViolatedPolicies(httpClient, config.getCxARMUrl(), projectId, SAST.value())
                     .forEach(sastResults::addPolicy);
         } catch (Exception ex) {
-            log.error("CxARM is not available. Policy violations for SAST cannot be calculated: " + ex.getMessage());
+            throw new CxClientException("CxARM is not available. Policy violations for SAST cannot be calculated: " + ex.getMessage());
         }
     }
 
