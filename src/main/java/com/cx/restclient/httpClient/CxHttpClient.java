@@ -89,13 +89,13 @@ public class CxHttpClient {
         setSSLTls("TLSv1.2", log);
         if (disableSSLValidation) {
             try {
-                cb.setSSLSocketFactory(getSSLSF());
-                cb.setConnectionManager(getSSLHttpConnManager());
+                cb.setSSLSocketFactory(getTrustAllSSLSocketFactory());
+                cb.setConnectionManager(getHttpConnectionManager(true));
             } catch (CxClientException e) {
                 log.warn("Failed to disable certificate verification: " + e.getMessage());
             }
         } else {
-            cb.setConnectionManager(getHttpConnManager());
+            cb.setConnectionManager(getHttpConnectionManager(false));
         }
         cb.setConnectionManagerShared(true);
 
@@ -131,7 +131,7 @@ public class CxHttpClient {
         }
     }
 
-    private static SSLConnectionSocketFactory getSSLSF() throws CxClientException {
+    private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() throws CxClientException {
         TrustStrategy acceptingTrustStrategy = new TrustAllStrategy();
         SSLContext sslContext;
         try {
@@ -142,21 +142,15 @@ public class CxHttpClient {
         return new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
     }
 
-
-    private static PoolingHttpClientConnectionManager getSSLHttpConnManager() throws CxClientException {
+    private static PoolingHttpClientConnectionManager getHttpConnectionManager(boolean disableSSLValidation) throws CxClientException {
+        ConnectionSocketFactory factory;
+        if (disableSSLValidation) {
+            factory = getTrustAllSSLSocketFactory();
+        } else {
+            factory = new SSLConnectionSocketFactory(SSLContexts.createDefault());
+        }
         Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-                .register("https", getSSLSF())
-                .register("http", new PlainConnectionSocketFactory())
-                .build();
-        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-        connManager.setMaxTotal(50);
-        connManager.setDefaultMaxPerRoute(5);
-        return connManager;
-    }
-
-    private static PoolingHttpClientConnectionManager getHttpConnManager() {
-        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-                .register("https", new PlainConnectionSocketFactory())
+                .register("https", factory)
                 .register("http", new PlainConnectionSocketFactory())
                 .build();
         PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
