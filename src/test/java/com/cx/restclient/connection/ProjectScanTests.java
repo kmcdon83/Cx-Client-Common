@@ -4,6 +4,7 @@ import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
+import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.SASTResults;
 import com.cx.restclient.sca.dto.SCAConfig;
@@ -26,7 +27,6 @@ public class ProjectScanTests {
     private static final String PROPERTIES_FILE = "config.properties";
 
     private Logger log = LoggerFactory.getLogger(ProjectScanTests.class.getName());
-    private CxShragaClient client;
     private static Properties props;
 
     @BeforeClass
@@ -37,7 +37,7 @@ public class ProjectScanTests {
     @Test
     public void runOsaScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initOsaConfig();
-        client = new CxShragaClient(config, log);
+        CxShragaClient client = new CxShragaClient(config, log);
         try {
             client.init();
             client.createDependencyScan();
@@ -54,22 +54,38 @@ public class ProjectScanTests {
     @Test
     public void runSastScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initSastConfig();
-        client = new CxShragaClient(config, log);
-        try {
-            client.init();
-            client.createSASTScan();
-            SASTResults results = client.waitForSASTResults();
-            Assert.assertNotNull(results);
-            Assert.assertNotEquals("Expected valid SAST scan id", 0, results.getScanId());
-        } catch (Exception e) {
-            failOnException(e);
-        }
+        runSastScan(config);
+    }
+
+    @Test
+    public void runSastScanWithProxy() throws MalformedURLException, CxClientException {
+        CxScanConfig config = initSastConfig();
+        setProxy(config);
+        runSastScan(config);
     }
 
     @Test
     public void runScaScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
-        client = new CxShragaClient(config, log);
+        runScaScan(config);
+    }
+
+    @Test
+    public void runScaScanWithProxy() throws MalformedURLException, CxClientException {
+        CxScanConfig config = initScaConfig();
+        setProxy(config);
+        runScaScan(config);
+    }
+
+    private void setProxy(CxScanConfig config) {
+        ProxyConfig proxyConfig = new ProxyConfig();
+        proxyConfig.setHost(props.getProperty("proxy.host"));
+        proxyConfig.setPort(Integer.parseInt(props.getProperty("proxy.port")));
+        config.setProxyConfig(proxyConfig);
+    }
+
+    private void runScaScan(CxScanConfig config) throws MalformedURLException, CxClientException {
+        CxShragaClient client = new CxShragaClient(config, log);
         try {
             client.init();
             client.createDependencyScan();
@@ -79,6 +95,19 @@ public class ProjectScanTests {
             Assert.assertNotNull(results.getScaResults());
             Assert.assertNotNull(results.getScaResults().getSummary());
             Assert.assertNotNull(results.getScaResults().getScanId());
+        } catch (Exception e) {
+            failOnException(e);
+        }
+    }
+
+    private void runSastScan(CxScanConfig config) throws MalformedURLException, CxClientException {
+        CxShragaClient client = new CxShragaClient(config, log);
+        try {
+            client.init();
+            client.createSASTScan();
+            SASTResults results = client.waitForSASTResults();
+            Assert.assertNotNull(results);
+            Assert.assertNotEquals("Expected valid SAST scan id", 0, results.getScanId());
         } catch (Exception e) {
             failOnException(e);
         }

@@ -3,6 +3,7 @@ package com.cx.restclient.httpClient;
 import com.cx.restclient.common.ErrorMessage;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.dto.LoginSettings;
+import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
@@ -44,6 +45,7 @@ import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.slf4j.Logger;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -76,9 +78,8 @@ public class CxHttpClient {
     private Boolean useSSo;
     private LoginSettings lastLoginSettings;
 
-    public CxHttpClient(String rootUri, String origin,
-                        boolean disableSSLValidation, boolean isSSO, Logger log,
-                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws CxClientException {
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO,
+                        @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
         this.log = log;
         this.rootUri = rootUri;
         this.cxOrigin = origin;
@@ -99,9 +100,7 @@ public class CxHttpClient {
         }
         cb.setConnectionManagerShared(true);
 
-        if (proxyHost != null) {
-            setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, log);
-        }
+        setCustomProxy(cb, proxyConfig, log);
 
         cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
@@ -109,26 +108,24 @@ public class CxHttpClient {
         apacheClient = cb.build();
     }
 
-    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, Logger log) throws CxClientException {
-        this(rootUri, origin, disableSSLValidation, isSSO, log, null, 0, null, null);
-    }
+    private static void setCustomProxy(HttpClientBuilder cb, ProxyConfig proxyConfig, Logger logi) {
+        if (proxyConfig == null) {
+            return;
+        }
 
-    private static void setCustomProxy(HttpClientBuilder cb, String proxyHost, int proxyPort, String proxyUser, String proxyPassword, Logger logi) {
-        HttpHost proxy = null;
-        if (!isEmpty(proxyHost)) {
-            proxy = new HttpHost(proxyHost, proxyPort, "http");
-            if (!isEmpty(proxyUser) && !isEmpty(proxyPassword)) {
-                CredentialsProvider credsProvider = new BasicCredentialsProvider();
-                credsProvider.setCredentials(new AuthScope(proxy), new UsernamePasswordCredentials(proxyUser, proxyPassword));
-                cb.setDefaultCredentialsProvider(credsProvider);
-            }
+        String scheme = proxyConfig.isUseHttps() ? "https" : "http";
+        HttpHost proxy = new HttpHost(proxyConfig.getHost(), proxyConfig.getPort(), scheme);
+        if (!isEmpty(proxyConfig.getUsername()) && !isEmpty(proxyConfig.getPassword())) {
+            UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(proxyConfig.getUsername(), proxyConfig.getPassword());
+            CredentialsProvider credsProvider = new BasicCredentialsProvider();
+            credsProvider.setCredentials(new AuthScope(proxy), credentials);
+            cb.setDefaultCredentialsProvider(credsProvider);
         }
-        if (proxy != null) {
-            logi.info("Setting proxy for Checkmarx http client");
-            cb.setProxy(proxy);
-            cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
-            cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
-        }
+
+        logi.info("Setting proxy for Checkmarx http client");
+        cb.setProxy(proxy);
+        cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
+        cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
     }
 
     private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() throws CxClientException {

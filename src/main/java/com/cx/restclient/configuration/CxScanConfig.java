@@ -2,6 +2,7 @@ package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
 import com.cx.restclient.dto.DependencyScannerType;
+import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.dto.RemoteSourceTypes;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
@@ -99,6 +100,8 @@ public class CxScanConfig implements Serializable {
 
     private SCAConfig scaConfig;
     private DependencyScannerType dependencyScannerType;
+
+    private ProxyConfig proxyConfig;
 
     public CxScanConfig() {
     }
@@ -716,7 +719,20 @@ public class CxScanConfig implements Serializable {
         this.dependencyScannerType = scannerType;
     }
 
+    /**
+     * SAST and OSA are currently deployed on-premises, whereas SCA is deployed in a cloud.
+     * If SAST or OSA are enabled, some of the config properties are mandatory (url, username, password etc).
+     * Otherwise, these properties are optional.
+     */
     public boolean isSastOrOSAEnabled() {
         return sastEnabled || dependencyScannerType == DependencyScannerType.OSA;
+    }
+
+    public ProxyConfig getProxyConfig() {
+        return proxyConfig;
+    }
+
+    public void setProxyConfig(ProxyConfig proxyConfig) {
+        this.proxyConfig = proxyConfig;
     }
 }

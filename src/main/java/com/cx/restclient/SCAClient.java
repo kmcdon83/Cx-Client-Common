@@ -67,6 +67,7 @@ public class SCAClient implements DependencyScanner {
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
+                config.getProxyConfig(),
                 log);
 
         waiter = new SCAWaiter("SCA scan", pollInterval, maxRetries, httpClient, ApiPaths.SCAN_STATUS, log);
