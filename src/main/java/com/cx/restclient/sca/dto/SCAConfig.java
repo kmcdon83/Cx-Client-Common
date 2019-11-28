@@ -8,6 +8,7 @@ public class SCAConfig implements Serializable {
     private String username;
     private String password;
     private String tenant;
+    private String webAppUrl;
 
     public String getApiUrl() {
         return apiUrl;
@@ -47,5 +48,13 @@ public class SCAConfig implements Serializable {
 
     public String getTenant() {
         return tenant;
+    }
+
+    public String getWebAppUrl() {
+        return webAppUrl;
+    }
+
+    public void setWebAppUrl(String webAppUrl) {
+        this.webAppUrl = webAppUrl;
     }
 }

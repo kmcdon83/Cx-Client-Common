@@ -8,6 +8,7 @@ import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.SASTResults;
 import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.sca.dto.SCAResults;
 import com.cx.utility.TestingUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -92,9 +93,12 @@ public class ProjectScanTests {
             DependencyScanResults results = client.waitForDependencyScanResults();
             Assert.assertNotNull(results);
             Assert.assertNull(results.getOsaResults());
-            Assert.assertNotNull(results.getScaResults());
-            Assert.assertNotNull(results.getScaResults().getSummary());
-            Assert.assertNotNull(results.getScaResults().getScanId());
+
+            SCAResults scaResults = results.getScaResults();
+            Assert.assertNotNull(scaResults);
+            Assert.assertNotNull(scaResults.getSummary());
+            Assert.assertNotNull(scaResults.getScanId());
+            Assert.assertNotNull(scaResults.getWebReportLink());
         } catch (Exception e) {
             failOnException(e);
         }
@@ -172,6 +176,8 @@ public class ProjectScanTests {
         sca.setTenant(props.getProperty("sca.tenant"));
         sca.setUsername(props.getProperty("sca.username"));
         sca.setPassword(props.getProperty("sca.password"));
+        sca.setWebAppUrl(props.getProperty("sca.webAppUrl"));
+
         config.setScaConfig(sca);
 
         return config;

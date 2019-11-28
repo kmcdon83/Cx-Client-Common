@@ -1,6 +1,7 @@
 package com.cx.restclient;
 
 import com.cx.restclient.common.DependencyScanner;
+import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
@@ -25,23 +26,23 @@ import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 public class SCAClient implements DependencyScanner {
-    private class ApiPaths {
+    private static class UrlPaths {
         private static final String PROJECTS = "/risk_management/api/projects";
         private static final String SUMMARY_REPORT = "/risk_management/api/riskReports/%s/summary";
         private static final String ZIP_UPLOAD = "/scans/api/scans/zip";
         private static final String SCAN_STATUS = "/scans/api/scans/%s/status";
         private static final String REPORT_ID = "/scans/api/scans/%s/riskReportId";
+        private static final String WEB_REPORT = "/#/projects/%s/report/%s";
     }
 
     private final Logger log;
@@ -61,7 +62,7 @@ public class SCAClient implements DependencyScanner {
         int pollInterval = config.getOsaProgressInterval() != null ? config.getOsaProgressInterval() : 20;
         int maxRetries = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
 
-        SCAConfig scaConfig = safeGetScaConfig();
+        SCAConfig scaConfig = getScaConfig();
 
         httpClient = new CxHttpClient(scaConfig.getApiUrl(),
                 config.getCxOrigin(),
@@ -70,7 +71,7 @@ public class SCAClient implements DependencyScanner {
                 config.getProxyConfig(),
                 log);
 
-        waiter = new SCAWaiter("SCA scan", pollInterval, maxRetries, httpClient, ApiPaths.SCAN_STATUS, log);
+        waiter = new SCAWaiter("SCA scan", pollInterval, maxRetries, httpClient, UrlPaths.SCAN_STATUS, log);
     }
 
     @Override
@@ -117,6 +118,10 @@ public class SCAClient implements DependencyScanner {
             throw new CxClientException("Error retrieving SCA scan results.", e);
         }
 
+        if (!Strings.isNullOrEmpty(scaResult.getWebReportLink())) {
+            log.info("SCA scan results location: " + scaResult.getWebReportLink());
+        }
+
         target.setScaResults(scaResult);
     }
 
@@ -128,7 +133,7 @@ public class SCAClient implements DependencyScanner {
 
     private void login() throws IOException, CxClientException {
         log.info("Logging into SCA.");
-        SCAConfig scaConfig = safeGetScaConfig();
+        SCAConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
         settings.setAccessControlBaseUrl(scaConfig.getAccessControlUrl());
@@ -157,7 +162,7 @@ public class SCAClient implements DependencyScanner {
             throw new CxClientException("Non-empty project name must be provided.");
         }
 
-        List<Project> allProjects = (List<Project>) httpClient.getRequest(ApiPaths.PROJECTS,
+        List<Project> allProjects = (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 Project.class,
                 HttpStatus.SC_OK,
@@ -177,7 +182,7 @@ public class SCAClient implements DependencyScanner {
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
-        Project newProject = httpClient.postRequest(ApiPaths.PROJECTS,
+        Project newProject = httpClient.postRequest(UrlPaths.PROJECTS,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 entity,
                 Project.class,
@@ -202,7 +207,7 @@ public class SCAClient implements DependencyScanner {
 
         HttpEntity entity = builder.build();
 
-        String scanId = httpClient.postRequest(ApiPaths.ZIP_UPLOAD, null, entity, String.class, HttpStatus.SC_OK, "upload ZIP file");
+        String scanId = httpClient.postRequest(UrlPaths.ZIP_UPLOAD, null, entity, String.class, HttpStatus.SC_OK, "upload ZIP file");
         log.debug("Scan ID: " + scanId);
 
         return scanId;
@@ -210,17 +215,44 @@ public class SCAClient implements DependencyScanner {
 
     private SCAResults retrieveScanResults() throws IOException, CxClientException {
         String reportId = getReportId();
-        SCASummaryResults scanSummary = getSummaryReport(reportId);
 
         SCAResults result = new SCAResults();
         result.setScanId(scanId);
+
+        SCASummaryResults scanSummary = getSummaryReport(reportId);
         result.setSummary(scanSummary);
+
+        String reportLink = getWebReportLink(reportId);
+        result.setWebReportLink(reportLink);
+        return result;
+    }
+
+    private String getWebReportLink(String reportId) {
+        String MESSAGE = "Unable to generate web report link. ";
+        String result = null;
+        try {
+            String webAppUrl = getScaConfig().getWebAppUrl();
+            if (Strings.isNullOrEmpty(webAppUrl)) {
+                log.warn(MESSAGE + "Web app URL is not specified.");
+            } else {
+                String encoding = StandardCharsets.UTF_8.name();
+                String path = String.format(UrlPaths.WEB_REPORT,
+                        URLEncoder.encode(projectId, encoding),
+                        URLEncoder.encode(reportId, encoding));
+
+                result = UrlUtils.parseURLToString(webAppUrl, path);
+            }
+        } catch (MalformedURLException e) {
+            log.warn(MESSAGE + "Invalid web app URL.", e);
+        } catch (Exception e) {
+            log.warn(MESSAGE, e);
+        }
         return result;
     }
 
     private String getReportId() throws IOException, CxClientException {
         log.debug("Getting report ID by scan ID: " + scanId);
-        String path = String.format(ApiPaths.REPORT_ID, scanId);
+        String path = String.format(UrlPaths.REPORT_ID, scanId);
         String reportId = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 String.class,
@@ -234,7 +266,7 @@ public class SCAClient implements DependencyScanner {
     private SCASummaryResults getSummaryReport(String reportId) throws IOException, CxClientException {
         log.debug("Getting summary report.");
 
-        String path = String.format(ApiPaths.SUMMARY_REPORT, reportId);
+        String path = String.format(UrlPaths.SUMMARY_REPORT, reportId);
 
         SCASummaryResults result = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
@@ -262,7 +294,7 @@ public class SCAClient implements DependencyScanner {
         log.info(String.format("Total outdated packages: %d\n", summary.getTotalOutdatedPackages()));
     }
 
-    private SCAConfig safeGetScaConfig() throws CxClientException {
+    private SCAConfig getScaConfig() throws CxClientException {
         SCAConfig result = config.getScaConfig();
         if (result == null) {
             throw new CxClientException("SCA scan configuration is missing.");
