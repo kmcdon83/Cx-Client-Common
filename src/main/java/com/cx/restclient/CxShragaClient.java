@@ -55,22 +55,21 @@ public class CxShragaClient {
         this.config = config;
         this.log = log;
 
-        if (config.isSastOrOSAEnabled()) {
-            this.httpClient = new CxHttpClient(
-                    UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
-                    config.getCxOrigin(),
-                    config.isDisableCertificateValidation(),
-                    config.isUseSSOLogin(),
-                    config.getProxyConfig(),
-                    log);
-            sastClient = new CxSASTClient(httpClient, log, config);
+        this.httpClient = new CxHttpClient(
+                UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
+                config.getCxOrigin(),
+                config.isDisableCertificateValidation(),
+                config.isUseSSOLogin(),
+                config.getProxyConfig(),
+                log);
 
-            if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
-                dependencyScanner = new CxOSAClient(httpClient, log, config);
-            }
+        if (config.getSastEnabled()) {
+            sastClient = new CxSASTClient(httpClient, log, config);
         }
 
-        if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
+            dependencyScanner = new CxOSAClient(httpClient, log, config);
+        } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
             dependencyScanner = new SCAClient(log, config);
         }
     }
