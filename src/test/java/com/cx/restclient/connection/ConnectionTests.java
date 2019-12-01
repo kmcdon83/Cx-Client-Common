@@ -43,11 +43,10 @@ public class ConnectionTests {
         CxScanConfig config = new CxScanConfig();
         config.setSastEnabled(true);
         config.setUseSSOLogin(true);
-        config.setUsername(props.getProperty("user"));
-        config.setPassword(props.getProperty("password"));
         config.setUrl(props.getProperty("serverUrl"));
         config.setCxOrigin("common");
-
+        config.setTeamId("1");
+        config.setPresetName("Default");
         return config;
     }
 
