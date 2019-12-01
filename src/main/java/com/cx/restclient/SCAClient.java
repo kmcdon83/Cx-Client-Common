@@ -15,7 +15,7 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.*;
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
@@ -26,7 +26,10 @@ import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.slf4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -118,7 +121,7 @@ public class SCAClient implements DependencyScanner {
             throw new CxClientException("Error retrieving SCA scan results.", e);
         }
 
-        if (!Strings.isNullOrEmpty(scaResult.getWebReportLink())) {
+        if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
             log.info("SCA scan results location: " + scaResult.getWebReportLink());
         }
 
@@ -158,7 +161,7 @@ public class SCAClient implements DependencyScanner {
     private String getProjectIdByName(String name) throws IOException, CxClientException {
         log.debug("Getting project by name: " + name);
 
-        if (Strings.isNullOrEmpty(name)) {
+        if (StringUtils.isEmpty(name)) {
             throw new CxClientException("Non-empty project name must be provided.");
         }
 
@@ -232,7 +235,7 @@ public class SCAClient implements DependencyScanner {
         String result = null;
         try {
             String webAppUrl = getScaConfig().getWebAppUrl();
-            if (Strings.isNullOrEmpty(webAppUrl)) {
+            if (StringUtils.isEmpty(webAppUrl)) {
                 log.warn(MESSAGE + "Web app URL is not specified.");
             } else {
                 String encoding = StandardCharsets.UTF_8.name();

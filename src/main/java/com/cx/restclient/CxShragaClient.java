@@ -6,13 +6,12 @@ import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.CxArmConfig;
 import com.cx.restclient.dto.*;
-import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.osa.dto.ClientType;
-import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.dto.*;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
@@ -52,25 +51,42 @@ public class CxShragaClient {
     private DependencyScanner dependencyScanner;
 
     public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException, CxClientException {
+        validateConfig(config);
+
         this.config = config;
         this.log = log;
 
-        this.httpClient = new CxHttpClient(
-                UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                config.getProxyConfig(),
-                log);
-
-        if (config.getSastEnabled()) {
+        if (config.isSastOrOSAEnabled()) {
+            this.httpClient = new CxHttpClient(
+                    UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
+                    config.getCxOrigin(),
+                    config.isDisableCertificateValidation(),
+                    config.isUseSSOLogin(),
+                    config.getProxyConfig(),
+                    log);
             sastClient = new CxSASTClient(httpClient, log, config);
+
+            if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
+                dependencyScanner = new CxOSAClient(httpClient, log, config);
+            }
         }
 
-        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
-            dependencyScanner = new CxOSAClient(httpClient, log, config);
-        } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
+        if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
             dependencyScanner = new SCAClient(log, config);
+        }
+    }
+
+    private void validateConfig(CxScanConfig config) throws CxClientException {
+        String message = null;
+        if (config == null) {
+            message = "Non-null config must be provided.";
+        } else if (!StringUtils.isEmpty(config.getUrl()) && !config.isSastOrOSAEnabled()) {
+            message = "Config contains server URL, but neither SAST nor OSA is enabled. Please enable SAST, OSA or both in config.";
+        } else if (StringUtils.isEmpty(config.getUrl()) && config.isSastOrOSAEnabled()) {
+            message = "Server URL is required when SAST or OSA is enabled.";
+        }
+        if (message != null) {
+            throw new CxClientException(message);
         }
     }
 

@@ -9,32 +9,15 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.SASTResults;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.utility.TestingUtils;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.Properties;
 
 @Ignore
-public class ProjectScanTests {
-
-    private static final String PROPERTIES_FILE = "config.properties";
-
-    private Logger log = LoggerFactory.getLogger(ProjectScanTests.class.getName());
-    private static Properties props;
-
-    @BeforeClass
-    public static void initTest() throws IOException {
-        props = TestingUtils.getProps(PROPERTIES_FILE, ProjectScanTests.class);
-    }
-
+public class ProjectScanTests extends CommonClientTest {
     @Test
     public void runOsaScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initOsaConfig();
@@ -181,10 +164,5 @@ public class ProjectScanTests {
         config.setScaConfig(sca);
 
         return config;
-    }
-
-    private void failOnException(Exception e) {
-        log.error("Error running scan.", e);
-        Assert.fail(e.getMessage());
     }
 }
