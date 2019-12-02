@@ -25,7 +25,6 @@ public class GetTeamListTests extends CommonClientTest {
 
     private CxScanConfig initConfig() {
         CxScanConfig config = new CxScanConfig();
-        config.setSastEnabled(true);
         config.setUsername(props.getProperty("username"));
         config.setPassword(props.getProperty("password"));
         config.setUrl(props.getProperty("serverUrl"));

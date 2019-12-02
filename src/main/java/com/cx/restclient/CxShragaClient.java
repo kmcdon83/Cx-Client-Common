@@ -56,7 +56,7 @@ public class CxShragaClient {
         this.config = config;
         this.log = log;
 
-        if (config.isSastOrOSAEnabled()) {
+        if (!StringUtils.isEmpty(config.getUrl())) {
             this.httpClient = new CxHttpClient(
                     UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
                     config.getCxOrigin(),
@@ -64,14 +64,15 @@ public class CxShragaClient {
                     config.isUseSSOLogin(),
                     config.getProxyConfig(),
                     log);
-            sastClient = new CxSASTClient(httpClient, log, config);
-
-            if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
-                dependencyScanner = new CxOSAClient(httpClient, log, config);
-            }
         }
 
-        if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
+        if (config.getSastEnabled()) {
+            sastClient = new CxSASTClient(httpClient, log, config);
+        }
+
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
+            dependencyScanner = new CxOSAClient(httpClient, log, config);
+        } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
             dependencyScanner = new SCAClient(log, config);
         }
     }
@@ -80,8 +81,6 @@ public class CxShragaClient {
         String message = null;
         if (config == null) {
             message = "Non-null config must be provided.";
-        } else if (!StringUtils.isEmpty(config.getUrl()) && !config.isSastOrOSAEnabled()) {
-            message = "Config contains server URL, but neither SAST nor OSA is enabled. Please enable SAST, OSA or both in config.";
         } else if (StringUtils.isEmpty(config.getUrl()) && config.isSastOrOSAEnabled()) {
             message = "Server URL is required when SAST or OSA is enabled.";
         }
