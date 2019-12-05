@@ -73,7 +73,7 @@ public class CxShragaClient {
         if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
             dependencyScanner = new CxOSAClient(httpClient, log, config);
         } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
-            dependencyScanner = new SCAClient(log, config);
+            dependencyScanner = new SCAClient(config, log);
         }
     }
 
@@ -188,6 +188,23 @@ public class CxShragaClient {
                 }
                 log.info("-----------------------------------------------------------------------------------------");
             }
+        }
+    }
+
+    /**
+     * @param config
+     * The following config properties are used:
+     *      scaConfig
+     *      proxyConfig
+     *      cxOrigin
+     *      disableCertificateValidation
+     */
+    public static void testScaConnection(CxScanConfig config, Logger log) throws CxClientException {
+        SCAClient client = new SCAClient(config, log);
+        try {
+            client.testConnection();
+        } catch (IOException e) {
+            throw new CxClientException(e);
         }
     }
 

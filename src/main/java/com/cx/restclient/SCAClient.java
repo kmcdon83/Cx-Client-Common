@@ -61,8 +61,7 @@ public class SCAClient implements DependencyScanner {
     private String projectId;
     private final Waiter<ScanStatusResponse> waiter;
     private String scanId;
-
-    SCAClient(Logger log, CxScanConfig config) throws CxClientException {
+    SCAClient(CxScanConfig config, Logger log) throws CxClientException {
         this.log = log;
         this.config = config;
 
@@ -138,6 +137,12 @@ public class SCAClient implements DependencyScanner {
         return null;
     }
 
+    void testConnection() throws IOException, CxClientException {
+        // The calls below allow to check both access control and API connectivity.
+        login();
+        getProjects();
+    }
+
     private void login() throws IOException, CxClientException {
         log.info("Logging into SCA.");
         SCAConfig scaConfig = getScaConfig();
@@ -169,18 +174,22 @@ public class SCAClient implements DependencyScanner {
             throw new CxClientException("Non-empty project name must be provided.");
         }
 
-        List<Project> allProjects = (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS,
-                ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                Project.class,
-                HttpStatus.SC_OK,
-                "SCA projects",
-                true);
+        List<Project> allProjects = getProjects();
 
         return allProjects.stream()
                 .filter((Project project) -> name.equals(project.getName()))
                 .map(Project::getId)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private List<Project> getProjects() throws IOException, CxClientException {
+        return (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS,
+                    ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                    Project.class,
+                    HttpStatus.SC_OK,
+                    "SCA projects",
+                    true);
     }
 
     private String createProject(String name) throws CxClientException, IOException {

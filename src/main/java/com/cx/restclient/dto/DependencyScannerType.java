@@ -4,8 +4,18 @@ public enum DependencyScannerType {
     /**
      * Indicates that dependency scan should not be performed.
      */
-    NONE,
+    NONE("None"),
 
-    OSA,
-    SCA
+    OSA("CxOSA"),
+    SCA("SCA");
+
+    private final String displayName;
+
+    DependencyScannerType(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
 }
