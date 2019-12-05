@@ -9,6 +9,7 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.SASTResults;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.utility.TestingUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -153,14 +154,7 @@ public class ProjectScanTests extends CommonClientTest {
         config.setOsaThresholdsEnabled(true);
         config.setProjectName("scaOnlyScan");
 
-        SCAConfig sca = new SCAConfig();
-        sca.setApiUrl(props.getProperty("sca.apiUrl"));
-        sca.setAccessControlUrl(props.getProperty("sca.accessControlUrl"));
-        sca.setTenant(props.getProperty("sca.tenant"));
-        sca.setUsername(props.getProperty("sca.username"));
-        sca.setPassword(props.getProperty("sca.password"));
-        sca.setWebAppUrl(props.getProperty("sca.webAppUrl"));
-
+        SCAConfig sca = TestingUtils.getScaConfig(props);
         config.setScaConfig(sca);
 
         return config;

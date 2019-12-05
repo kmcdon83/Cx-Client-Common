@@ -3,6 +3,7 @@ package com.cx.restclient.connection;
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.exception.CxClientException;
+import com.cx.utility.TestingUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -19,6 +20,18 @@ public class ConnectionTests extends CommonClientTest {
             e.printStackTrace();
             log.error("Error running  osa scan: " + e.getMessage());
             Assert.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void scaConnectionTest() {
+        CxScanConfig config = new CxScanConfig();
+        config.setCxOrigin("common");
+        config.setScaConfig(TestingUtils.getScaConfig(props));
+        try {
+            CxShragaClient.testScaConnection(config, log);
+        } catch (CxClientException e) {
+            failOnException(e);
         }
     }
 
