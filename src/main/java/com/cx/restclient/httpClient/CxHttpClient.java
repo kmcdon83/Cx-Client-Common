@@ -10,10 +10,12 @@ import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.exception.CxTokenExpiredException;
 import com.cx.restclient.osa.dto.ClientType;
 import org.apache.commons.lang3.StringUtils;
+import com.google.gson.Gson;
 import org.apache.http.*;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CookieStore;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.AuthSchemes;
@@ -29,17 +31,19 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustAllStrategy;
+import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.NoConnectionReuseStrategy;
 import org.apache.http.impl.auth.BasicSchemeFactory;
 import org.apache.http.impl.auth.DigestSchemeFactory;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.client.ProxyAuthenticationStrategy;
+import org.apache.http.impl.auth.win.WindowsCredentialsProvider;
+import org.apache.http.impl.auth.win.WindowsNTLMSchemeFactory;
+import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
+import org.apache.http.impl.client.*;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
@@ -56,6 +60,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,19 +74,33 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
  * Created by Galn on 05/02/2018.
  */
 public class CxHttpClient {
+
+    private static String HTTP_HOST = System.getProperty("http.proxyHost");
+    private static String HTTP_PORT = System.getProperty("http.proxyPort");
+    private static String HTTP_USERNAME = System.getProperty("http.proxyUser");
+    private static String HTTP_PASSWORD = System.getProperty("http.proxyPassword");
+
+    private static String HTTPS_HOST = System.getProperty("https.proxyHost");
+    private static String HTTPS_PORT = System.getProperty("https.proxyPort");
+    private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
+    private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
+
     private static HttpClient apacheClient;
 
     private Logger log;
     private TokenLoginResponse token;
     private String rootUri;
+    private final String refreshToken;
     private String cxOrigin;
     private Boolean useSSo;
     private LoginSettings lastLoginSettings;
+    private CookieStore cookieStore = new BasicCookieStore();
 
-    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO,
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
                         @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
         this.log = log;
         this.rootUri = rootUri;
+        this.refreshToken = refreshToken;
         this.cxOrigin = origin;
         this.useSSo = isSSO;
         //create httpclient
@@ -102,20 +121,28 @@ public class CxHttpClient {
 
         setCustomProxy(cb, proxyConfig, log);
 
-        cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
+        if (useSSo) {
+            cb.setDefaultCredentialsProvider(new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider()));
+            cb.setDefaultCookieStore(cookieStore);
+        } else {
+            cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
+        }
         cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
         cb.useSystemProperties();
         apacheClient = cb.build();
     }
 
     private static void setCustomProxy(HttpClientBuilder cb, ProxyConfig proxyConfig, Logger logi) {
-        if (proxyConfig == null) {
+        if (proxyConfig == null ||
+                StringUtils.isEmpty(proxyConfig.getHost()) ||
+                proxyConfig.getPort() == 0) {
             return;
         }
 
         String scheme = proxyConfig.isUseHttps() ? "https" : "http";
         HttpHost proxy = new HttpHost(proxyConfig.getHost(), proxyConfig.getPort(), scheme);
-        if (!isEmpty(proxyConfig.getUsername()) && !isEmpty(proxyConfig.getPassword())) {
+        if (StringUtils.isNotEmpty(proxyConfig.getUsername()) &&
+                StringUtils.isNotEmpty(proxyConfig.getPassword())) {
             UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(proxyConfig.getUsername(), proxyConfig.getPassword());
             CredentialsProvider credsProvider = new BasicCredentialsProvider();
             credsProvider.setCredentials(new AuthScope(proxy), credentials);
@@ -160,6 +187,8 @@ public class CxHttpClient {
         return RegistryBuilder.<AuthSchemeProvider>create()
                 .register(AuthSchemes.DIGEST, new DigestSchemeFactory())
                 .register(AuthSchemes.BASIC, new BasicSchemeFactory())
+                .register(AuthSchemes.NTLM, new WindowsNTLMSchemeFactory(null))
+                .register(AuthSchemes.SPNEGO, new WindowsNegotiateSchemeFactory(null))
                 .build();
     }
 
@@ -168,11 +197,84 @@ public class CxHttpClient {
         if (settings.getRefreshToken() != null) {
             token = getAccessTokenFromRefreshToken(settings);
         } else if (useSSo) {
-            HttpPost post = new HttpPost(rootUri + SSO_AUTHENTICATION);
-            request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), new StringEntity(""), TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
+            token = ssoLogin();
         } else {
             token = generateToken(settings);
         }
+    }
+
+    private TokenLoginResponse ssoLogin() throws CxClientException {
+        HttpUriRequest request;
+        HttpResponse response = null;
+        final String BASE_URL = "/auth/identity/";
+
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setRedirectsEnabled(false)
+                .setAuthenticationEnabled(true)
+                .setCookieSpec(CookieSpecs.STANDARD)
+                .build();
+        try {
+            //Request1
+            request = RequestBuilder.post()
+                    .setUri(rootUri + SSO_AUTHENTICATION)
+                    .setConfig(requestConfig)
+                    .setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.toString())
+                    .setEntity(generateSSOEntity())
+                    .build();
+
+            response = apacheClient.execute(request);
+
+            //Request2
+            String cookies = retrieveCookies();
+            String redirectURL = response.getHeaders("Location")[0].getValue();
+            request = RequestBuilder.get()
+                    .setUri(rootUri + BASE_URL + redirectURL)
+                    .setConfig(requestConfig)
+                    .setHeader("Cookie", cookies)
+                    .setHeader("Upgrade-Insecure-Requests", "1")
+                    .build();
+            response = apacheClient.execute(request);
+
+            //Request3
+            cookies = retrieveCookies();
+            redirectURL = response.getHeaders("Location")[0].getValue();
+            redirectURL = rootUri + redirectURL.replace("/CxRestAPI/", "");
+            request = RequestBuilder.get()
+                    .setUri(redirectURL)
+                    .setConfig(requestConfig)
+                    .setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.toString())
+                    .setHeader("Cookie", cookies)
+                    .build();
+            response = apacheClient.execute(request);
+            return extractToken(response);
+        } catch (IOException e) {
+            log.error("Fail to login with windows authentication: " + e.getMessage());
+            throw new CxClientException("Fail to login with windows authentication: " + e.getMessage());
+        }
+    }
+
+    private TokenLoginResponse extractToken(HttpResponse response) {
+        String redirectURL = response.getHeaders("Location")[0].getValue();
+        if (!redirectURL.contains("access_token")) {
+            throw new CxClientException("Failed retrieving access token from server");
+        }
+        return new Gson().fromJson(urlToJson(redirectURL), TokenLoginResponse.class);
+    }
+
+    private String urlToJson(String url) {
+        url = url.replaceAll("=", "\":\"");
+        url = url.replaceAll("&", "\",\"");
+        return "{\"" + url + "\"}";
+    }
+
+    private String retrieveCookies() {
+        List<Cookie> cookieList = cookieStore.getCookies();
+        String cookies = "";
+        for (Cookie cookie : cookieList) {
+            cookies += cookie.getName() + "=" + cookie.getValue() + ";";
+        }
+
+        return cookies;
     }
 
     public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
@@ -332,6 +434,34 @@ public class CxHttpClient {
             HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
             log.warn("Failed to set SSL TLS : " + e.getMessage());
+        }
+    }
+
+    //TODO handle missing scope issue with management_and_orchestration_api
+    private StringEntity generateSSOEntity() throws CxClientException {
+        final String clientId = "cxsast_client";
+        final String redirectUri = "%2Fcxwebclient%2FauthCallback.html%3F";
+        final String responseType = "id_token%20token";
+        final String nonce = "9313f0902ba64e50bc564f5137f35a52";
+        final String isPrompt = "true";
+        final String scopes = "sast_api openid sast-permissions access-control-permissions access_control_api management_and_orchestration_api".replace(" ", "%20");
+        final String providerId = "2"; //windows provider id
+
+        String redirectUrl = MessageFormat.format("/CxRestAPI/auth/identity/connect/authorize/callback" +
+                        "?client_id={0}" +
+                        "&redirect_uri={1}" + redirectUri +
+                        "&response_type={2}" +
+                        "&scope={3}" +
+                        "&nonce={4}" +
+                        "&prompt={5}"
+                , clientId, rootUri, responseType, scopes, nonce, isPrompt);
+        try {
+            List<NameValuePair> urlParameters = new ArrayList<>();
+            urlParameters.add(new BasicNameValuePair("redirectUrl", redirectUrl));
+            urlParameters.add(new BasicNameValuePair("providerid", providerId));
+            return new UrlEncodedFormEntity(urlParameters, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException e) {
+            throw new CxClientException(e.getMessage());
         }
     }
 

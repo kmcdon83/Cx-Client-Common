@@ -3,7 +3,7 @@ package com.cx.restclient.exception;
 /**
  * Created by Galn on 05/02/2018.
  */
-public class CxClientException extends Exception {
+public class CxClientException extends RuntimeException {
     public CxClientException() {
         super();
     }

@@ -174,12 +174,12 @@ class CxOSAClient implements DependencyScanner {
         return results;
     }
 
-    private void resolveOSAViolation(OSAResults osaResults, long projectId) {
+    private void resolveOSAViolation(OSAResults osaResults, long projectId) throws CxClientException {
         try {
             getProjectViolatedPolicies(httpClient, config.getCxARMUrl(), projectId, OPEN_SOURCE.value())
                     .forEach(osaResults::addPolicy);
         } catch (Exception ex) {
-            log.error("CxARM is not available. Policy violations for OSA cannot be calculated: " + ex.getMessage());
+            throw new CxClientException("CxARM is not available. Policy violations for OSA cannot be calculated: " + ex.getMessage());
         }
     }
 

@@ -3,13 +3,13 @@ package com.cx.restclient.connection;
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.exception.CxClientException;
-import com.cx.utility.TestingUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 
 public class ConnectionTests extends CommonClientTest {
+
     @Test
     public void ssoConnectionTest() {
         CxScanConfig config = initConfig();
