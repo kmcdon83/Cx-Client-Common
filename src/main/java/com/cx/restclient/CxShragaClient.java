@@ -62,6 +62,7 @@ public class CxShragaClient {
                     config.getCxOrigin(),
                     config.isDisableCertificateValidation(),
                     config.isUseSSOLogin(),
+                    config.getRefreshToken(),
                     config.getProxyConfig(),
                     log);
         }

@@ -61,6 +61,7 @@ public class SCAClient implements DependencyScanner {
     private String projectId;
     private final Waiter<ScanStatusResponse> waiter;
     private String scanId;
+
     SCAClient(CxScanConfig config, Logger log) throws CxClientException {
         this.log = log;
         this.config = config;
@@ -74,6 +75,7 @@ public class SCAClient implements DependencyScanner {
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
+                null,
                 config.getProxyConfig(),
                 log);
 
