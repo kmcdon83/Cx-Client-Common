@@ -12,6 +12,7 @@ import com.cx.restclient.sast.utils.SASTUtils;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.google.gson.Gson;
 import org.apache.http.HttpEntity;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -357,7 +358,7 @@ class CxSASTClient {
         builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
         builder.addPart("zippedSource", streamBody);
         HttpEntity entity = builder.build();
-        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, entity, null, 204, "upload ZIP file");
+        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
     }
 
     private CxID createScan(CreateScanRequest request) throws CxClientException, IOException {
