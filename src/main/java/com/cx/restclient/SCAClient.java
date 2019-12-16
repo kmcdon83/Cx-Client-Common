@@ -43,13 +43,12 @@ public class SCAClient implements DependencyScanner {
         private static final String RISK_MANAGEMENT_API = "/risk-management/api/";
         private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
         private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
+        private static final String SCAN_STATUS = RISK_MANAGEMENT_API + "scans/%s/status";
+        private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
 
-        private static final String SCAN_API = "/emerald/api/scans/";
-        private static final String ZIP_UPLOAD = SCAN_API + "zip";
-        private static final String SCAN_STATUS = SCAN_API + "%s/status";
-        private static final String REPORT_ID = SCAN_API + "%s/riskReportId";
+        private static final String ZIP_UPLOAD = "/emerald/api/scans/zip";
 
-        private static final String WEB_REPORT = "/#/projects/%s/report/%s";
+        private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     }
 
     private final Logger log;
@@ -225,7 +224,7 @@ public class SCAClient implements DependencyScanner {
 
         HttpEntity entity = builder.build();
 
-        String scanId = httpClient.postRequest(UrlPaths.ZIP_UPLOAD, null, entity, String.class, HttpStatus.SC_OK, "upload ZIP file");
+        String scanId = httpClient.postRequest(UrlPaths.ZIP_UPLOAD, null, entity, String.class, HttpStatus.SC_CREATED, "upload ZIP file");
         log.debug("Scan ID: " + scanId);
 
         return scanId;
