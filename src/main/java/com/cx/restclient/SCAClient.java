@@ -78,7 +78,7 @@ public class SCAClient implements DependencyScanner {
                 config.getProxyConfig(),
                 log);
 
-        waiter = new SCAWaiter("SCA scan", pollInterval, maxRetries, httpClient, UrlPaths.SCAN_STATUS, log);
+        waiter = new SCAWaiter("CxSCA scan", pollInterval, maxRetries, httpClient, UrlPaths.SCAN_STATUS, log);
     }
 
     @Override
@@ -87,14 +87,13 @@ public class SCAClient implements DependencyScanner {
             login();
             resolveProject();
         } catch (IOException e) {
-            throw new CxClientException("Failed to init SCA Client.", e);
+            throw new CxClientException("Failed to init CxSCA Client.", e);
         }
     }
 
     @Override
     public String createScan(DependencyScanResults target) throws CxClientException {
-        log.info("----------------------------------- Create SCA Scan:------------------------------------");
-        log.info("Creating SCA scan");
+        log.info("----------------------------------- Create CxSCA Scan:------------------------------------");
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         scanId = null;
@@ -104,7 +103,7 @@ public class SCAClient implements DependencyScanner {
             scanId = uploadZipFile(zipFile);
             CxZipUtils.deleteZippedSources(zipFile, config, log);
         } catch (IOException e) {
-            throw new CxClientException("Error creating SCA scan.", e);
+            throw new CxClientException("Error creating CxSCA scan.", e);
         }
 
         return scanId;
@@ -112,21 +111,21 @@ public class SCAClient implements DependencyScanner {
 
     @Override
     public void waitForScanResults(DependencyScanResults target) throws CxClientException {
-        log.info("------------------------------------Get SCA Results:-----------------------------------");
+        log.info("------------------------------------Get CxSCA Results:-----------------------------------");
 
-        log.info("Waiting for SCA scan to finish");
+        log.info("Waiting for CxSCA scan to finish");
         waiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
 
-        log.info("SCA scan finished successfully. Retrieving SCA scan results.");
+        log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
         SCAResults scaResult;
         try {
             scaResult = retrieveScanResults();
         } catch (IOException e) {
-            throw new CxClientException("Error retrieving SCA scan results.", e);
+            throw new CxClientException("Error retrieving CxSCA scan results.", e);
         }
 
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info("SCA scan results location: " + scaResult.getWebReportLink());
+            log.info("CxSCA scan results location: " + scaResult.getWebReportLink());
         }
 
         target.setScaResults(scaResult);
@@ -145,7 +144,7 @@ public class SCAClient implements DependencyScanner {
     }
 
     private void login() throws IOException, CxClientException {
-        log.info("Logging into SCA.");
+        log.info("Logging into CxSCA.");
         SCAConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
@@ -189,7 +188,7 @@ public class SCAClient implements DependencyScanner {
                     ContentType.CONTENT_TYPE_APPLICATION_JSON,
                     Project.class,
                     HttpStatus.SC_OK,
-                    "SCA projects",
+                    "CxSCA projects",
                     true);
     }
 
@@ -289,7 +288,7 @@ public class SCAClient implements DependencyScanner {
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 SCASummaryResults.class,
                 HttpStatus.SC_OK,
-                "SCA report summary",
+                "CxSCA report summary",
                 false);
 
         printSummary(result);
@@ -299,7 +298,7 @@ public class SCAClient implements DependencyScanner {
 
     // This method is for demo purposes and probably should be replaced in the future.
     private void printSummary(SCASummaryResults summary) {
-        log.info("\n----SCA risk report summary----");
+        log.info("\n----CxSCA risk report summary----");
         log.info("Created on: " + summary.getCreatedOn());
         log.info("Direct packages: " + summary.getDirectPackages());
         log.info("High vulnerabilities: " + summary.getHighVulnerabilityCount());
@@ -314,7 +313,7 @@ public class SCAClient implements DependencyScanner {
     private SCAConfig getScaConfig() throws CxClientException {
         SCAConfig result = config.getScaConfig();
         if (result == null) {
-            throw new CxClientException("SCA scan configuration is missing.");
+            throw new CxClientException("CxSCA scan configuration is missing.");
         }
         return result;
     }

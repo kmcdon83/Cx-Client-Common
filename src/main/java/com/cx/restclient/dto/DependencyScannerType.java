@@ -7,7 +7,7 @@ public enum DependencyScannerType {
     NONE("None"),
 
     OSA("CxOSA"),
-    SCA("SCA");
+    SCA("CxSCA");
 
     private final String displayName;
 

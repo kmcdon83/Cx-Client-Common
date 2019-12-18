@@ -32,7 +32,7 @@ public class SCAWaiter extends Waiter<ScanStatusResponse> {
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 ScanStatusResponse.class,
                 HttpStatus.SC_OK,
-                "SCA scan status",
+                "CxSCA scan status",
                 false);
 
         return response;
@@ -40,7 +40,7 @@ public class SCAWaiter extends Waiter<ScanStatusResponse> {
 
     @Override
     public void printProgress(ScanStatusResponse statusResponse) {
-        log.info(String.format("Waiting for SCA scan results. Elapsed time: %s. Status: %s.",
+        log.info(String.format("Waiting for CxSCA scan results. Elapsed time: %s. Status: %s.",
                 ShragaUtils.getTimestampSince(getStartTimeSec()),
                 statusResponse.getName().getValue()));
     }
@@ -54,11 +54,11 @@ public class SCAWaiter extends Waiter<ScanStatusResponse> {
                         lastStatusResponse.getName(),
                         lastStatusResponse.getMessage());
             }
-            throw new CxClientException("SCA scan cannot be completed. " + details);
+            throw new CxClientException("CxSCA scan cannot be completed. " + details);
         }
 
         if (lastStatusResponse.getName() == StatusName.DONE) {
-            log.info("SCA scan finished.");
+            log.info("CxSCA scan finished.");
         }
         return lastStatusResponse;
     }
