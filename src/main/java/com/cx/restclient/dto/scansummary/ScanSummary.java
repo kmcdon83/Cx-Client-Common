@@ -98,12 +98,12 @@ public class ScanSummary {
             SCAResults scaResults = dependencyScanResults.getScaResults();
             OSAResults osaResults = dependencyScanResults.getOsaResults();
             int totalHigh = 0, totalMedium = 0, totalLow = 0;
-            String severityType = null;
+            boolean hasSummary = false;
 
             if (scaResults != null) {
                 SCASummaryResults summary = scaResults.getSummary();
                 if (summary != null) {
-                    severityType = "SCA";
+                    hasSummary = true;
                     totalHigh = summary.getHighVulnerabilityCount();
                     totalMedium = summary.getMediumVulnerabilityCount();
                     totalLow = summary.getLowVulnerabilityCount();
@@ -111,14 +111,14 @@ public class ScanSummary {
             } else if (osaResults != null && osaResults.isOsaResultsReady()) {
                 OSASummaryResults summary = osaResults.getResults();
                 if (summary != null) {
-                    severityType = "CxOSA";
+                    hasSummary = true;
                     totalHigh = summary.getTotalHighVulnerabilities();
                     totalMedium = summary.getTotalMediumVulnerabilities();
                     totalLow = summary.getTotalLowVulnerabilities();
                 }
             }
 
-            if (severityType != null) {
+            if (hasSummary) {
                 checkForThresholdError(totalHigh, config.getOsaHighThreshold(), ErrorSource.DEPENDENCY_SCANNER, Severity.HIGH);
                 checkForThresholdError(totalMedium, config.getOsaMediumThreshold(), ErrorSource.DEPENDENCY_SCANNER, Severity.MEDIUM);
                 checkForThresholdError(totalLow, config.getOsaLowThreshold(), ErrorSource.DEPENDENCY_SCANNER, Severity.LOW);
