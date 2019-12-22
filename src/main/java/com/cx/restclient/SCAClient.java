@@ -46,7 +46,7 @@ public class SCAClient implements DependencyScanner {
         private static final String SCAN_STATUS = RISK_MANAGEMENT_API + "scans/%s/status";
         private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
 
-        private static final String ZIP_UPLOAD = "/emerald/api/scans/zip";
+        private static final String ZIP_UPLOAD = "/scan-runner/api/scans/zip";
 
         private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     }
