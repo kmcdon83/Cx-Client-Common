@@ -91,7 +91,7 @@ public abstract class OSAUtils {
             ret.put("php.runPreStep", "true");
             ret.put("sbt.runPreStep", "true");
             setResolveDependencies(ret, "true");
-            ret.put("sbt.targetFolder", getSbtTargetFolder(scanFolder));
+            ret.put("sbt.targetFolder", getSbtTargetFolder(sourceDir));
         } else {
             setResolveDependencies(ret, "false");
         }
