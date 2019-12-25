@@ -1,6 +1,8 @@
 package com.cx.restclient.dto;
 
-public class ProxyConfig {
+import java.io.Serializable;
+
+public class ProxyConfig implements Serializable {
     private String host;
     private int port;
     private String username;
