@@ -1,8 +1,8 @@
 package com.cx.restclient.sca.dto;
 
-import java.time.OffsetDateTime;
+import java.io.Serializable;
 
-public class SCASummaryResults {
+public class SCASummaryResults implements Serializable {
     private String riskReportId;
     private int highVulnerabilityCount;
     private int mediumVulnerabilityCount;

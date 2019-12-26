@@ -1,6 +1,8 @@
 package com.cx.restclient.sca.dto;
 
-public class SCAResults {
+import java.io.Serializable;
+
+public class SCAResults implements Serializable {
     private String scanId;
     private SCASummaryResults summary;
     private String webReportLink;
