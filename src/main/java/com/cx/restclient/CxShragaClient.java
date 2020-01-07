@@ -41,7 +41,7 @@ public class CxShragaClient {
     private Logger log;
     private CxScanConfig config;
     private long projectId;
-
+    private String teamPath;
     private CxSASTClient sastClient;
 
     private long sastScanId;
@@ -342,6 +342,7 @@ public class CxShragaClient {
             config.setTeamId(getTeamIdByName(config.getTeamPath()));
         }
         printTeamPath();
+        httpClient.setTeamPathHeader(this.teamPath);
     }
 
     private void resolveCxARMUrl() throws CxClientException {
@@ -372,11 +373,11 @@ public class CxShragaClient {
 
     private void printTeamPath() {
         try {
-            String teamPath = config.getTeamPath();
-            if (teamPath == null) {
-                teamPath = getTeamNameById(config.getTeamId());
+            this.teamPath = config.getTeamPath();
+            if (this.teamPath == null) {
+                this.teamPath = getTeamNameById(config.getTeamId());
             }
-            log.info("full team path: " + teamPath);
+            log.info("full team path: " + this.teamPath);
         } catch (Exception e) {
         }
     }
