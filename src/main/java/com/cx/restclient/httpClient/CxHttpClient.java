@@ -398,6 +398,7 @@ public class CxHttpClient {
 
         try {
             httpMethod.addHeader(ORIGIN_HEADER, cxOrigin);
+            log.debug("request setTeamPathHeader " + this.teamPath);
             httpMethod.addHeader(TEAM_PATH, this.teamPath);
             if (token != null) {
                 httpMethod.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
