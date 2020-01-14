@@ -285,7 +285,14 @@ public class CxHttpClient {
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
         } catch (CxClientException e) {
-            throw new CxClientException(String.format("Failed to generate access token, failure error was: %s", e.getMessage()), e);
+            if (!e.getMessage().contains("invalid_scope")) {
+                throw new CxClientException(String.format("Failed to generate access token, failure error was: %s", e.getMessage()), e);
+            }
+            ClientType.RESOURCE_OWNER.setScopes("sast_rest_api");
+            settings.setClientTypeForPasswordAuth(ClientType.RESOURCE_OWNER);
+            requestEntity = generateUrlEncodedFormEntity(settings);
+            return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
+                    TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
         }
     }
 
