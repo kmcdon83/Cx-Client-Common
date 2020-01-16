@@ -41,7 +41,7 @@ public class CxShragaClient {
     private Logger log;
     private CxScanConfig config;
     private long projectId;
-
+    private String teamPath;
     private CxSASTClient sastClient;
 
     private long sastScanId;
@@ -116,6 +116,7 @@ public class CxShragaClient {
             getCxVersion();
             login();
             resolveTeam();
+            httpClient.setTeamPathHeader(this.teamPath);
             if (config.getSastEnabled()) {
                 resolvePreset();
             }
@@ -210,6 +211,7 @@ public class CxShragaClient {
     }
 
     private CxArmConfig getCxARMConfig() throws IOException, CxClientException {
+        httpClient.setTeamPathHeader(this.teamPath);
         return httpClient.getRequest(CX_ARM_URL, CONTENT_TYPE_APPLICATION_JSON_V1, CxArmConfig.class, 200, "CxARM URL", false);
     }
 
@@ -223,7 +225,10 @@ public class CxShragaClient {
 
     public List<Project> getAllProjects() throws IOException, CxClientException {
         List<Project> projects = null;
+        List<Team> teamList = getTeamList();
+
         try {
+            httpClient.setTeamPathHeader(this.teamPath);
             projects = (List<Project>) httpClient.getRequest(SAST_GET_All_PROJECTS, CONTENT_TYPE_APPLICATION_JSON_V1, Project.class, 200, "all projects", true);
         } catch (HttpResponseException ex) {
             if (ex.getStatusCode() != 404) {
@@ -317,19 +322,36 @@ public class CxShragaClient {
         throw new CxClientException("Could not resolve preset ID from preset name: " + presetName);
     }
 
-    public List<Team> getTeamList() throws IOException, CxClientException {
+    private List<Team> populateTeamList() throws IOException, CxClientException {
         return (List<Team>) httpClient.getRequest(CXTEAMS, CONTENT_TYPE_APPLICATION_JSON_V1, Team.class, 200, "team list", true);
     }
 
+    public List<Team> getTeamList() throws IOException, CxClientException {
+
+        List<Team> teamList = populateTeamList();
+        //If there is no chosen teamPath, just add first one from the teams list as default
+        if(StringUtils.isEmpty(this.teamPath) && teamList!=null && !teamList.isEmpty()){
+            this.teamPath= teamList.get(0).getFullName();
+        }
+        httpClient.setTeamPathHeader(this.teamPath);
+        log.debug("getTeamList setTeamPathHeader " + this.teamPath);
+        return  teamList;
+    }
+
     public Preset getPresetById(int presetId) throws IOException, CxClientException {
+        httpClient.setTeamPathHeader(this.teamPath);
         return httpClient.getRequest(CXPRESETS + "/" + presetId, CONTENT_TYPE_APPLICATION_JSON_V1, Preset.class, 200, "preset by id", false);
     }
 
     public List<Preset> getPresetList() throws IOException, CxClientException {
+        List<Team> teamList = getTeamList();
+        httpClient.setTeamPathHeader(this.teamPath);
         return (List<Preset>) httpClient.getRequest(CXPRESETS, CONTENT_TYPE_APPLICATION_JSON_V1, Preset.class, 200, "preset list", true);
     }
 
     public List<CxNameObj> getConfigurationSetList() throws IOException, CxClientException {
+        List<Team> teamList = getTeamList();
+        httpClient.setTeamPathHeader(this.teamPath);
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
     }
 
@@ -343,6 +365,7 @@ public class CxShragaClient {
             config.setTeamId(getTeamIdByName(config.getTeamPath()));
         }
         printTeamPath();
+        httpClient.setTeamPathHeader(this.teamPath);
     }
 
     private void resolveCxARMUrl() throws CxClientException {
@@ -373,11 +396,11 @@ public class CxShragaClient {
 
     private void printTeamPath() {
         try {
-            String teamPath = config.getTeamPath();
-            if (teamPath == null) {
-                teamPath = getTeamNameById(config.getTeamId());
+            this.teamPath = config.getTeamPath();
+            if (this.teamPath == null) {
+                this.teamPath = getTeamNameById(config.getTeamId());
             }
-            log.info("full team path: " + teamPath);
+            log.info("full team path: " + this.teamPath);
         } catch (Exception e) {
         }
     }
@@ -407,6 +430,7 @@ public class CxShragaClient {
         String projectNamePath = SAST_GET_PROJECT.replace("{name}", projectName).replace("{teamId}", teamId);
         List<Project> projects = null;
         try {
+            httpClient.setTeamPathHeader(this.teamPath);
             projects = (List<Project>) httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V1, Project.class, 200, "project by name: " + projectName, true);
         } catch (CxHTTPClientException ex) {
             if (ex.getStatusCode() != 404) {
@@ -418,6 +442,7 @@ public class CxShragaClient {
 
     private Project createNewProject(CreateProjectRequest request) throws CxClientException, IOException {
         String json = convertToJson(request);
+        httpClient.setTeamPathHeader(this.teamPath);
         StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);
         return httpClient.postRequest(CREATE_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "create new project: " + request.getName());
     }
