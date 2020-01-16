@@ -254,6 +254,7 @@ public class CxShragaClient {
 
     public String getToken() throws IOException, CxClientException {
         LoginSettings settings = getDefaultLoginSettings();
+        settings.setClientTypeForPasswordAuth(ClientType.CLI);
         final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(settings);
         return tokenLoginResponse.getRefresh_token();
     }

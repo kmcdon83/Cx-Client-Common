@@ -146,7 +146,7 @@
         <dependency>
             <groupId>com.checkmarx</groupId>
             <artifactId>cx-ws-fs-agent</artifactId>
-            <version>18.7.2.4</version>
+            <version>20.0.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.xml.bind</groupId>
