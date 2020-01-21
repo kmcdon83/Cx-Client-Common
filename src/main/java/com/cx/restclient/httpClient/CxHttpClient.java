@@ -91,6 +91,7 @@ public class CxHttpClient {
     private final String refreshToken;
     private String cxOrigin;
     private Boolean useSSo;
+    private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
 
     public CxHttpClient(String hostname, String username, String password, String origin,
@@ -408,6 +409,9 @@ public class CxHttpClient {
         HttpPatch patch = new HttpPatch(rootUri + relPath);
         request(patch, contentType, entity, null, expectStatus, failedMsg, false, true);
     }
+    public void setTeamPathHeader(String teamPath){
+        this.teamPath = teamPath;
+    }
 
     private <T> T request(HttpRequestBase httpMethod, String contentType, HttpEntity entity, Class<T> responseType, int expectStatus, String failedMsg, boolean isCollection, boolean retry) throws IOException, CxClientException {
         if (contentType != null) {
@@ -421,6 +425,8 @@ public class CxHttpClient {
 
         try {
             httpMethod.addHeader(ORIGIN_HEADER, cxOrigin);
+            httpMethod.addHeader(TEAM_PATH, this.teamPath);
+            log.debug("request setTeamPathHeader " + this.teamPath);
             if (token != null) {
                 httpMethod.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
             }
