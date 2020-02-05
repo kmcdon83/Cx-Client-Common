@@ -25,24 +25,18 @@ public abstract class Waiter<T> {
 
     private long startTimeSec;
 
-    protected Status status = null;
-
-    public T waitForTaskToFinish(String taskId, Integer scanTimeoutSec, Logger log) throws CxClientException, InterruptedException {
+    public T waitForTaskToFinish(String taskId, Integer scanTimeoutSec, Logger log) throws CxClientException {
         startTimeSec = System.currentTimeMillis() / 1000;
         long elapsedTimeSec = 0L;
-        T obj;
+        T statusResponse;
 
         try {
-            obj = getStatus(taskId);
-            status = ((BaseStatus) obj).getBaseStatus();
+            statusResponse = getStatus(taskId);
 
-
-            while (status.equals(Status.IN_PROGRESS) && (scanTimeoutSec <= 0 || elapsedTimeSec < scanTimeoutSec)) {
+            while (isTaskInProgress(statusResponse) && (scanTimeoutSec <= 0 || elapsedTimeSec < scanTimeoutSec)) {
                 Thread.sleep(sleepIntervalSec * 1000);
                 try {
-                    obj = getStatus(taskId);
-                    status = ((BaseStatus) obj).getBaseStatus();
-                    log.debug(status.value());
+                    statusResponse = getStatus(taskId);
                 } catch (Exception e) {
                     log.debug("Failed to get status from " + scanType + ". retrying (" + (retry - 1) + " tries left). Error message: " + e.getMessage());
                     retry--;
@@ -52,16 +46,16 @@ public abstract class Waiter<T> {
                     continue;
                 }
                 elapsedTimeSec = (new Date()).getTime() / 1000 - startTimeSec;
-                printProgress(obj);
-
+                printProgress(statusResponse);
             }
+
             if (scanTimeoutSec > 0 && scanTimeoutSec <= elapsedTimeSec) {
                 throw new CxClientException("Failed to perform " + scanType + ": " + scanType + " has been automatically aborted: reached the user-specified timeout (" + scanTimeoutSec / 60 + " minutes)");
             }
         } catch (Exception e) {
             throw new CxClientException("Failed to get status from " + scanType + ". Error message: " + e.getMessage(), e);
         }
-        return resolveStatus(obj);
+        return resolveStatus(statusResponse);
     }
 
     public abstract T getStatus(String id) throws CxClientException, IOException;
@@ -70,12 +64,9 @@ public abstract class Waiter<T> {
 
     public abstract T resolveStatus(T status) throws CxClientException;
 
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
+    public boolean isTaskInProgress(T statusResponse) {
+        Status status = ((BaseStatus) statusResponse).getBaseStatus();
+        return status.equals(Status.IN_PROGRESS);
     }
 
     public long getStartTimeSec() {

@@ -1,7 +1,10 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.DependencyScanner;
+import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.Status;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
@@ -28,12 +31,22 @@ import static com.cx.restclient.osa.utils.OSAUtils.writeJsonToFile;
 /**
  * Created by Galn on 05/02/2018.
  */
-class CxOSAClient {
+class CxOSAClient implements DependencyScanner {
 
     private CxHttpClient httpClient;
     private Logger log;
     private CxScanConfig config;
     private Waiter<OSAScanStatus> osaWaiter;
+    private long projectId;
+    private String scanId;
+
+    public void setProjectId(long projectId) {
+        this.projectId = projectId;
+    }
+
+    public OSAScanStatus getStatus(String id) throws CxClientException, IOException {
+        return getOSAScanStatus(id);
+    }
 
     public CxOSAClient(CxHttpClient client, Logger log, CxScanConfig config) {
         this.log = log;
@@ -59,8 +72,14 @@ class CxOSAClient {
         };
     }
 
-    //API
-    public String createOSAScan(long projectId) throws IOException, CxClientException {
+    @Override
+    public void init() {
+        // Empty for now
+    }
+    @Override
+    public String createScan(DependencyScanResults target) throws CxClientException {
+        ensureProjectIdSpecified();
+
         log.info("----------------------------------- Create CxOSA Scan:------------------------------------");
         log.info("Creating OSA scan");
         String osaDependenciesJson = config.getOsaDependenciesJson();
@@ -71,7 +90,19 @@ class CxOSAClient {
                 throw new CxClientException("Failed to resolve dependencies for OSA scan: " + e.getMessage(), e);
             }
         }
-        return sendOSAScan(osaDependenciesJson, projectId);
+
+        try {
+            scanId = sendOSAScan(osaDependenciesJson, projectId);
+        } catch (IOException e) {
+            scanId = null;
+            throw new CxClientException("Error sending OSA scan request.", e);
+        }
+
+        OSAResults osaResults = new OSAResults();
+        osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
+        target.setOsaResults(osaResults);
+
+        return scanId;
     }
 
     private String resolveOSADependencies() throws JsonProcessingException {
@@ -82,9 +113,8 @@ class CxOSAClient {
                     config.getOsaFolderExclusions(),
                     config.getOsaFilterPattern(),
                     config.getOsaArchiveIncludePatterns(),
-                    config.getSourceDir(),
+                    config.getEffectiveSourceDirForDependencyScan(),
                     config.getOsaRunInstall(),
-                    config.getOsaLocationPath(),
                     config.getOsaScanDepth(),
                     log);
         }
@@ -96,14 +126,28 @@ class CxOSAClient {
         return osaDependenciesJson;
     }
 
-    public OSAResults getOSAResults(String scanId, long projectId) throws CxClientException, InterruptedException, IOException {
+    @Override
+    public void waitForScanResults(DependencyScanResults target) throws CxClientException {
+        ensureProjectIdSpecified();
+
+        if (scanId == null) {
+            throw new CxClientException("Scan was not created.");
+        }
+
         log.info("-------------------------------------Get CxOSA Results:-----------------------------------");
         log.info("Waiting for OSA scan to finish");
-        OSAScanStatus osaScanStatus = osaWaiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
+
+        OSAScanStatus osaScanStatus;
+        osaScanStatus = osaWaiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
         log.info("OSA scan finished successfully. Retrieving OSA scan results");
 
         log.info("Creating OSA reports");
-        OSAResults osaResults = retrieveOSAResults(scanId, osaScanStatus, projectId);
+        OSAResults osaResults;
+        try {
+            osaResults = retrieveOSAResults(scanId, osaScanStatus, projectId);
+        } catch (IOException e) {
+            throw new CxClientException("Failed to retrieve OSA results.", e);
+        }
 
         if (config.getEnablePolicyViolations()) {
             resolveOSAViolation(osaResults, projectId);
@@ -117,9 +161,8 @@ class CxOSAClient {
             writeJsonToFile(OSA_VULNERABILITIES_NAME, osaResults.getOsaVulnerabilities(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
         }
 
-        return osaResults;
+        target.setOsaResults(osaResults);
     }
-
 
     private OSAResults retrieveOSAResults(String scanId, OSAScanStatus osaScanStatus, long projectId) throws CxClientException, IOException {
         OSASummaryResults osaSummaryResults = getOSAScanSummaryResults(scanId);
@@ -140,16 +183,27 @@ class CxOSAClient {
         }
     }
 
+    @Override
+    public DependencyScanResults getLatestScanResults() throws CxClientException {
+        ensureProjectIdSpecified();
 
-    public OSAResults getLatestOSAResults(long projectId) throws CxClientException, IOException, InterruptedException {
         log.info("----------------------------------Get CxOSA Last Results:--------------------------------");
-        List<OSAScanStatus> scanList = getOSALastOSAStatus(projectId);
-        for (OSAScanStatus s : scanList) {
-            if (Status.SUCCEEDED.value().equals(s.getState().getName())) {
-                return retrieveOSAResults(s.getId(), s, projectId);
+        OSAResults osaResults = null;
+        try {
+            List<OSAScanStatus> scanList = getOSALastOSAStatus(projectId);
+            for (OSAScanStatus s : scanList) {
+                if (Status.SUCCEEDED.value().equals(s.getState().getName())) {
+                    osaResults = retrieveOSAResults(s.getId(), s, projectId);
+                    break;
+                }
             }
+        } catch (IOException e) {
+            throw new CxClientException("Error getting last scan results.");
         }
-        return new OSAResults();
+
+        DependencyScanResults result = new DependencyScanResults();
+        result.setOsaResults(osaResults != null ? osaResults : new OSAResults());
+        return result;
     }
 
     //Private Methods
@@ -204,14 +258,9 @@ class CxOSAClient {
     }
 
     private void printOSAProgress(OSAScanStatus scanStatus, long startTime) {
-        long elapsedSec = System.currentTimeMillis() / 1000 - startTime;
-        long hours = elapsedSec / 3600;
-        long minutes = elapsedSec % 3600 / 60;
-        long seconds = elapsedSec % 60;
-        String hoursStr = (hours < 10) ? ("0" + Long.toString(hours)) : (Long.toString(hours));
-        String minutesStr = (minutes < 10) ? ("0" + Long.toString(minutes)) : (Long.toString(minutes));
-        String secondsStr = (seconds < 10) ? ("0" + Long.toString(seconds)) : (Long.toString(seconds));
-        log.info("Waiting for OSA scan results. Elapsed time: " + hoursStr + ":" + minutesStr + ":" + secondsStr + ". " +
+        String timestamp = ShragaUtils.getTimestampSince(startTime);
+
+        log.info("Waiting for OSA scan results. Elapsed time: " + timestamp + ". " +
                 "Status: " + scanStatus.getState().getName());
     }
 
@@ -225,6 +274,12 @@ class CxOSAClient {
             return scanStatus;
         }
         return scanStatus;
+    }
+
+    private void ensureProjectIdSpecified() throws CxClientException {
+        if (projectId == 0) {
+            throw new CxClientException("projectId must be set before executing this method.");
+        }
     }
 }
 

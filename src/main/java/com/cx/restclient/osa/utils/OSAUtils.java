@@ -44,7 +44,7 @@ public abstract class OSAUtils {
         return String.format(url + "/CxWebClient/SPA/#/viewer/project/%s", projectId);
     }
 
-    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, String osaLocationPath, String osaScanDepth, Logger log) {
+    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String sourceDir, boolean installBeforeScan, String osaScanDepth, Logger log) {
         Properties ret = new Properties();
         filterPatterns = StringUtils.defaultString(filterPatterns);
         archiveIncludes = StringUtils.defaultString(archiveIncludes);
@@ -91,12 +91,12 @@ public abstract class OSAUtils {
             ret.put("php.runPreStep", "true");
             ret.put("sbt.runPreStep", "true");
             setResolveDependencies(ret, "true");
-            ret.put("sbt.targetFolder", getSbtTargetFolder(scanFolder));
+            ret.put("sbt.targetFolder", getSbtTargetFolder(sourceDir));
         } else {
             setResolveDependencies(ret, "false");
         }
 
-        ret.put("d", osaLocationPath == null ? scanFolder : osaLocationPath);
+        ret.put("d", sourceDir);
         return ret;
     }
 

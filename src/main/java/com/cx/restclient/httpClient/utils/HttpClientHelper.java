@@ -3,13 +3,16 @@ package com.cx.restclient.httpClient.utils;
 
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
+import org.apache.http.entity.StringEntity;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.List;
 
@@ -36,7 +39,7 @@ public abstract class HttpClientHelper {
     }
 
     private static <T> T convertToStrObject(HttpResponse response, Class<T> valueType) throws CxClientException {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = getObjectMapper();
         try {
             if (response.getEntity() == null) {
                 return null;
@@ -50,7 +53,7 @@ public abstract class HttpClientHelper {
     }
 
     public static String convertToJson(Object o) throws CxClientException {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = getObjectMapper();
         try {
             return mapper.writeValueAsString(o);
         } catch (Exception e) {
@@ -58,14 +61,26 @@ public abstract class HttpClientHelper {
         }
     }
 
+    public static StringEntity convertToStringEntity(Object o) throws CxClientException, UnsupportedEncodingException {
+        return new StringEntity(convertToJson(o));
+    }
+
     private static <T> T convertToCollectionObject(HttpResponse response, JavaType javaType) throws CxClientException {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = getObjectMapper();
         try {
             String json = IOUtils.toString(response.getEntity().getContent(), Charset.defaultCharset());
             return mapper.readValue(json, javaType);
         } catch (IOException e) {
             throw new CxClientException("Failed to parse json response: " + e.getMessage(), e);
         }
+    }
+
+    private static ObjectMapper getObjectMapper() {
+        ObjectMapper result = new ObjectMapper();
+
+        // Prevent UnrecognizedPropertyException if additional fields are added to API responses.
+        result.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return result;
     }
 
     public static void validateResponse(HttpResponse response, int status, String message) throws CxClientException {

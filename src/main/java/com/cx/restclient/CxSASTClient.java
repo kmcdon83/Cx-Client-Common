@@ -1,7 +1,9 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.dto.RemoteSourceRequest;
 import com.cx.restclient.dto.RemoteSourceTypes;
 import com.cx.restclient.dto.Status;
@@ -139,25 +141,12 @@ class CxSASTClient {
         defineScanSetting(scanSettingRequest);
 
         //prepare sources for scan
-        if (config.getZipFile() == null) {
-            log.info("Zipping sources");
-            Long maxZipSize = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
-            File zipTempFile = CxZipUtils.zipWorkspaceFolder(config, maxZipSize, log);
-            //Upload zipped source file
-            uploadZipFile(zipTempFile, projectId);
-            deleteTempZipFile(zipTempFile, log);
-        } else {
-            uploadZipFile(config.getZipFile(), projectId);
-        }
+        PathFilter filter = new PathFilter(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
+        File zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
+        uploadZipFile(zipFile, projectId);
+        CxZipUtils.deleteZippedSources(zipFile, config, log);
 
-        //Start a new createSASTScan
-        log.info("Uploading zip file");
-        CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
-        log.info("Sending SAST scan request");
-        CxID createScanResponse = createScan(scanRequest);
-        log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
-
-        return createScanResponse.getId();
+        return createScan(projectId);
     }
 
     private long createRemoteSourceScan(long projectId) throws IOException, CxClientException {
@@ -216,14 +205,8 @@ class CxSASTClient {
         }
         createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
 
-        CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
-        log.info("Sending SAST scan request");
-        CxID createScanResponse = createScan(scanRequest);
-        log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
-
-        return createScanResponse.getId();
+        return createScan(projectId);
     }
-
 
     //GET SAST results + reports
     public SASTResults waitForSASTResults(long scanId, long projectId) throws InterruptedException, IOException, CxClientException {
@@ -353,6 +336,8 @@ class CxSASTClient {
     }
 
     private void uploadZipFile(File zipFile, long projectId) throws CxClientException, IOException {
+        log.info("Uploading zip file");
+
         InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
@@ -361,9 +346,15 @@ class CxSASTClient {
         httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
     }
 
-    private CxID createScan(CreateScanRequest request) throws CxClientException, IOException {
-        StringEntity entity = new StringEntity(convertToJson(request), StandardCharsets.UTF_8);
-        return httpClient.postRequest(SAST_CREATE_SCAN, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 201, "create new SAST Scan");
+    private long createScan(long projectId) throws CxClientException, IOException {
+        CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
+
+        log.info("Sending SAST scan request");
+        StringEntity entity = new StringEntity(convertToJson(scanRequest), StandardCharsets.UTF_8);
+        CxID createScanResponse = httpClient.postRequest(SAST_CREATE_SCAN, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 201, "create new SAST Scan");
+        log.info(String.format("SAST Scan created successfully. Link to project state: " + config.getUrl() + LINK_FORMAT, projectId));
+
+        return createScanResponse.getId();
     }
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
@@ -421,16 +412,10 @@ class CxSASTClient {
     }
 
     private void printSASTProgress(ResponseQueueScanStatus scanStatus, long startTime) {
-        long elapsedSec = System.currentTimeMillis() / 1000 - startTime;
-        long hours = elapsedSec / 3600;
-        long minutes = elapsedSec % 3600 / 60;
-        long seconds = elapsedSec % 60;
-        String hoursStr = (hours < 10) ? ("0" + Long.toString(hours)) : (Long.toString(hours));
-        String minutesStr = (minutes < 10) ? ("0" + Long.toString(minutes)) : (Long.toString(minutes));
-        String secondsStr = (seconds < 10) ? ("0" + Long.toString(seconds)) : (Long.toString(seconds));
+        String timestamp = ShragaUtils.getTimestampSince(startTime);
 
         String prefix = (scanStatus.getTotalPercent() < 10) ? " " : "";
-        log.info("Waiting for SAST scan results. Elapsed time: " + hoursStr + ":" + minutesStr + ":" + secondsStr + ". " + prefix +
+        log.info("Waiting for SAST scan results. Elapsed time: " + timestamp + ". " + prefix +
                 scanStatus.getTotalPercent() + "% processed. Status: " + scanStatus.getStage().getValue() + ".");
     }
 

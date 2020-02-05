@@ -1,7 +1,10 @@
 package com.cx.restclient.configuration;
 
 import com.cx.restclient.dto.CxVersion;
+import com.cx.restclient.dto.DependencyScannerType;
+import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
 
@@ -17,7 +20,6 @@ import java.util.Properties;
 public class CxScanConfig implements Serializable {
 
     private Boolean sastEnabled = false;
-    private Boolean osaEnabled = false;
 
     private String cxOrigin;
     private CxVersion cxVersion;
@@ -96,6 +98,11 @@ public class CxScanConfig implements Serializable {
     private Integer maxZipSize;
     private String defaultProjectName;
 
+    private SCAConfig scaConfig;
+    private DependencyScannerType dependencyScannerType;
+
+    private ProxyConfig proxyConfig;
+
     public CxScanConfig() {
     }
 
@@ -120,14 +127,6 @@ public class CxScanConfig implements Serializable {
 
     public void setSastEnabled(Boolean sastEnabled) {
         this.sastEnabled = sastEnabled;
-    }
-
-    public Boolean getOsaEnabled() {
-        return osaEnabled;
-    }
-
-    public void setOsaEnabled(Boolean osaEnabled) {
-        this.osaEnabled = osaEnabled;
     }
 
     public String getCxOrigin() {
@@ -172,6 +171,10 @@ public class CxScanConfig implements Serializable {
 
     public void setOsaLocationPath(String osaLocationPath) {
         this.osaLocationPath = osaLocationPath;
+    }
+
+    public String getEffectiveSourceDirForDependencyScan() {
+        return osaLocationPath != null ? osaLocationPath : sourceDir;
     }
 
     public File getReportsDir() {
@@ -490,7 +493,9 @@ public class CxScanConfig implements Serializable {
     }
 
     public boolean isOSAThresholdEffectivelyEnabled() {
-        return getOsaEnabled() && getOsaThresholdsEnabled() && (getOsaHighThreshold() != null || getOsaMediumThreshold() != null || getOsaLowThreshold() != null);
+        return getDependencyScannerType() != DependencyScannerType.NONE &&
+                getOsaThresholdsEnabled() &&
+                (getOsaHighThreshold() != null || getOsaMediumThreshold() != null || getOsaLowThreshold() != null);
     }
 
     public void setOsaDependenciesJson(String osaDependenciesJson) {
@@ -696,5 +701,38 @@ public class CxScanConfig implements Serializable {
 
     public void addRTFReport(String rtfReportPath) {
         reports.put(ReportType.RTF, rtfReportPath);
+    }
+
+    public SCAConfig getScaConfig() {
+        return scaConfig;
+    }
+
+    public void setScaConfig(SCAConfig scaConfig) {
+        this.scaConfig = scaConfig;
+    }
+
+    public DependencyScannerType getDependencyScannerType() {
+        return dependencyScannerType;
+    }
+
+    public void setDependencyScannerType(DependencyScannerType scannerType) {
+        this.dependencyScannerType = scannerType;
+    }
+
+    /**
+     * SAST and OSA are currently deployed on-premises, whereas SCA is deployed in a cloud.
+     * If SAST or OSA are enabled, some of the config properties are mandatory (url, username, password etc).
+     * Otherwise, these properties are optional.
+     */
+    public boolean isSastOrOSAEnabled() {
+        return sastEnabled || dependencyScannerType == DependencyScannerType.OSA;
+    }
+
+    public ProxyConfig getProxyConfig() {
+        return proxyConfig;
+    }
+
+    public void setProxyConfig(ProxyConfig proxyConfig) {
+        this.proxyConfig = proxyConfig;
     }
 }

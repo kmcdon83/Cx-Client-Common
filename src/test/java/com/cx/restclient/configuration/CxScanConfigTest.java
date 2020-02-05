@@ -61,27 +61,6 @@ public class CxScanConfigTest {
     }
 
     @Test
-    public void getSetOsaEnabled() {
-        logUnitTests.info("Current test validate that we get correct values from  getOsaEnabled method\n");
-
-        logUnitTests.info("1 test --> Set 'setOsaEnabled' to value 'false' and validate that get 'false' value\n");
-        cxScanConfig.setOsaEnabled(false);
-        assertEquals("I expected to get 'false' value but got different value", cxScanConfig.getOsaEnabled(), false);
-
-        logUnitTests.info("2 test --> Set 'setOsaEnabled' to value 'true' and validate that get 'true' value\n");
-        cxScanConfig.setOsaEnabled(true);
-        assertEquals("I expected to get 'true' value but got different value", cxScanConfig.getOsaEnabled(), true);
-
-        logUnitTests.info("3 test --> Negative test - Set 'setOsaEnabled' to value 'true' and validate that get 'false' value\n");
-        cxScanConfig.setOsaEnabled(true);
-        assertEquals("Negative test - expected to see different values", !(cxScanConfig.getOsaEnabled()), false);
-
-        logUnitTests.info("4 test --> Negative test - Set 'setOsaEnabled' to value 'false' and validate that get 'true' value\n");
-        cxScanConfig.setOsaEnabled(false);
-        assertEquals("Negative test - expected to see different values", !(cxScanConfig.getOsaEnabled()), true);
-    }
-
-    @Test
     public void getSetCxOrigin() {
 
         logUnitTests.info("Current test validate that we get correct values from  getCxOrigin method\n");
@@ -101,5 +80,4 @@ public class CxScanConfigTest {
         assertNull("Did not Get NULL value", cxScanConfig.getCxOrigin());
 
     }
-
 }

@@ -2,11 +2,14 @@ package com.cx.restclient.httpClient;
 
 import com.cx.restclient.common.ErrorMessage;
 import com.cx.restclient.common.UrlUtils;
+import com.cx.restclient.dto.LoginSettings;
+import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.exception.CxTokenExpiredException;
 import com.cx.restclient.osa.dto.ClientType;
+import org.apache.commons.lang3.StringUtils;
 import com.google.gson.Gson;
 import org.apache.http.*;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -46,6 +49,7 @@ import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.slf4j.Logger;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -86,45 +90,37 @@ public class CxHttpClient {
     private Logger log;
     private TokenLoginResponse token;
     private String rootUri;
-    private final String username;
-    private final String password;
     private final String refreshToken;
     private String cxOrigin;
     private Boolean useSSo;
+    private LoginSettings lastLoginSettings;
     private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
 
-    public CxHttpClient(String hostname, String username, String password, String origin,
-                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi,
-                        String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
-        this.log = logi;
-        this.username = username;
-        this.password = password;
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
+                        @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
+        this.log = log;
+        this.rootUri = rootUri;
         this.refreshToken = refreshToken;
-        this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
         this.cxOrigin = origin;
         this.useSSo = isSSO;
         //create httpclient
         HttpClientBuilder cb = HttpClients.custom();
         cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
-        setSSLTls("TLSv1.2", logi);
+        setSSLTls("TLSv1.2", log);
         if (disableSSLValidation) {
             try {
                 cb.setSSLSocketFactory(getTrustAllSSLSocketFactory());
                 cb.setConnectionManager(getHttpConnectionManager(true));
             } catch (CxClientException e) {
-                logi.warn("Failed to disable certificate verification: " + e.getMessage());
+                log.warn("Failed to disable certificate verification: " + e.getMessage());
             }
         } else {
             cb.setConnectionManager(getHttpConnectionManager(false));
         }
         cb.setConnectionManagerShared(true);
 
-        if (proxyHost != null) {
-            setCustomProxy(cb, proxyHost, proxyPort, proxyUser, proxyPassword, logi);
-        } else {
-            setProxy(cb, logi);
-        }
+        setCustomProxy(cb, proxyConfig, log);
 
         if (useSSo) {
             cb.setDefaultCredentialsProvider(new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider()));
@@ -137,51 +133,27 @@ public class CxHttpClient {
         apacheClient = cb.build();
     }
 
-    public CxHttpClient(String hostname, String username, String password, String origin,
-                        boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi) throws MalformedURLException, CxClientException {
-        this(hostname, username, password, origin, disableSSLValidation, isSSO, refreshToken, logi, null, 0, null, null);
-    }
+    private static void setCustomProxy(HttpClientBuilder cb, ProxyConfig proxyConfig, Logger logi) {
+        if (proxyConfig == null ||
+                StringUtils.isEmpty(proxyConfig.getHost()) ||
+                proxyConfig.getPort() == 0) {
+            return;
+        }
 
-    private static void setCustomProxy(HttpClientBuilder cb, String proxyHost, int proxyPort, String proxyUser, String proxyPassword, Logger logi) {
-        HttpHost proxy = null;
-        if (!isEmpty(proxyHost)) {
-            proxy = new HttpHost(proxyHost, proxyPort, "http");
-            if (!isEmpty(proxyUser) && !isEmpty(proxyPassword)) {
-                CredentialsProvider credsProvider = new BasicCredentialsProvider();
-                credsProvider.setCredentials(new AuthScope(proxy), new UsernamePasswordCredentials(proxyUser, proxyPassword));
-                cb.setDefaultCredentialsProvider(credsProvider);
-            }
+        String scheme = proxyConfig.isUseHttps() ? "https" : "http";
+        HttpHost proxy = new HttpHost(proxyConfig.getHost(), proxyConfig.getPort(), scheme);
+        if (StringUtils.isNotEmpty(proxyConfig.getUsername()) &&
+                StringUtils.isNotEmpty(proxyConfig.getPassword())) {
+            UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(proxyConfig.getUsername(), proxyConfig.getPassword());
+            CredentialsProvider credsProvider = new BasicCredentialsProvider();
+            credsProvider.setCredentials(new AuthScope(proxy), credentials);
+            cb.setDefaultCredentialsProvider(credsProvider);
         }
-        if (proxy != null) {
-            logi.info("Setting proxy for Checkmarx http client");
-            cb.setProxy(proxy);
-            cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
-            cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
-        }
-    }
 
-    private static void setProxy(HttpClientBuilder cb, Logger logi) {
-        HttpHost proxyHost = null;
-        CredentialsProvider credsProvider = new BasicCredentialsProvider();
-        if (!isEmpty(HTTPS_HOST) && !isEmpty(HTTPS_PORT)) {
-            proxyHost = new HttpHost(HTTPS_HOST, Integer.parseInt(HTTPS_PORT), "https");
-            if (!isEmpty(HTTPS_USERNAME) && !isEmpty(HTTPS_PASSWORD)) {
-                credsProvider.setCredentials(new AuthScope(HTTPS_HOST, Integer.parseInt(HTTPS_PORT)), new UsernamePasswordCredentials(HTTPS_USERNAME, HTTPS_PASSWORD));
-                cb.setDefaultCredentialsProvider(credsProvider);
-            }
-        } else if (!isEmpty(HTTP_HOST) && !isEmpty(HTTP_PORT)) {
-            proxyHost = new HttpHost(HTTP_HOST, Integer.parseInt(HTTP_PORT), "http");
-            if (!isEmpty(HTTP_USERNAME) && !isEmpty(HTTP_PASSWORD)) {
-                credsProvider.setCredentials(new AuthScope(HTTP_HOST, Integer.parseInt(HTTP_PORT)), new UsernamePasswordCredentials(HTTP_USERNAME, HTTP_PASSWORD));
-                cb.setDefaultCredentialsProvider(credsProvider);
-            }
-        }
-        if (proxyHost != null) {
-            logi.info("Setting proxy for Checkmarx http client");
-            cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxyHost));
-            cb.setProxy(proxyHost);
-            cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
-        }
+        logi.info("Setting proxy for Checkmarx http client");
+        cb.setProxy(proxy);
+        cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
+        cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
     }
 
     private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() throws CxClientException {
@@ -221,13 +193,14 @@ public class CxHttpClient {
                 .build();
     }
 
-    public void login() throws IOException, CxClientException {
-        if (refreshToken != null) {
-            token = getAccessTokenFromRefreshToken();
+    public void login(LoginSettings settings) throws IOException, CxClientException {
+        lastLoginSettings = settings;
+        if (settings.getRefreshToken() != null) {
+            token = getAccessTokenFromRefreshToken(settings);
         } else if (useSSo) {
             token = ssoLogin();
         } else {
-            token = generateToken();
+            token = generateToken(settings);
         }
     }
 
@@ -305,13 +278,10 @@ public class CxHttpClient {
         return cookies;
     }
 
-    public TokenLoginResponse generateToken() throws IOException, CxClientException {
-        return generateToken(ClientType.RESOURCE_OWNER);
-    }
-
-    public TokenLoginResponse generateToken(ClientType clientType) throws IOException, CxClientException {
-        UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity(clientType);
-        HttpPost post = new HttpPost(rootUri + AUTHENTICATION);
+    public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
+        UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity(settings);
+        String fullUrl = UrlUtils.parseURLToString(settings.getAccessControlBaseUrl(), AUTHENTICATION);
+        HttpPost post = new HttpPost(fullUrl);
         try {
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
@@ -320,15 +290,17 @@ public class CxHttpClient {
                 throw new CxClientException(String.format("Failed to generate access token, failure error was: %s", e.getMessage()), e);
             }
             ClientType.RESOURCE_OWNER.setScopes("sast_rest_api");
-            requestEntity = generateUrlEncodedFormEntity(ClientType.RESOURCE_OWNER);
+            settings.setClientTypeForPasswordAuth(ClientType.RESOURCE_OWNER);
+            requestEntity = generateUrlEncodedFormEntity(settings);
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
         }
     }
 
-    private TokenLoginResponse getAccessTokenFromRefreshToken() throws IOException, CxClientException {
-        UrlEncodedFormEntity requestEntity = generateTokenFromRefreshEntity(ClientType.CLI);
-        HttpPost post = new HttpPost(rootUri + AUTHENTICATION);
+    private TokenLoginResponse getAccessTokenFromRefreshToken(LoginSettings settings) throws IOException, CxClientException {
+        UrlEncodedFormEntity requestEntity = generateTokenFromRefreshEntity(settings);
+        String fullUrl = UrlUtils.parseURLToString(settings.getAccessControlBaseUrl(), AUTHENTICATION);
+        HttpPost post = new HttpPost(fullUrl);
         try {
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, "authenticate", false, false);
@@ -359,24 +331,31 @@ public class CxHttpClient {
 
     }
 
-    private UrlEncodedFormEntity generateUrlEncodedFormEntity(ClientType clientType) throws UnsupportedEncodingException {
+    private UrlEncodedFormEntity generateUrlEncodedFormEntity(LoginSettings settings) throws UnsupportedEncodingException {
+        ClientType clientType = settings.getClientTypeForPasswordAuth();
         List<BasicNameValuePair> parameters = new ArrayList<>();
-        parameters.add(new BasicNameValuePair("username", username));
-        parameters.add(new BasicNameValuePair("password", password));
+        parameters.add(new BasicNameValuePair("username", settings.getUsername()));
+        parameters.add(new BasicNameValuePair("password", settings.getPassword()));
         parameters.add(new BasicNameValuePair("grant_type", "password"));
         parameters.add(new BasicNameValuePair("scope", clientType.getScopes()));
         parameters.add(new BasicNameValuePair("client_id", clientType.getClientId()));
         parameters.add(new BasicNameValuePair("client_secret", clientType.getClientSecret()));
 
+        if (!StringUtils.isEmpty(settings.getTenant())) {
+            String authContext = String.format("Tenant:%s", settings.getTenant());
+            parameters.add(new BasicNameValuePair("acr_values", authContext));
+        }
+
         return new UrlEncodedFormEntity(parameters, "utf-8");
     }
 
-    private UrlEncodedFormEntity generateTokenFromRefreshEntity(ClientType clientType) throws UnsupportedEncodingException {
+    private UrlEncodedFormEntity generateTokenFromRefreshEntity(LoginSettings settings) throws UnsupportedEncodingException {
+        ClientType clientType = settings.getClientTypeForRefreshToken();
         List<BasicNameValuePair> parameters = new ArrayList<>();
         parameters.add(new BasicNameValuePair("grant_type", "refresh_token"));
         parameters.add(new BasicNameValuePair("client_id", clientType.getClientId()));
         parameters.add(new BasicNameValuePair("client_secret", clientType.getClientSecret()));
-        parameters.add(new BasicNameValuePair("refresh_token", refreshToken));
+        parameters.add(new BasicNameValuePair("refresh_token", settings.getRefreshToken()));
 
         return new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8.name());
     }
@@ -409,6 +388,7 @@ public class CxHttpClient {
         HttpPatch patch = new HttpPatch(rootUri + relPath);
         request(patch, contentType, entity, null, expectStatus, failedMsg, false, true);
     }
+
     public void setTeamPathHeader(String teamPath){
         this.teamPath = teamPath;
     }
@@ -425,8 +405,8 @@ public class CxHttpClient {
 
         try {
             httpMethod.addHeader(ORIGIN_HEADER, cxOrigin);
-            httpMethod.addHeader(TEAM_PATH, this.teamPath);
             log.debug("request setTeamPathHeader " + this.teamPath);
+            httpMethod.addHeader(TEAM_PATH, this.teamPath);
             if (token != null) {
                 httpMethod.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
             }
@@ -447,7 +427,7 @@ public class CxHttpClient {
         } catch (CxTokenExpiredException ex) {
             if (retry) {
                 log.warn("Access token expired for request: " + httpMethod.getURI() + ", Status code:" + statusCode + "requesting a new token. message: " + ex.getMessage());
-                login();
+                login(lastLoginSettings);
                 return request(httpMethod, contentType, entity, responseType, expectStatus, failedMsg, isCollection, false);
             }
             throw ex;

@@ -1,18 +1,17 @@
 package com.cx.restclient;
 
+import com.cx.restclient.common.DependencyScanner;
+import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.CxArmConfig;
-import com.cx.restclient.dto.CxVersion;
-import com.cx.restclient.dto.Team;
-import com.cx.restclient.dto.TokenLoginResponse;
+import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.osa.dto.ClientType;
-import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
@@ -36,6 +35,7 @@ import static com.cx.restclient.sast.utils.SASTParam.*;
 //SHRAGA
 //System Holistic Rest Api Generic Application
 public class CxShragaClient {
+    private static final String DEFAULT_AUTH_API_PATH = "CxRestApi/auth/";
 
     private CxHttpClient httpClient;
     private Logger log;
@@ -43,49 +43,51 @@ public class CxShragaClient {
     private long projectId;
     private String teamPath;
     private CxSASTClient sastClient;
-    private CxOSAClient osaClient;
-    private long sastScanId;
-    private String osaScanId;
-    private SASTResults sastResults = new SASTResults();
-    private OSAResults osaResults = new OSAResults();
 
-    public CxShragaClient(CxScanConfig config, Logger log, String proxyHost, int proxyPort,
-                          String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
-        this.config = config;
-        this.log = log;
-        this.httpClient = new CxHttpClient(
-                config.getUrl(),
-                config.getUsername(),
-                config.getPassword(),
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                config.getRefreshToken(),
-                log,
-                proxyHost, proxyPort, proxyUser, proxyPassword);
-        sastClient = new CxSASTClient(httpClient, log, config);
-        osaClient = new CxOSAClient(httpClient, log, config);
-    }
+    private long sastScanId;
+    private SASTResults sastResults = new SASTResults();
+    private DependencyScanResults dependencyScanResults = new DependencyScanResults();
+
+    private DependencyScanner dependencyScanner;
 
     public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException, CxClientException {
+        validateConfig(config);
+
         this.config = config;
         this.log = log;
-        this.httpClient = new CxHttpClient(
-                config.getUrl(),
-                config.getUsername(),
-                config.getPassword(),
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                config.getRefreshToken(),
-                log);
-        sastClient = new CxSASTClient(httpClient, log, config);
-        osaClient = new CxOSAClient(httpClient, log, config);
+
+        if (!StringUtils.isEmpty(config.getUrl())) {
+            this.httpClient = new CxHttpClient(
+                    UrlUtils.parseURLToString(config.getUrl(), "CxRestAPI/"),
+                    config.getCxOrigin(),
+                    config.isDisableCertificateValidation(),
+                    config.isUseSSOLogin(),
+                    config.getRefreshToken(),
+                    config.getProxyConfig(),
+                    log);
+        }
+
+        if (config.getSastEnabled()) {
+            sastClient = new CxSASTClient(httpClient, log, config);
+        }
+
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
+            dependencyScanner = new CxOSAClient(httpClient, log, config);
+        } else if (config.getDependencyScannerType() == DependencyScannerType.SCA) {
+            dependencyScanner = new SCAClient(config, log);
+        }
     }
 
-    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation,
-                          Logger log, String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
-        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log, proxyHost, proxyPort, proxyUser, proxyPassword);
+    private void validateConfig(CxScanConfig config) throws CxClientException {
+        String message = null;
+        if (config == null) {
+            message = "Non-null config must be provided.";
+        } else if (StringUtils.isEmpty(config.getUrl()) && config.isSastOrOSAEnabled()) {
+            message = "Server URL is required when SAST or OSA is enabled.";
+        }
+        if (message != null) {
+            throw new CxClientException(message);
+        }
     }
 
     public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException, CxClientException {
@@ -109,55 +111,59 @@ public class CxShragaClient {
     }
 
     public void init() throws CxClientException, IOException {
-
         log.info("Initializing Cx client [" + getClientVersion() + "]");
-        getCxVersion();
-        login();
-        resolveTeam();
-        httpClient.setTeamPathHeader(this.teamPath);
-        if (config.getSastEnabled()) {
-            resolvePreset();
+        if (config.isSastOrOSAEnabled()) {
+            getCxVersion();
+            login();
+            resolveTeam();
+            httpClient.setTeamPathHeader(this.teamPath);
+            if (config.getSastEnabled()) {
+                resolvePreset();
+            }
+            if (config.getEnablePolicyViolations()) {
+                resolveCxARMUrl();
+            }
+            resolveProject();
         }
-        if (config.getEnablePolicyViolations()) {
-            resolveCxARMUrl();
+
+        if (dependencyScanner != null) {
+            dependencyScanner.init();
         }
-        resolveProject();
     }
 
     public long createSASTScan() throws IOException, CxClientException {
-        sastScanId = sastClient.createSASTScan(projectId);
+        sastScanId = getSastClient().createSASTScan(projectId);
         sastResults.setSastScanLink(config.getUrl(), sastScanId, projectId);
         return sastScanId;
     }
 
-    public String createOSAScan() throws IOException, CxClientException {
-        osaScanId = osaClient.createOSAScan(projectId);
-        osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
-        return osaScanId;
+    public String createDependencyScan() throws CxClientException {
+        String scanId = getDependencyScanner().createScan(dependencyScanResults);
+        return scanId;
     }
 
     public void cancelSASTScan() throws IOException, CxClientException {
-        sastClient.cancelSASTScan(sastScanId);
+        getSastClient().cancelSASTScan(sastScanId);
     }
 
     public SASTResults waitForSASTResults() throws InterruptedException, CxClientException, IOException {
-        sastResults = sastClient.waitForSASTResults(sastScanId, projectId);
+        sastResults = getSastClient().waitForSASTResults(sastScanId, projectId);
         return sastResults;
     }
 
     public SASTResults getLatestSASTResults() throws InterruptedException, CxClientException, IOException {
-        sastResults = sastClient.getLatestSASTResults(projectId);
+        sastResults = getSastClient().getLatestSASTResults(projectId);
         return sastResults;
     }
 
-    public OSAResults waitForOSAResults() throws InterruptedException, CxClientException, IOException {
-        osaResults = osaClient.getOSAResults(osaScanId, projectId);
-        return osaResults;
+    public DependencyScanResults waitForDependencyScanResults() throws CxClientException {
+        getDependencyScanner().waitForScanResults(dependencyScanResults);
+        return dependencyScanResults;
     }
 
-    public OSAResults getLatestOSAResults() throws InterruptedException, CxClientException, IOException {
-        osaResults = osaClient.getLatestOSAResults(projectId);
-        return osaResults;
+    public DependencyScanResults getLatestDependencyScanResults() throws CxClientException {
+        dependencyScanResults = getDependencyScanner().getLatestScanResults();
+        return dependencyScanResults;
     }
 
     public void printIsProjectViolated() {
@@ -165,19 +171,42 @@ public class CxShragaClient {
             log.info("-----------------------------------------------------------------------------------------");
             log.info("Policy Management: ");
             log.info("--------------------");
-            if (sastResults.getSastPolicies().isEmpty() && osaResults.getOsaPolicies().isEmpty()) {
-                log.info(PROJECT_POLICY_COMPLAINT_STATUS);
+
+            boolean hasOsaViolations = dependencyScanResults != null &&
+                    dependencyScanResults.getOsaResults() != null &&
+                    dependencyScanResults.getOsaResults().getOsaPolicies() != null &&
+                    !dependencyScanResults.getOsaResults().getOsaPolicies().isEmpty();
+
+            if (sastResults.getSastPolicies().isEmpty() && !hasOsaViolations) {
+                log.info(PROJECT_POLICY_COMPLIANT_STATUS);
                 log.info("-----------------------------------------------------------------------------------------");
             } else {
                 log.info(PROJECT_POLICY_VIOLATED_STATUS);
                 if (!sastResults.getSastPolicies().isEmpty()) {
                     log.info("SAST violated policies names: " + getPoliciesNames(sastResults.getSastPolicies()));
                 }
-                if (!osaResults.getOsaPolicies().isEmpty()) {
-                    log.info("OSA violated policies names: " + getPoliciesNames(osaResults.getOsaPolicies()));
+                if (hasOsaViolations) {
+                    log.info("OSA violated policies names: " + getPoliciesNames(dependencyScanResults.getOsaResults().getOsaPolicies()));
                 }
                 log.info("-----------------------------------------------------------------------------------------");
             }
+        }
+    }
+
+    /**
+     * @param config
+     * The following config properties are used:
+     *      scaConfig
+     *      proxyConfig
+     *      cxOrigin
+     *      disableCertificateValidation
+     */
+    public static void testScaConnection(CxScanConfig config, Logger log) throws CxClientException {
+        SCAClient client = new SCAClient(config, log);
+        try {
+            client.testConnection();
+        } catch (IOException e) {
+            throw new CxClientException(e);
         }
     }
 
@@ -187,16 +216,17 @@ public class CxShragaClient {
     }
 
     public String generateHTMLSummary() throws Exception {
-        return SummaryUtils.generateSummary(sastResults, osaResults, config);
+        return SummaryUtils.generateSummary(sastResults, dependencyScanResults, config);
     }
 
-    public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults) throws Exception {
-        return SummaryUtils.generateSummary(sastResults, osaResults, config);
+    public String generateHTMLSummary(SASTResults sastResults, DependencyScanResults dependencyScanResults) throws Exception {
+        return SummaryUtils.generateSummary(sastResults, dependencyScanResults, config);
     }
 
     public List<Project> getAllProjects() throws IOException, CxClientException {
         List<Project> projects = null;
         List<Team> teamList = getTeamList();
+
         try {
             httpClient.setTeamPathHeader(this.teamPath);
             projects = (List<Project>) httpClient.getRequest(SAST_GET_All_PROJECTS, CONTENT_TYPE_APPLICATION_JSON_V1, Project.class, 200, "all projects", true);
@@ -211,16 +241,21 @@ public class CxShragaClient {
     public void close() {
         httpClient.close();
     }
-
     //HELP config  Methods
+
     public void login() throws IOException, CxClientException {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
-        httpClient.login();
+
+        LoginSettings settings = getDefaultLoginSettings();
+        settings.setRefreshToken(config.getRefreshToken());
+        httpClient.login(settings);
     }
 
     public String getToken() throws IOException, CxClientException {
-        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(ClientType.CLI);
+        LoginSettings settings = getDefaultLoginSettings();
+        settings.setClientTypeForPasswordAuth(ClientType.CLI);
+        final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(settings);
         return tokenLoginResponse.getRefresh_token();
     }
 
@@ -323,8 +358,8 @@ public class CxShragaClient {
     public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
         config.setOsaFsaConfig(fsaConfig);
     }
-
     //Private methods
+
     private void resolveTeam() throws CxClientException, IOException {
         if (config.getTeamId() == null) {
             config.setTeamId(getTeamIdByName(config.getTeamPath()));
@@ -361,8 +396,8 @@ public class CxShragaClient {
 
     private void printTeamPath() {
         try {
-             this.teamPath = config.getTeamPath();
-            if (teamPath == null) {
+            this.teamPath = config.getTeamPath();
+            if (this.teamPath == null) {
                 this.teamPath = getTeamNameById(config.getTeamId());
             }
             log.info("full team path: " + this.teamPath);
@@ -382,6 +417,11 @@ public class CxShragaClient {
 
         } else {
             projectId = projects.get(0).getId();
+        }
+
+        // SAST and OSA share the same project ID.
+        if (dependencyScanner instanceof CxOSAClient) {
+            ((CxOSAClient) dependencyScanner).setProjectId(projectId);
         }
     }
 
@@ -407,4 +447,35 @@ public class CxShragaClient {
         return httpClient.postRequest(CREATE_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "create new project: " + request.getName());
     }
 
+    private LoginSettings getDefaultLoginSettings() throws MalformedURLException {
+        LoginSettings result = new LoginSettings();
+
+        String baseUrl = UrlUtils.parseURLToString(config.getUrl(), DEFAULT_AUTH_API_PATH);
+        result.setAccessControlBaseUrl(baseUrl);
+
+        result.setUsername(config.getUsername());
+        result.setPassword(config.getPassword());
+
+        result.setClientTypeForPasswordAuth(ClientType.RESOURCE_OWNER);
+        result.setClientTypeForRefreshToken(ClientType.CLI);
+
+        return result;
+    }
+
+    private DependencyScanner getDependencyScanner() throws CxClientException {
+        if (dependencyScanner == null) {
+            String message = String.format("The action can't be performed, because dependency scanner type is set to %s in scan configuration.",
+                    DependencyScannerType.NONE);
+
+            throw new CxClientException(message);
+        }
+        return dependencyScanner;
+    }
+
+    private CxSASTClient getSastClient() throws CxClientException {
+        if (sastClient == null) {
+            throw new CxClientException("The action can't be performed, because SAST is disabled in scan configuration.");
+        }
+        return sastClient;
+    }
 }

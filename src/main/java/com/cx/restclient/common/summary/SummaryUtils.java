@@ -1,8 +1,11 @@
 package com.cx.restclient.common.summary;
 
-import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.cxArm.dto.Policy;
+import com.cx.restclient.dto.DependencyScanResults;
+import com.cx.restclient.dto.DependencyScannerType;
+import com.cx.restclient.dto.ScanResults;
+import com.cx.restclient.dto.scansummary.ScanSummary;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
@@ -19,7 +22,8 @@ import java.util.stream.Collectors;
 
 public abstract class SummaryUtils {
 
-    public static String generateSummary(SASTResults sastResults, OSAResults osaResults, CxScanConfig config) throws IOException, TemplateException {
+    public static String generateSummary(SASTResults sastResults, DependencyScanResults dependencyScanResults, CxScanConfig config) throws IOException, TemplateException {
+        OSAResults osaResults = dependencyScanResults.getOsaResults();
 
         Configuration cfg = new Configuration(new Version("2.3.23"));
         cfg.setClassForTemplateLoading(SummaryUtils.class, "/com/cx/report");
@@ -28,7 +32,14 @@ public abstract class SummaryUtils {
         Map<String, Object> templateData = new HashMap<String, Object>();
         templateData.put("config", config);
         templateData.put("sast", sastResults);
-        templateData.put("osa", osaResults);
+
+        // TODO: null value for "osa" should be handled inside the template.
+        templateData.put("osa", osaResults != null ? osaResults : new OSAResults());
+
+        ScanResults scanResults = new ScanResults();
+        scanResults.setSastResults(sastResults);
+        scanResults.setDependencyScanResults(dependencyScanResults);
+        ScanSummary scanSummary = new ScanSummary(config, scanResults);
 
         //calculated params:
 
@@ -38,9 +49,9 @@ public abstract class SummaryUtils {
         //sast:
         if (config.getSastEnabled()) {
             if (sastResults.isSastResultsReady()) {
-                boolean sastThresholdExceeded = ShragaUtils.isThresholdExceeded(config, sastResults, null, new StringBuilder());
-                boolean sastNewResultsExceeded = ShragaUtils.isThresholdForNewResultExceeded(config, sastResults, new StringBuilder());
-                templateData.put("sastThresholdExceeded", sastThresholdExceeded);
+                boolean sastThresholdExceeded = scanSummary.isSastThresholdExceeded();
+                boolean sastNewResultsExceeded = scanSummary.isSastThresholdForNewResultsExceeded();
+                templateData.put("sastThresholdExceeded", sastNewResultsExceeded);
                 templateData.put("sastNewResultsExceeded", sastNewResultsExceeded);
                 buildFailed = sastThresholdExceeded || sastNewResultsExceeded;
                 //calculate sast bars:
@@ -76,11 +87,11 @@ public abstract class SummaryUtils {
         }
 
         //osa:
-        if (config.getOsaEnabled()) {
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
             if (osaResults.isOsaResultsReady()) {
-                boolean osaThresholdExceeded = ShragaUtils.isThresholdExceeded(config, null, osaResults, new StringBuilder());
-                templateData.put("osaThresholdExceeded", osaThresholdExceeded);
-                buildFailed |= osaThresholdExceeded;
+                boolean thresholdExceeded = scanSummary.isOsaThresholdExceeded();
+                templateData.put("osaThresholdExceeded", thresholdExceeded);
+                buildFailed |= thresholdExceeded;
 
                 //calculate osa bars:
                 OSASummaryResults osaSummaryResults = osaResults.getResults();
@@ -117,13 +128,14 @@ public abstract class SummaryUtils {
                         ));
             }
 
-            if (config.getOsaEnabled() && osaResults.getOsaPolicies().size() > 0) {
+            if (config.getDependencyScannerType() == DependencyScannerType.OSA &&
+                    osaResults.getOsaPolicies().size() > 0) {
                 policyViolated = true;
                 policies.putAll(osaResults.getOsaPolicies().stream().collect(
                         Collectors.toMap(Policy::getPolicyName, Policy::getRuleName,
-                        (left, right) -> {
-                            return left;
-                        })));
+                                (left, right) -> {
+                                    return left;
+                                })));
             }
 
             policyViolatedCount = policies.size();

@@ -1,5 +1,7 @@
 package com.cx.utility;
 
+import com.cx.restclient.sca.dto.SCAConfig;
+
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
@@ -14,5 +16,16 @@ public final class TestingUtils {
         properties.load(new FileReader(resource.getFile()));
 
         return properties;
+    }
+
+    public static SCAConfig getScaConfig(Properties props) {
+        SCAConfig result = new SCAConfig();
+        result.setApiUrl(props.getProperty("sca.apiUrl"));
+        result.setAccessControlUrl(props.getProperty("sca.accessControlUrl"));
+        result.setTenant(props.getProperty("sca.tenant"));
+        result.setUsername(props.getProperty("sca.username"));
+        result.setPassword(props.getProperty("sca.password"));
+        result.setWebAppUrl(props.getProperty("sca.webAppUrl"));
+        return result;
     }
 }
