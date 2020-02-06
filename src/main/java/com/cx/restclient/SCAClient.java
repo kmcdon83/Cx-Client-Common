@@ -40,13 +40,13 @@ import java.util.List;
  */
 public class SCAClient implements DependencyScanner {
     private static class UrlPaths {
-        private static final String RISK_MANAGEMENT_API = "/risk-management/api/";
+        private static final String RISK_MANAGEMENT_API = "/risk-management/";
         private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
         private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
         private static final String SCAN_STATUS = RISK_MANAGEMENT_API + "scans/%s/status";
         private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
 
-        private static final String ZIP_UPLOAD = "/scan-runner/api/scans/zip";
+        private static final String ZIP_UPLOAD = "/scan-runner/scans/zip";
 
         private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     }
