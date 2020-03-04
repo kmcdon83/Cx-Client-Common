@@ -6,6 +6,8 @@ import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.scansummary.ScanSummary;
+import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
@@ -88,7 +90,7 @@ public abstract class SummaryUtils {
 
         //osa:
         if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
-            if (osaResults.isOsaResultsReady()) {
+            if (osaResults!=null && osaResults.isOsaResultsReady()) {
                 boolean thresholdExceeded = scanSummary.isOsaThresholdExceeded();
                 templateData.put("osaThresholdExceeded", thresholdExceeded);
                 buildFailed |= thresholdExceeded;
