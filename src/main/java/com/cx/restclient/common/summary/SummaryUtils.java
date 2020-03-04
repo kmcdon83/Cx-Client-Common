@@ -77,7 +77,7 @@ public abstract class SummaryUtils {
 
         //osa:
         if (config.getOsaEnabled()) {
-            if (osaResults.isOsaResultsReady()) {
+            if (osaResults!=null && osaResults.isOsaResultsReady()) {
                 boolean osaThresholdExceeded = ShragaUtils.isThresholdExceeded(config, null, osaResults, new StringBuilder());
                 templateData.put("osaThresholdExceeded", osaThresholdExceeded);
                 buildFailed |= osaThresholdExceeded;
