@@ -478,4 +478,21 @@ public class CxShragaClient {
         }
         return sastClient;
     }
+
+    public ResponseQueueScanStatus getStatus(String scanId) throws IOException {
+        return sastClient.getSASTScanStatus(scanId);
+    }
+
+
+    public Long getProjectId(){
+        return projectId;
+    }
+
+    public ScanSettingResponse getScanSetting(Long projectId) throws IOException {
+        return sastClient.getScanSetting(projectId);
+    }
+
+    public List<LastScanResponse> getLastScansByProjectId(long projectId) throws IOException {
+        return sastClient.getLatestSASTStatus(projectId);
+    }
 }
