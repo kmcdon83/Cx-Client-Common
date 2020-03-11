@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class LastScanResponse {
     private long id;
     private CxNameObj status;
+    private DateAndTime dateAndTime;
 
     public long getId() {
         return id;
@@ -24,5 +25,13 @@ public class LastScanResponse {
 
     public void setStatus(CxNameObj status) {
         this.status = status;
+    }
+
+    public DateAndTime getDateAndTime() {
+        return dateAndTime;
+    }
+
+    public void setDateAndTime(DateAndTime dateAndTime) {
+        this.dateAndTime = dateAndTime;
     }
 }

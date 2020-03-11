@@ -326,7 +326,7 @@ class CxSASTClient {
         return false;
     }
 
-    private ScanSettingResponse getScanSetting(long projectId) throws IOException, CxClientException {
+    public ScanSettingResponse getScanSetting(long projectId) throws IOException, CxClientException {
         return httpClient.getRequest(SAST_GET_SCAN_SETTINGS.replace("{projectId}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, ScanSettingResponse.class, 200, "Scan setting", false);
     }
 
@@ -368,7 +368,7 @@ class CxSASTClient {
         return httpClient.getRequest(SAST_SCAN_RESULTS_STATISTICS.replace("{scanId}", Long.toString(scanId)), CONTENT_TYPE_APPLICATION_JSON_V1, SASTStatisticsResponse.class, 200, "SAST scan statistics", false);
     }
 
-    private List<LastScanResponse> getLatestSASTStatus(long projectId) throws CxClientException, IOException {
+    public List<LastScanResponse> getLatestSASTStatus(long projectId) throws CxClientException, IOException {
         return (List<LastScanResponse>) httpClient.getRequest(SAST_GET_PROJECT_SCANS.replace("{projectId}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, LastScanResponse.class, 200, "last SAST scan ID", true);
     }
 
@@ -395,7 +395,7 @@ class CxSASTClient {
     }
 
     //SCAN Waiter - overload methods
-    private ResponseQueueScanStatus getSASTScanStatus(String scanId) throws CxClientException, IOException {
+    public ResponseQueueScanStatus getSASTScanStatus(String scanId) throws CxClientException, IOException {
         ResponseQueueScanStatus scanStatus = httpClient.getRequest(SAST_QUEUE_SCAN_STATUS.replace("{scanId}", scanId), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseQueueScanStatus.class, 200, "SAST scan status", false);
         String currentStatus = scanStatus.getStage().getValue();
 

@@ -26,6 +26,7 @@ import java.util.Properties;
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V1;
+import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V21;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.convertToJson;
 import static com.cx.restclient.sast.utils.SASTParam.*;
 
@@ -440,6 +441,20 @@ public class CxShragaClient {
         return projects;
     }
 
+    public Project getProjectById(String projectId) throws IOException, CxClientException {
+        String projectNamePath = SAST_GET_PROJECT_BY_ID.replace("{projectId}", projectId);
+        Project projects = null;
+        try {
+            httpClient.setTeamPathHeader(this.teamPath);
+            projects = httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V21, Project.class, 200, "project by id: " + projectId, false);
+        } catch (CxHTTPClientException ex) {
+            if (ex.getStatusCode() != 404) {
+                throw ex;
+            }
+        }
+        return projects;
+    }
+
     private Project createNewProject(CreateProjectRequest request) throws CxClientException, IOException {
         String json = convertToJson(request);
         httpClient.setTeamPathHeader(this.teamPath);
@@ -477,5 +492,22 @@ public class CxShragaClient {
             throw new CxClientException("The action can't be performed, because SAST is disabled in scan configuration.");
         }
         return sastClient;
+    }
+
+    public ResponseQueueScanStatus getStatus(String scanId) throws IOException {
+        return sastClient.getSASTScanStatus(scanId);
+    }
+
+
+    public Long getProjectId(){
+        return projectId;
+    }
+
+    public ScanSettingResponse getScanSetting(Long projectId) throws IOException {
+        return sastClient.getScanSetting(projectId);
+    }
+
+    public List<LastScanResponse> getLastScansByProjectId(long projectId) throws IOException {
+        return sastClient.getLatestSASTStatus(projectId);
     }
 }
