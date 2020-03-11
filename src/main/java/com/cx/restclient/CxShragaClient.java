@@ -26,6 +26,7 @@ import java.util.Properties;
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V1;
+import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V21;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.convertToJson;
 import static com.cx.restclient.sast.utils.SASTParam.*;
 
@@ -432,6 +433,20 @@ public class CxShragaClient {
         try {
             httpClient.setTeamPathHeader(this.teamPath);
             projects = (List<Project>) httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V1, Project.class, 200, "project by name: " + projectName, true);
+        } catch (CxHTTPClientException ex) {
+            if (ex.getStatusCode() != 404) {
+                throw ex;
+            }
+        }
+        return projects;
+    }
+
+    public Project getProjectById(String projectId) throws IOException, CxClientException {
+        String projectNamePath = SAST_GET_PROJECT_BY_ID.replace("{projectId}", projectId);
+        Project projects = null;
+        try {
+            httpClient.setTeamPathHeader(this.teamPath);
+            projects = httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V21, Project.class, 200, "project by id: " + projectId, false);
         } catch (CxHTTPClientException ex) {
             if (ex.getStatusCode() != 404) {
                 throw ex;
