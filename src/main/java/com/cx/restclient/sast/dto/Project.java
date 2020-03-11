@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Project {
     private long id;
+    private String owner;
     private String name;
     private String teamId;
     private boolean isPublic;
@@ -42,5 +43,13 @@ public class Project {
 
     public void setIsPublic(boolean isPublic) {
         this.isPublic = isPublic;
+    }
+
+    public String getOwner() {
+        return owner;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
     }
 }
