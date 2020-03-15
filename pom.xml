@@ -186,13 +186,13 @@
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
-  <!--    &lt;!&ndash; API &ndash;&gt;
-        <dependency>
+  <!--  API -->
+      <!--  <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
             <version>2.3.2</version>
         </dependency>
-
+-->
         <!-- Runtime -->
       <!--  <dependency>
             <groupId>org.glassfish.jaxb</groupId>
