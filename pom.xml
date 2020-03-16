@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>2020.1.11.NO.SCA.TEST</version>
+    <version>2020.1.12.NO.SCA.TEST</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
@@ -195,12 +195,12 @@
             <scope>provided</scope>
         </dependency>
   <!--  API -->
-      <!--  <dependency>
+       <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
             <version>2.3.2</version>
         </dependency>
--->
+
         <!-- Runtime -->
        <dependency>
             <groupId>org.glassfish.jaxb</groupId>
