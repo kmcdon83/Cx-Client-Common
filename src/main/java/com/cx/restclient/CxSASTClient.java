@@ -15,9 +15,9 @@ import org.apache.http.HttpEntity;
 import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.HttpMultipartMode;
+/*import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.InputStreamBody;
+import org.apache.http.entity.mime.content.InputStreamBody;*/
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -170,12 +170,12 @@ class CxSASTClient {
             case SVN:
                 if (req.getPrivateKey() != null && req.getPrivateKey().length > 1) {
                     isSSH = true;
-                    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+                   /* MultipartEntityBuilder builder = MultipartEntityBuilder.create();
                     builder.addBinaryBody("privateKey", req.getPrivateKey(), ContentType.APPLICATION_JSON, null)
                             .addTextBody("absoluteUrl", req.getUri().getAbsoluteUrl())
                             .addTextBody("port", String.valueOf(req.getUri().getPort()))
                             .addTextBody("paths", config.getSourceDir());   //todo add paths to req OR using without
-                    entity = builder.build();
+                    entity = builder.build();*/
                 } else {
                     entity = new StringEntity(convertToJson(req), ContentType.APPLICATION_JSON);
                 }
@@ -202,11 +202,11 @@ class CxSASTClient {
                     entity = new StringEntity(new JSONObject(content).toString(), StandardCharsets.UTF_8);
                 } else {
                     isSSH = true;
-                    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+                   /* MultipartEntityBuilder builder = MultipartEntityBuilder.create();
                     builder.addTextBody("url", req.getUri().getAbsoluteUrl(), ContentType.APPLICATION_JSON);
                     builder.addTextBody("branch", config.getRemoteSrcBranch(), ContentType.APPLICATION_JSON); //todo add branch to req OR using without this else??
                     builder.addBinaryBody("privateKey", req.getPrivateKey(), ContentType.MULTIPART_FORM_DATA, null);
-                    entity = builder.build();
+                    entity = builder.build();*/
                 }
                 break;
             default:
@@ -214,7 +214,7 @@ class CxSASTClient {
                 entity = new StringEntity("", StandardCharsets.UTF_8);
 
         }
-        createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
+//        createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
 
         CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
         log.info("Sending SAST scan request");
@@ -353,12 +353,12 @@ class CxSASTClient {
     }
 
     private void uploadZipFile(File zipFile, long projectId) throws CxClientException, IOException {
-        InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
+        /*InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
         builder.addPart("zippedSource", streamBody);
         HttpEntity entity = builder.build();
-        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
+        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");*/
     }
 
     private CxID createScan(CreateScanRequest request) throws CxClientException, IOException {
