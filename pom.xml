@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>2020.1.10.NO.SCA.TEST</version>
+    <version>2020.1.11.NO.SCA.TEST</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
@@ -31,7 +31,15 @@
         <url>https://www.checkmarx.com/</url>
     </organization>
     <build>
-
+  <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8.2</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -251,7 +259,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!--<plugin>
+                    <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
                         <version>1.6.7</version>
@@ -279,7 +287,7 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>-->
+                    </plugin>
                 </plugins>
             </build>
         </profile>
