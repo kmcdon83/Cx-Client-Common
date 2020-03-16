@@ -3,22 +3,11 @@ package com.cx.restclient.sast.utils;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.CxXMLResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.sun.xml.bind.v2.JAXBContextFactory;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
-import java.util.Collections;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
-import static com.cx.restclient.sast.utils.SASTParam.PDF_REPORT_NAME;
 
 /**
  * Created by Galn on 07/02/2018.
@@ -35,7 +24,7 @@ public abstract class SASTUtils {
 
     public static CxXMLResults convertToXMLResult(byte[] cxReport) throws CxClientException {
         CxXMLResults reportObj = null;
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport);
+        /*ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport);
         try {
 
             JAXBContextFactory jaxbContextFactory = new JAXBContextFactory();
@@ -49,7 +38,7 @@ public abstract class SASTUtils {
             throw new CxClientException("Failed to parse xml report: " + e.getMessage(), e);
         } finally {
             IOUtils.closeQuietly(byteArrayInputStream);
-        }
+        }*/
         return reportObj;
     }
 
