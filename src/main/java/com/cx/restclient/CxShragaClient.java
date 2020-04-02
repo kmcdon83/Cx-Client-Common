@@ -124,11 +124,31 @@ public class CxShragaClient {
             if (config.getEnablePolicyViolations()) {
                 resolveCxARMUrl();
             }
+            if(config.getEngineConfigurationName() != null){
+                resolveEngineConfiguration();
+            }
             resolveProject();
         }
 
         if (dependencyScanner != null) {
             dependencyScanner.init();
+        }
+    }
+
+    private void resolveEngineConfiguration() throws IOException {
+        if(config.getEngineConfigurationId() == null && config.getEngineConfigurationName() == null){
+            config.setEngineConfigurationId(1);
+        }else if(config.getEngineConfigurationName() != null){
+            final List<EngineConfiguration> engineConfigurations = getEngineConfiguration();
+            for (EngineConfiguration engineConfiguration : engineConfigurations) {
+                if (engineConfiguration.getName().equalsIgnoreCase(config.getEngineConfigurationName())) {
+                    config.setEngineConfigurationId(engineConfiguration.getId());
+                    log.info("Engine configuration: \"" + config.getEngineConfigurationName() + "\" was validated in server");
+                }
+            }
+            if (config.getEngineConfigurationId() == null){
+                throw new CxClientException("Engine configuration: \"" + config.getEngineConfigurationName() + "\" was not found in server");
+            }
         }
     }
 
@@ -354,6 +374,12 @@ public class CxShragaClient {
         List<Team> teamList = getTeamList();
         httpClient.setTeamPathHeader(this.teamPath);
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
+    }
+
+    public List<EngineConfiguration> getEngineConfiguration() throws IOException {
+        List<Team> teamList = getTeamList();
+        httpClient.setTeamPathHeader(this.teamPath);
+        return (List<EngineConfiguration>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, EngineConfiguration.class, 200, "engine configurations", true);
     }
 
     public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
