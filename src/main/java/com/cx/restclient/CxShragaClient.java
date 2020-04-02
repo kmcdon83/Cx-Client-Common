@@ -124,9 +124,7 @@ public class CxShragaClient {
             if (config.getEnablePolicyViolations()) {
                 resolveCxARMUrl();
             }
-            if(config.getEngineConfigurationName() != null){
-                resolveEngineConfiguration();
-            }
+            resolveEngineConfiguration();
             resolveProject();
         }
 
