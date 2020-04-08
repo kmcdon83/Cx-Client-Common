@@ -8,6 +8,7 @@ public class LoginSettings {
     private String password;
     private CharSequence tenant;
     private String refreshToken;
+    private String version;
 
     // TODO: find a way to use a single client type here.
     private ClientType clientTypeForRefreshToken;
@@ -67,5 +68,13 @@ public class LoginSettings {
 
     public void setTenant(CharSequence tenant) {
         this.tenant = tenant;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 }
