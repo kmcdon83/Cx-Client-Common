@@ -114,8 +114,8 @@ public class CxShragaClient {
     public void init() throws CxClientException, IOException {
         log.info("Initializing Cx client [" + getClientVersion() + "]");
         if (config.isSastOrOSAEnabled()) {
-            getCxVersion();
-            login();
+            String version = getCxVersion();
+            login(version);
             resolveTeam();
             httpClient.setTeamPathHeader(this.teamPath);
             if (config.getSastEnabled()) {
@@ -262,12 +262,13 @@ public class CxShragaClient {
     }
     //HELP config  Methods
 
-    public void login() throws IOException, CxClientException {
+    public void login(String version) throws IOException, CxClientException {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
 
         LoginSettings settings = getDefaultLoginSettings();
         settings.setRefreshToken(config.getRefreshToken());
+        settings.setVersion(version);
         httpClient.login(settings);
     }
 
@@ -282,7 +283,8 @@ public class CxShragaClient {
         httpClient.revokeToken(token);
     }
 
-    public void getCxVersion() throws IOException, CxClientException {
+    public String getCxVersion() throws IOException, CxClientException {
+        String version = "";
         try {
             config.setCxVersion(httpClient.getRequest(CX_VERSION, CONTENT_TYPE_APPLICATION_JSON_V1, CxVersion.class, 200, "cx Version", false));
             String hotfix = "";
@@ -293,11 +295,14 @@ public class CxShragaClient {
             } catch (Exception ex) {
             }
 
+            version = config.getCxVersion().getVersion();
             log.info("Checkmarx server version [" + config.getCxVersion().getVersion() + "]." + hotfix);
 
         } catch (Exception ex) {
+            version = "lower than 9.0";
             log.debug("Checkmarx server version [lower than 9.0]");
         }
+        return version;
     }
 
     public String getTeamIdByName(String teamName) throws CxClientException, IOException {
