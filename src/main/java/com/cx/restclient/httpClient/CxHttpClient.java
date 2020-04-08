@@ -99,6 +99,7 @@ public class CxHttpClient {
     private LoginSettings lastLoginSettings;
     private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
+    private HttpClientBuilder cb = HttpClients.custom();
 
     public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
                         @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
@@ -108,7 +109,6 @@ public class CxHttpClient {
         this.cxOrigin = origin;
         this.useSSo = isSSO;
         //create httpclient
-        HttpClientBuilder cb = HttpClients.custom();
         cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
         setSSLTls("TLSv1.2", log);
         if (disableSSLValidation) {
@@ -201,10 +201,53 @@ public class CxHttpClient {
         if (settings.getRefreshToken() != null) {
             token = getAccessTokenFromRefreshToken(settings);
         } else if (useSSo) {
-            token = ssoLogin();
+            if (settings.getVersion().equals("lower than 9.0")) {
+                ssoLegacyLogin();
+            } else {
+                token = ssoLogin();
+            }
         } else {
             token = generateToken(settings);
         }
+    }
+
+    public void ssoLegacyLogin() throws CxClientException {
+        HttpUriRequest request;
+        HttpResponse loginResponse = null;
+
+        String cxCookie = null;
+        String csrfToken = null;
+
+        try {
+            request = RequestBuilder.post()
+                    .setUri(rootUri + "auth/ssologin")
+                    .setConfig(RequestConfig.DEFAULT)
+                    .setEntity(new StringEntity("", StandardCharsets.UTF_8))
+                    .build();
+
+            loginResponse = apacheClient.execute(request);
+
+        } catch (IOException e) {
+            log.error("Fail to login with windows authentication: " + e.getMessage());
+            throw new CxClientException("Fail to login with windows authentication: " + e.getMessage());
+        } finally {
+            HttpClientUtils.closeQuietly(loginResponse);
+        }
+
+        for (Cookie cookie : cookieStore.getCookies()) {
+            if (cookie.getName().equals(CSRF_TOKEN_HEADER)) {
+                csrfToken = cookie.getValue();
+            }
+            if (cookie.getName().equals("cxCookie")) {
+                cxCookie = cookie.getValue();
+            }
+        }
+
+        List<Header> headers = new ArrayList<>();
+        headers.add(new BasicHeader(CSRF_TOKEN_HEADER, csrfToken));
+        headers.add(new BasicHeader("cookie", String.format("CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie)));
+
+        apacheClient = cb.setDefaultHeaders(headers).build();
     }
 
     private TokenLoginResponse ssoLogin() throws CxClientException {

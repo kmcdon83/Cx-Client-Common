@@ -194,8 +194,9 @@ public abstract class OSAUtils {
                 if (!workDirectory.getParentFile().exists()) {
                     workDirectory.getParentFile().mkdirs();
                 }
-                FileUtils.writeStringToFile(workDirectory, json);
-                log.info(name + " json location: " + workDirectory);
+                File jsonFile = new File(workDirectory + File.separator + name);
+                FileUtils.writeStringToFile(jsonFile , json);
+                log.info(name + " json location: " + jsonFile);
             }
             else {
                 String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());

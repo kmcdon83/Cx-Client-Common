@@ -61,9 +61,19 @@ public class CxScanConfig implements Serializable {
 
     private Boolean generatePDFReport = false;
     private File zipFile;
-    private Integer engineConfigurationId = 1;
+    private Integer engineConfigurationId;
+    private String engineConfigurationName;
 
     private String osaFolderExclusions;
+
+    public String getEngineConfigurationName() {
+        return engineConfigurationName;
+    }
+
+    public void setEngineConfigurationName(String engineConfigurationName) {
+        this.engineConfigurationName = engineConfigurationName;
+    }
+
     private String osaFilterPattern;
     private String osaArchiveIncludePatterns;
     private Boolean osaGenerateJsonReport = true;

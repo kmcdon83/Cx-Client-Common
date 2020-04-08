@@ -115,8 +115,8 @@ public class CxShragaClient {
     public void init() throws CxClientException, IOException {
         log.info("Initializing Cx client [" + getClientVersion() + "]");
         if (config.isSastOrOSAEnabled()) {
-            getCxVersion();
-            login();
+            String version = getCxVersion();
+            login(version);
             resolveTeam();
             httpClient.setTeamPathHeader(this.teamPath);
             if (config.getSastEnabled()) {
@@ -125,11 +125,29 @@ public class CxShragaClient {
             if (config.getEnablePolicyViolations()) {
                 resolveCxARMUrl();
             }
+            resolveEngineConfiguration();
             resolveProject();
         }
 
         if (dependencyScanner != null) {
             dependencyScanner.init();
+        }
+    }
+
+    private void resolveEngineConfiguration() throws IOException {
+        if(config.getEngineConfigurationId() == null && config.getEngineConfigurationName() == null){
+            config.setEngineConfigurationId(1);
+        }else if(config.getEngineConfigurationName() != null){
+            final List<EngineConfiguration> engineConfigurations = getEngineConfiguration();
+            for (EngineConfiguration engineConfiguration : engineConfigurations) {
+                if (engineConfiguration.getName().equalsIgnoreCase(config.getEngineConfigurationName())) {
+                    config.setEngineConfigurationId(engineConfiguration.getId());
+                    log.info("Engine configuration: \"" + config.getEngineConfigurationName() + "\" was validated in server");
+                }
+            }
+            if (config.getEngineConfigurationId() == null){
+                throw new CxClientException("Engine configuration: \"" + config.getEngineConfigurationName() + "\" was not found in server");
+            }
         }
     }
 
@@ -251,12 +269,13 @@ public class CxShragaClient {
     }
     //HELP config  Methods
 
-    public void login() throws IOException, CxClientException {
+    public void login(String version) throws IOException, CxClientException {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
 
         LoginSettings settings = getDefaultLoginSettings();
         settings.setRefreshToken(config.getRefreshToken());
+        settings.setVersion(version);
         httpClient.login(settings);
     }
 
@@ -271,7 +290,8 @@ public class CxShragaClient {
         httpClient.revokeToken(token);
     }
 
-    public void getCxVersion() throws IOException, CxClientException {
+    public String getCxVersion() throws IOException, CxClientException {
+        String version = "";
         try {
             config.setCxVersion(httpClient.getRequest(CX_VERSION, CONTENT_TYPE_APPLICATION_JSON_V1, CxVersion.class, 200, "cx Version", false));
             String hotfix = "";
@@ -282,11 +302,14 @@ public class CxShragaClient {
             } catch (Exception ex) {
             }
 
+            version = config.getCxVersion().getVersion();
             log.info("Checkmarx server version [" + config.getCxVersion().getVersion() + "]." + hotfix);
 
         } catch (Exception ex) {
+            version = "lower than 9.0";
             log.debug("Checkmarx server version [lower than 9.0]");
         }
+        return version;
     }
 
     public String getTeamIdByName(String teamName) throws CxClientException, IOException {
@@ -365,6 +388,12 @@ public class CxShragaClient {
         List<Team> teamList = getTeamList();
         httpClient.setTeamPathHeader(this.teamPath);
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
+    }
+
+    public List<EngineConfiguration> getEngineConfiguration() throws IOException {
+        List<Team> teamList = getTeamList();
+        httpClient.setTeamPathHeader(this.teamPath);
+        return (List<EngineConfiguration>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, EngineConfiguration.class, 200, "engine configurations", true);
     }
 
     public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin

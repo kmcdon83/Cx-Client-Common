@@ -14,7 +14,7 @@ public class GetTeamListTests extends CommonClientTest {
         CxScanConfig config = initConfig();
         try {
             CxShragaClient client = new CxShragaClient(config, log);
-            client.login();
+            client.login("9.0");
             List<Team> teams = client.getTeamList();
             Assert.assertNotNull(teams);
             Assert.assertFalse(teams.isEmpty());
