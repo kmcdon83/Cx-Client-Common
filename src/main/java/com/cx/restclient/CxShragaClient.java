@@ -21,6 +21,7 @@ import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static com.cx.restclient.common.CxPARAM.*;
@@ -135,6 +136,12 @@ public class CxShragaClient {
     public long createSASTScan() throws IOException, CxClientException {
         sastScanId = getSastClient().createSASTScan(projectId);
         sastResults.setSastScanLink(config.getUrl(), sastScanId, projectId);
+        return sastScanId;
+    }
+
+    public long createSASTScan(long pId) throws IOException, CxClientException {
+        sastScanId = getSastClient().createSASTScan(pId);
+        sastResults.setSastScanLink(config.getUrl(), sastScanId, pId);
         return sastScanId;
     }
 
@@ -350,6 +357,10 @@ public class CxShragaClient {
         return (List<Preset>) httpClient.getRequest(CXPRESETS, CONTENT_TYPE_APPLICATION_JSON_V1, Preset.class, 200, "preset list", true);
     }
 
+    public void setSessionCookie(Map<String, CxCookieData> cookie){
+        httpClient.setSessionCookies(cookie);
+    }
+
     public List<CxNameObj> getConfigurationSetList() throws IOException, CxClientException {
         List<Team> teamList = getTeamList();
         httpClient.setTeamPathHeader(this.teamPath);
@@ -455,7 +466,7 @@ public class CxShragaClient {
         return projects;
     }
 
-    private Project createNewProject(CreateProjectRequest request) throws CxClientException, IOException {
+    public Project createNewProject(CreateProjectRequest request) throws CxClientException, IOException {
         String json = convertToJson(request);
         httpClient.setTeamPathHeader(this.teamPath);
         StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);

@@ -2,6 +2,7 @@ package com.cx.restclient.httpClient;
 
 import com.cx.restclient.common.ErrorMessage;
 import com.cx.restclient.common.UrlUtils;
+import com.cx.restclient.dto.CxCookieData;
 import com.cx.restclient.dto.LoginSettings;
 import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.dto.TokenLoginResponse;
@@ -43,6 +44,7 @@ import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
 import org.apache.http.impl.client.*;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.impl.cookie.BasicClientCookie;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContexts;
@@ -63,6 +65,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
@@ -121,10 +124,10 @@ public class CxHttpClient {
         cb.setConnectionManagerShared(true);
 
         setCustomProxy(cb, proxyConfig, log);
+        cb.setDefaultCookieStore(cookieStore);
 
         if (useSSo) {
             cb.setDefaultCredentialsProvider(new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider()));
-            cb.setDefaultCookieStore(cookieStore);
         } else {
             cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
         }
@@ -278,6 +281,13 @@ public class CxHttpClient {
         return cookies;
     }
 
+    public void setSessionCookies(Map<String, CxCookieData> cookie){
+        cookieStore.clear();
+        cookie.forEach((key,entity) -> {
+            cookieStore.addCookie(new BasicClientCookie(entity.getName(),entity.getValue()));
+        });
+    }
+
     public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
         UrlEncodedFormEntity requestEntity = generateUrlEncodedFormEntity(settings);
         String fullUrl = UrlUtils.parseURLToString(settings.getAccessControlBaseUrl(), AUTHENTICATION);
@@ -410,6 +420,19 @@ public class CxHttpClient {
             if (token != null) {
                 httpMethod.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
             }
+
+            String cookies = retrieveCookies();
+
+            if(!StringUtils.isEmpty(cookies)) {
+                cookieStore.getCookies().forEach(cookie -> {
+                    if("CXCSRFToken".equalsIgnoreCase(cookie.getName())){
+                        httpMethod.addHeader("CXCSRFToken", cookie.getValue());
+                    }
+                });
+
+                httpMethod.addHeader("Cookie",cookies);
+            }
+
 
             response = apacheClient.execute(httpMethod);
             statusCode = response.getStatusLine().getStatusCode();
