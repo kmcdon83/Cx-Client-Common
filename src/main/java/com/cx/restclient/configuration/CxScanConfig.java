@@ -7,12 +7,10 @@ import com.cx.restclient.dto.RemoteSourceTypes;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
-
+import org.apache.http.cookie.Cookie;
 import java.io.File;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created by galn on 21/12/2016.
@@ -110,7 +108,7 @@ public class CxScanConfig implements Serializable {
 
     private SCAConfig scaConfig;
     private DependencyScannerType dependencyScannerType;
-
+    private List<Cookie> sessionCookies = new ArrayList<>();
     private ProxyConfig proxyConfig;
 
     public CxScanConfig() {
@@ -744,5 +742,12 @@ public class CxScanConfig implements Serializable {
 
     public void setProxyConfig(ProxyConfig proxyConfig) {
         this.proxyConfig = proxyConfig;
+    }
+
+    public void addCookie(Cookie cookie){
+        this.sessionCookies.add(cookie);
+    }
+    public List<Cookie> getSessionCookie() {
+        return this.sessionCookies;
     }
 }

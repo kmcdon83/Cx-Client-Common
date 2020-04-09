@@ -54,7 +54,6 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
@@ -67,7 +66,6 @@ import java.util.List;
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.*;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 
 /**
@@ -195,9 +193,16 @@ public class CxHttpClient {
 
     public void login(LoginSettings settings) throws IOException, CxClientException {
         lastLoginSettings = settings;
+
+        if(!settings.getSessionCookies().isEmpty()){
+            setSessionCookies(settings.getSessionCookies());
+            return;
+        }
+
         if (settings.getRefreshToken() != null) {
             token = getAccessTokenFromRefreshToken(settings);
-        } else if (useSSo) {
+        }
+        else if (useSSo) {
             if (settings.getVersion().equals("lower than 9.0")) {
                 ssoLegacyLogin();
             } else {
@@ -208,12 +213,9 @@ public class CxHttpClient {
         }
     }
 
-    public void ssoLegacyLogin() throws CxClientException {
+    public ArrayList<Cookie> ssoLegacyLogin() throws CxClientException {
         HttpUriRequest request;
         HttpResponse loginResponse = null;
-
-        String cxCookie = null;
-        String csrfToken = null;
 
         try {
             request = RequestBuilder.post()
@@ -230,8 +232,17 @@ public class CxHttpClient {
         } finally {
             HttpClientUtils.closeQuietly(loginResponse);
         }
+        setSessionCookies(cookieStore.getCookies());
 
-        for (Cookie cookie : cookieStore.getCookies()) {
+        //return cookies clone - for IDE's usage
+        return new ArrayList<>(cookieStore.getCookies());
+    }
+
+    private void setSessionCookies(List<Cookie> cookies){
+        String cxCookie = null;
+        String csrfToken = null;
+
+        for (Cookie cookie : cookies) {
             if (cookie.getName().equals(CSRF_TOKEN_HEADER)) {
                 csrfToken = cookie.getValue();
             }

@@ -13,6 +13,7 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.dto.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.HttpResponseException;
+import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
@@ -499,7 +500,7 @@ public class CxShragaClient {
 
         result.setUsername(config.getUsername());
         result.setPassword(config.getPassword());
-
+        result.getSessionCookies().addAll(config.getSessionCookie());
         result.setClientTypeForPasswordAuth(ClientType.RESOURCE_OWNER);
         result.setClientTypeForRefreshToken(ClientType.CLI);
 
@@ -538,5 +539,9 @@ public class CxShragaClient {
 
     public List<LastScanResponse> getLastScansByProjectId(long projectId) throws IOException {
         return sastClient.getLatestSASTStatus(projectId);
+    }
+
+    public List<Cookie> ssoLegacyLogin(){
+        return httpClient.ssoLegacyLogin();
     }
 }

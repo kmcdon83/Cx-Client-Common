@@ -1,6 +1,10 @@
 package com.cx.restclient.dto;
 
 import com.cx.restclient.osa.dto.ClientType;
+import org.apache.http.cookie.Cookie;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LoginSettings {
     private String accessControlBaseUrl;
@@ -8,6 +12,7 @@ public class LoginSettings {
     private String password;
     private CharSequence tenant;
     private String refreshToken;
+    private List<Cookie> sessionCookies = new ArrayList<>();
     private String version;
 
     // TODO: find a way to use a single client type here.
@@ -76,5 +81,9 @@ public class LoginSettings {
 
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public List<Cookie> getSessionCookies() {
+        return sessionCookies;
     }
 }
