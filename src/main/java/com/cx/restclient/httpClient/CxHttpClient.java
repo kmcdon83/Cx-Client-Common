@@ -93,6 +93,10 @@ public class CxHttpClient {
     private Boolean useSSo;
     private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
+    private String version = "";
+
+    //create http client
+    HttpClientBuilder cb = HttpClients.custom();
 
     public CxHttpClient(String hostname, String username, String password, String origin,
                         boolean disableSSLValidation, boolean isSSO, String refreshToken, Logger logi,
@@ -104,8 +108,6 @@ public class CxHttpClient {
         this.rootUri = UrlUtils.parseURLToString(hostname, "CxRestAPI/");
         this.cxOrigin = origin;
         this.useSSo = isSSO;
-        //create httpclient
-        HttpClientBuilder cb = HttpClients.custom();
         cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
         setSSLTls("TLSv1.2", logi);
         if (disableSSLValidation) {
@@ -221,14 +223,58 @@ public class CxHttpClient {
                 .build();
     }
 
-    public void login() throws IOException, CxClientException {
+    public void login(String version) throws IOException, CxClientException {
         if (refreshToken != null) {
             token = getAccessTokenFromRefreshToken();
         } else if (useSSo) {
-            token = ssoLogin();
+            if(version == "lower than 9.0"){
+                ssoLegacyLogin();
+            }else{
+                token = ssoLogin();
+            }
         } else {
             token = generateToken();
         }
+    }
+
+
+    public void ssoLegacyLogin() throws CxClientException {
+        HttpUriRequest request;
+        HttpResponse loginResponse = null;
+
+        String cxCookie = null;
+        String csrfToken = null;
+
+        try {
+            request = RequestBuilder.post()
+                    .setUri(rootUri + "auth/ssologin")
+                    .setConfig(RequestConfig.DEFAULT)
+                    .setEntity(new StringEntity("", StandardCharsets.UTF_8))
+                    .build();
+
+            loginResponse = apacheClient.execute(request);
+
+        } catch (IOException e) {
+            log.error("Fail to login with windows authentication: " + e.getMessage());
+            throw new CxClientException("Fail to login with windows authentication: " + e.getMessage());
+        } finally {
+            HttpClientUtils.closeQuietly(loginResponse);
+        }
+
+        for (Cookie cookie : cookieStore.getCookies()) {
+            if (cookie.getName().equals(CSRF_TOKEN_HEADER)) {
+                csrfToken = cookie.getValue();
+            }
+            if (cookie.getName().equals("cxCookie")) {
+                cxCookie = cookie.getValue();
+            }
+        }
+
+        List<Header> headers = new ArrayList<>();
+        headers.add(new BasicHeader(CSRF_TOKEN_HEADER, csrfToken));
+        headers.add(new BasicHeader("cookie", String.format("CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie)));
+
+        apacheClient = cb.setDefaultHeaders(headers).build();
     }
 
     private TokenLoginResponse ssoLogin() throws CxClientException {
@@ -447,7 +493,7 @@ public class CxHttpClient {
         } catch (CxTokenExpiredException ex) {
             if (retry) {
                 log.warn("Access token expired for request: " + httpMethod.getURI() + ", Status code:" + statusCode + "requesting a new token. message: " + ex.getMessage());
-                login();
+                login(version);
                 return request(httpMethod, contentType, entity, responseType, expectStatus, failedMsg, isCollection, false);
             }
             throw ex;
@@ -497,6 +543,14 @@ public class CxHttpClient {
         } catch (UnsupportedEncodingException e) {
             throw new CxClientException(e.getMessage());
         }
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 
 }
