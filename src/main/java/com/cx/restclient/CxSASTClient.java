@@ -26,10 +26,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.cx.restclient.cxArm.dto.CxProviders.SAST;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getProjectViolatedPolicies;
@@ -300,12 +297,13 @@ class CxSASTClient {
     SASTResults getLatestSASTResults(long projectId) throws IOException, CxClientException, InterruptedException {
         log.info("---------------------------------Get Last CxSAST Results:--------------------------------");
         List<LastScanResponse> scanList = getLatestSASTStatus(projectId);
-        for (LastScanResponse s : scanList) {
-            if (CurrentStatus.FINISHED.value().equals(s.getStatus().getName())) {
-                return retrieveSASTResults(s.getId(), projectId);
-            }
+        try {
+            scanList.sort(Comparator.comparing(LastScanResponse::getId).reversed());
+            return retrieveSASTResults(scanList.get(0).getId(), projectId);
+        } catch (Exception e) {
+            log.error("Fail retrieving latest SAST results.");
+            return new SASTResults();
         }
-        return new SASTResults();
     }
 
     //Cancel SAST Scan
