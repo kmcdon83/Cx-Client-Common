@@ -38,6 +38,7 @@ public class CxScanConfig implements Serializable {
     private String url;
     private String projectName;
     private String teamPath;
+    private String mvnPath;
     private String teamId;
     private Boolean denyProject = false;
     private Boolean hideResults = false;
@@ -668,6 +669,13 @@ public class CxScanConfig implements Serializable {
     public void setConnectionRetries(Integer connectionRetries) {
         this.connectionRetries = connectionRetries;
     }
+     public String getMvnPath() {
+            return mvnPath;
+        }
+
+     public void setMvnPath(String mvnPath) {
+            this.mvnPath = mvnPath;
+        }
 
     public String getOsaScanDepth() {
         return osaScanDepth;
