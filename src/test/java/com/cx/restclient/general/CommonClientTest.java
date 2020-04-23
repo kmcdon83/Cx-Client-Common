@@ -18,7 +18,7 @@ public abstract class CommonClientTest {
 
     @BeforeClass
     public static void initTest() throws IOException {
-        props = TestingUtils.getProps(PROPERTIES_FILE, ProjectScanTests.class);
+        props = TestingUtils.getProps(PROPERTIES_FILE, SastScanTests.class);
     }
 
     protected static void setProxy(CxScanConfig config) {

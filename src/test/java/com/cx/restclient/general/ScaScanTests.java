@@ -4,10 +4,10 @@ import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
-import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.sca.dto.SourceLocationType;
 import com.cx.utility.TestingUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -18,19 +18,20 @@ import java.net.MalformedURLException;
 @Ignore
 public class ScaScanTests extends CommonClientTest {
     @Test
-    public void runScaScan() throws MalformedURLException, CxClientException {
+    public void scan_locaDirUpload() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
-        runScaScan(config);
+        config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
+        scanUsing(config);
     }
 
     @Test
     public void runScaScanWithProxy() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
         setProxy(config);
-        runScaScan(config);
+        scanUsing(config);
     }
 
-    private void runScaScan(CxScanConfig config) throws MalformedURLException, CxClientException {
+    private void scanUsing(CxScanConfig config) throws MalformedURLException, CxClientException {
         CxShragaClient client = new CxShragaClient(config, log);
         try {
             client.init();
@@ -55,7 +56,7 @@ public class ScaScanTests extends CommonClientTest {
         config.setSastEnabled(false);
         config.setSourceDir(props.getProperty("dependencyScanSourceDir"));
         config.setOsaThresholdsEnabled(true);
-        config.setProjectName("scaOnlyScan");
+        config.setProjectName("commonClient-test-scaOnlyScan");
 
         SCAConfig sca = TestingUtils.getScaConfig(props);
         config.setScaConfig(sca);

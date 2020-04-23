@@ -2,9 +2,7 @@ package com.cx.restclient.general;
 
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
-import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.SASTResults;
 import org.junit.Assert;
@@ -15,7 +13,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 
 @Ignore
-public class ProjectScanTests extends CommonClientTest {
+public class SastScanTests extends CommonClientTest {
     @Test
     public void runSastScan() throws MalformedURLException, CxClientException {
         CxScanConfig config = initSastConfig();
