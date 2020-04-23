@@ -1,5 +1,7 @@
-package com.cx.restclient.connection;
+package com.cx.restclient.general;
 
+import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.ProxyConfig;
 import com.cx.utility.TestingUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -17,6 +19,13 @@ public abstract class CommonClientTest {
     @BeforeClass
     public static void initTest() throws IOException {
         props = TestingUtils.getProps(PROPERTIES_FILE, ProjectScanTests.class);
+    }
+
+    protected static void setProxy(CxScanConfig config) {
+        ProxyConfig proxyConfig = new ProxyConfig();
+        proxyConfig.setHost(props.getProperty("proxy.host"));
+        proxyConfig.setPort(Integer.parseInt(props.getProperty("proxy.port")));
+        config.setProxyConfig(proxyConfig);
     }
 
     void failOnException(Exception e) {
