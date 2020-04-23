@@ -134,9 +134,9 @@ public class CxShragaClient {
     }
 
     private void resolveEngineConfiguration() throws IOException {
-        if(config.getEngineConfigurationId() == null && config.getEngineConfigurationName() == null){
+        if (config.getEngineConfigurationId() == null && config.getEngineConfigurationName() == null) {
             config.setEngineConfigurationId(1);
-        }else if(config.getEngineConfigurationName() != null){
+        } else if (config.getEngineConfigurationName() != null) {
             final List<EngineConfiguration> engineConfigurations = getEngineConfiguration();
             for (EngineConfiguration engineConfiguration : engineConfigurations) {
                 if (engineConfiguration.getName().equalsIgnoreCase(config.getEngineConfigurationName())) {
@@ -144,7 +144,7 @@ public class CxShragaClient {
                     log.info("Engine configuration: \"" + config.getEngineConfigurationName() + "\" was validated in server");
                 }
             }
-            if (config.getEngineConfigurationId() == null){
+            if (config.getEngineConfigurationId() == null) {
                 throw new CxClientException("Engine configuration: \"" + config.getEngineConfigurationName() + "\" was not found in server");
             }
         }
@@ -213,12 +213,11 @@ public class CxShragaClient {
     }
 
     /**
-     * @param config
-     * The following config properties are used:
-     *      scaConfig
-     *      proxyConfig
-     *      cxOrigin
-     *      disableCertificateValidation
+     * @param config The following config properties are used:
+     *               scaConfig
+     *               proxyConfig
+     *               cxOrigin
+     *               disableCertificateValidation
      */
     public static void testScaConnection(CxScanConfig config, Logger log) throws CxClientException {
         SCAClient client = new SCAClient(config, log);
@@ -260,12 +259,18 @@ public class CxShragaClient {
     public void close() {
         httpClient.close();
     }
+
     //HELP config  Methods
+
+
+    public void login() throws IOException {
+        String version = getCxVersion();
+        login(version);
+    }
 
     public void login(String version) throws IOException, CxClientException {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
-
         LoginSettings settings = getDefaultLoginSettings();
         settings.setRefreshToken(config.getRefreshToken());
         settings.setVersion(version);
@@ -354,12 +359,12 @@ public class CxShragaClient {
 
         List<Team> teamList = populateTeamList();
         //If there is no chosen teamPath, just add first one from the teams list as default
-        if(StringUtils.isEmpty(this.teamPath) && teamList!=null && !teamList.isEmpty()){
-            this.teamPath= teamList.get(0).getFullName();
+        if (StringUtils.isEmpty(this.teamPath) && teamList != null && !teamList.isEmpty()) {
+            this.teamPath = teamList.get(0).getFullName();
         }
         httpClient.setTeamPathHeader(this.teamPath);
         log.debug("getTeamList setTeamPathHeader " + this.teamPath);
-        return  teamList;
+        return teamList;
     }
 
     public Preset getPresetById(int presetId) throws IOException, CxClientException {
@@ -528,7 +533,7 @@ public class CxShragaClient {
     }
 
 
-    public Long getProjectId(){
+    public Long getProjectId() {
         return projectId;
     }
 
