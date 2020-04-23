@@ -1,4 +1,4 @@
-package com.cx.restclient.connection;
+package com.cx.restclient.general;
 
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
