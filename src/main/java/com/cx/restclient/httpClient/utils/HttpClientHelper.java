@@ -83,13 +83,20 @@ public abstract class HttpClientHelper {
         return result;
     }
 
-    public static void validateResponse(HttpResponse response, int status, String message) throws CxClientException {
-        if (response.getStatusLine().getStatusCode() != status) {
+    public static void validateResponse(HttpResponse response, int expectedStatus, String message) throws CxClientException {
+        int actualStatusCode = response.getStatusLine().getStatusCode();
+        if (actualStatusCode != expectedStatus) {
             String responseBody = extractResponseBody(response);
-            responseBody = responseBody.replace("{", "").replace("}", "").replace(System.getProperty("line.separator"), " ").replace("  ", "");
-            throw new CxHTTPClientException(response.getStatusLine().getStatusCode(), message + ": " + responseBody);
-        }
+            responseBody = responseBody.replace("{", "")
+                    .replace("}", "")
+                    .replace(System.getProperty("line.separator"), " ")
+                    .replace("  ", "");
 
+            String exceptionMessage = String.format("Status code: %d, message: '%s', response body: %s",
+                    actualStatusCode, message, responseBody);
+
+            throw new CxHTTPClientException(actualStatusCode, exceptionMessage);
+        }
     }
 
     public static String extractResponseBody(HttpResponse response) {

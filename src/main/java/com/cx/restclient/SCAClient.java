@@ -34,12 +34,17 @@ import java.util.List;
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 public class SCAClient implements DependencyScanner {
+
+
     private static class UrlPaths {
         private static final String RISK_MANAGEMENT_API = "/risk-management/";
         private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
         private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
         private static final String SCAN_STATUS = RISK_MANAGEMENT_API + "scans/%s/status";
         private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
+
+        public static final String GET_UPLOAD_URL_ENDPOINT = "/api/uploads";
+        public static final String CREATE_SCAN_ENDPOINT = "/api/scans";
 
         private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     }
@@ -87,7 +92,7 @@ public class SCAClient implements DependencyScanner {
             SourceLocationType locationType = getScaConfig().getSourceLocationType();
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
                 submitSourcesFromRemoteRepo();
-            } else if (locationType == SourceLocationType.LOCAL_DIRECTORY) {
+            } else {
                 submitSourcesFromLocalDir();
             }
         } catch (IOException e) {
@@ -103,6 +108,44 @@ public class SCAClient implements DependencyScanner {
         validateRemoteRepoConfig(repoInfo);
     }
 
+    private void submitSourcesFromLocalDir() throws IOException {
+        log.info("Using local directory flow.");
+
+        PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
+        String sourceDir = config.getEffectiveSourceDirForDependencyScan();
+        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
+
+        String uploadUrl = getSourcesUploadUrl();
+        uploadArchive(zipFile, uploadUrl);
+        CxZipUtils.deleteZippedSources(zipFile, config, log);
+
+        sendStartScanRequest(uploadUrl);
+    }
+
+    private void sendStartScanRequest(String uploadUrl) throws IOException {
+        log.info("Sending a request to start scan.");
+
+        UploadHandler handler = UploadHandler.builder()
+                .url(uploadUrl)
+                .build();
+
+        ProjectToScan project = ProjectToScan.builder()
+                .id(projectId)
+                .type(SourceLocationType.LOCAL_DIRECTORY.getApiValue())
+                .handler(handler)
+                .build();
+
+        StartScanRequest request = StartScanRequest.builder()
+                .project(project)
+                .build();
+
+        StringEntity entity = HttpClientHelper.convertToStringEntity(request);
+
+        httpClient.postRequest(UrlPaths.CREATE_SCAN_ENDPOINT, ContentType.CONTENT_TYPE_APPLICATION_JSON_V1, entity, String.class, HttpStatus.SC_CREATED, "start CxSCA scan");
+
+        log.info("Scan started successfully.");
+    }
+
     private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
         if (repoInfo == null) {
             String message = String.format(
@@ -114,20 +157,8 @@ public class SCAClient implements DependencyScanner {
         }
     }
 
-    private void submitSourcesFromLocalDir() throws IOException {
-        log.info("Using local directory flow.");
-
-        PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
-        String sourceDir = config.getEffectiveSourceDirForDependencyScan();
-        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
-
-        String uploadUrl = getSourcesUploadUrl();
-        uploadArchive(zipFile, uploadUrl);
-        CxZipUtils.deleteZippedSources(zipFile, config, log);
-    }
-
     private String getSourcesUploadUrl() throws IOException {
-        JsonNode response = httpClient.postRequest("/api/uploads", null, null, JsonNode.class, HttpStatus.SC_OK, "get upload URL for sources");
+        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL_ENDPOINT, null, null, JsonNode.class, HttpStatus.SC_OK, "get upload URL for sources");
         return response.get("url").asText();
     }
 
