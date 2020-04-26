@@ -19,16 +19,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.InputStreamBody;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -67,13 +63,7 @@ public class SCAClient implements DependencyScanner {
 
         SCAConfig scaConfig = getScaConfig();
 
-        httpClient = new CxHttpClient(scaConfig.getApiUrl(),
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                null,
-                config.getProxyConfig(),
-                log);
+        httpClient = createHttpClient(scaConfig.getApiUrl());
 
         waiter = new SCAWaiter("CxSCA scan", pollInterval, maxRetries, httpClient, UrlPaths.SCAN_STATUS, log);
     }
@@ -90,13 +80,13 @@ public class SCAClient implements DependencyScanner {
 
     @Override
     public String createScan(DependencyScanResults target) {
-        log.info("----------------------------------- Create CxSCA Scan:------------------------------------");
+        log.info("----------------------------------- Creating CxSCA Scan:------------------------------------");
 
         scanId = null;
         try {
             SourceLocationType locationType = getScaConfig().getSourceLocationType();
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
-                submitSourcesFromRemoteRepo(locationType);
+                submitSourcesFromRemoteRepo();
             } else if (locationType == SourceLocationType.LOCAL_DIRECTORY) {
                 submitSourcesFromLocalDir();
             }
@@ -107,18 +97,18 @@ public class SCAClient implements DependencyScanner {
         return scanId;
     }
 
-    private void submitSourcesFromRemoteRepo(SourceLocationType locationType) {
+    private void submitSourcesFromRemoteRepo() {
         log.info("Using remote repository flow.");
         RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
-        validate(repoInfo, locationType);
+        validateRemoteRepoConfig(repoInfo);
     }
 
-    private void validate(RemoteRepositoryInfo repoInfo, SourceLocationType locationType) {
+    private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
         if (repoInfo == null) {
             String message = String.format(
                     "%s must be provided in CxSCA configuration when using source location of type %s.",
                     RemoteRepositoryInfo.class.getName(),
-                    locationType.name());
+                    SourceLocationType.REMOTE_REPOSITORY.name());
 
             throw new CxClientException(message);
         }
@@ -126,32 +116,31 @@ public class SCAClient implements DependencyScanner {
 
     private void submitSourcesFromLocalDir() throws IOException {
         log.info("Using local directory flow.");
+
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
         File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
-        String uploadHandleUrl = uploadArchive(zipFile);
+
+        String uploadUrl = getSourcesUploadUrl();
+        uploadArchive(zipFile, uploadUrl);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
-        startScanAfterUpload();
     }
 
-    private void startScanAfterUpload() {
-        // TODO
+    private String getSourcesUploadUrl() throws IOException {
+        JsonNode response = httpClient.postRequest("/api/uploads", null, null, JsonNode.class, HttpStatus.SC_OK, "get upload URL for sources");
+        return response.get("url").asText();
     }
 
-    private String uploadArchive(File source) throws IOException {
-        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-        builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+    private void uploadArchive(File source, String uploadUrl) throws IOException {
+        log.info("Uploading the zipped sources.");
 
-        InputStream input = new FileInputStream(source.getAbsoluteFile());
-        InputStreamBody fileBody = new InputStreamBody(input, org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM, "anyfilename");
-        builder.addPart("sources", fileBody);
-        HttpEntity entity = builder.build();
+        HttpEntity request = new FileEntity(source);
 
-        JsonNode response = httpClient.postRequest("/api/uploads", null, entity, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
-        String uploadHandlerUrl = response.get("url").textValue();
-        log.debug("Upload handler URL: {}", uploadHandlerUrl);
+        CxHttpClient client = createHttpClient(uploadUrl);
 
-        return uploadHandlerUrl;
+        // Relative path is empty, because we use the whole upload URL as the base URL for the HTTP client.
+        // Content type is empty, because the server at uploadUrl throws an error if Content-Type is non-empty.
+        client.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
     }
 
     @Override
@@ -320,7 +309,6 @@ public class SCAClient implements DependencyScanner {
         return result;
     }
 
-    // This method is for demo purposes and probably should be replaced in the future.
     private void printSummary(SCASummaryResults summary) {
         log.info("\n----CxSCA risk report summary----");
         log.info("Created on: " + summary.getCreatedOn());
@@ -331,7 +319,7 @@ public class SCAClient implements DependencyScanner {
         log.info("Risk report ID: " + summary.getRiskReportId());
         log.info("Risk score: " + summary.getRiskScore());
         log.info("Total packages: " + summary.getTotalPackages());
-        log.info(String.format("Total outdated packages: %d\n", summary.getTotalOutdatedPackages()));
+        log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
     }
 
     private SCAConfig getScaConfig() {
@@ -340,5 +328,15 @@ public class SCAClient implements DependencyScanner {
             throw new CxClientException("CxSCA scan configuration is missing.");
         }
         return result;
+    }
+
+    private CxHttpClient createHttpClient(String baseUrl) {
+        return new CxHttpClient(baseUrl,
+                config.getCxOrigin(),
+                config.isDisableCertificateValidation(),
+                config.isUseSSOLogin(),
+                null,
+                config.getProxyConfig(),
+                log);
     }
 }
