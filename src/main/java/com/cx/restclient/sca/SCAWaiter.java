@@ -1,70 +1,110 @@
 package com.cx.restclient.sca;
 
+import com.cx.restclient.SCAClient;
 import com.cx.restclient.common.ShragaUtils;
-import com.cx.restclient.common.Waiter;
+import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
-import com.cx.restclient.sca.dto.ScanStatusResponse;
+import com.cx.restclient.sca.dto.ScanInfoResponse;
 import com.cx.restclient.sca.dto.StatusName;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.http.HttpStatus;
-import org.slf4j.Logger;
+import org.awaitility.Awaitility;
+import org.awaitility.core.ConditionTimeoutException;
 
-import java.io.IOException;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class SCAWaiter extends Waiter<ScanStatusResponse> {
+@RequiredArgsConstructor
+@Slf4j
+public class SCAWaiter {
     private final CxHttpClient httpClient;
-    private final String scanStatusUrlPath;
-    private final Logger log;
+    private final CxScanConfig config;
+    private long startTimestampSec;
 
-    public SCAWaiter(String scanType, int interval, int retry, CxHttpClient httpClient, String scanStatusUrlPath, Logger log) {
-        super(scanType, interval, retry);
-        this.httpClient = httpClient;
-        this.scanStatusUrlPath = scanStatusUrlPath;
-        this.log = log;
+    public void waitForScanToComplete(String scanId) {
+        startTimestampSec = System.currentTimeMillis() / 1000;
+        Duration timeout = getTimeout(config);
+        Duration pollInterval = getPollInterval(config);
+
+        int maxErrorCount = getMaxErrorCount(config);
+        AtomicInteger errorCounter = new AtomicInteger();
+
+        String urlPath = String.format(SCAClient.UrlPaths.GET_SCAN, scanId);
+
+        try {
+            Awaitility.await()
+                    .atMost(timeout)
+                    .pollDelay(Duration.ZERO)
+                    .pollInterval(pollInterval)
+                    .until(() -> scanIsCompleted(urlPath, errorCounter, maxErrorCount));
+
+        } catch (ConditionTimeoutException e) {
+            String message = String.format(
+                    "Failed to perform CxSCA scan. The scan has been automatically aborted: " +
+                            "reached the user-specified timeout (%d minutes).", timeout.toMinutes());
+            throw new CxClientException(message);
+        }
     }
 
-    @Override
-    public ScanStatusResponse getStatus(String scanId) throws CxClientException, IOException {
-        String path = String.format(scanStatusUrlPath, scanId);
-
-        ScanStatusResponse response = httpClient.getRequest(path,
-                ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                ScanStatusResponse.class,
-                HttpStatus.SC_OK,
-                "CxSCA scan status",
-                false);
-
-        return response;
+    private static Duration getTimeout(CxScanConfig config) {
+        Integer rawTimeout = config.getOsaScanTimeoutInMinutes();
+        final int DEFAULT_TIMEOUT = 30;
+        rawTimeout = rawTimeout != null && rawTimeout > 0 ? rawTimeout : DEFAULT_TIMEOUT;
+        return Duration.ofMinutes(rawTimeout);
     }
 
-    @Override
-    public void printProgress(ScanStatusResponse statusResponse) {
-        log.info(String.format("Waiting for CxSCA scan results. Elapsed time: %s. Status: %s.",
-                ShragaUtils.getTimestampSince(getStartTimeSec()),
-                statusResponse.getName().getValue()));
+    private static Duration getPollInterval(CxScanConfig config) {
+        int rawPollInterval = ObjectUtils.defaultIfNull(config.getOsaProgressInterval(), 20);
+        return Duration.ofSeconds(rawPollInterval);
     }
 
-    @Override
-    public ScanStatusResponse resolveStatus(ScanStatusResponse lastStatusResponse) throws CxClientException {
-        if (lastStatusResponse == null || lastStatusResponse.getName() == StatusName.FAILED) {
-            String details = null;
-            if (lastStatusResponse != null) {
-                details = String.format("Status: %s, message: \'%s\'",
-                        lastStatusResponse.getName(),
-                        lastStatusResponse.getMessage());
-            }
-            throw new CxClientException("CxSCA scan cannot be completed. " + details);
+    private static int getMaxErrorCount(CxScanConfig config) {
+        return ObjectUtils.defaultIfNull(config.getConnectionRetries(), 3);
+    }
+
+    private boolean scanIsCompleted(String path, AtomicInteger errorCounter, int maxErrorCount) {
+        boolean completedSuccessfully = false;
+        try {
+            ScanInfoResponse response = httpClient.getRequest(path, ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                    ScanInfoResponse.class, HttpStatus.SC_OK, "CxSCA scan", false);
+
+            completedSuccessfully = validateScanStatus(response);
+        } catch (Exception e) {
+            countError(errorCounter, maxErrorCount, e.getMessage());
+        }
+        return completedSuccessfully;
+    }
+
+    private void countError(AtomicInteger errorCounter, int maxErrorCount, String message) {
+        int currentErrorCount = errorCounter.incrementAndGet();
+        int triesLeft = maxErrorCount - currentErrorCount;
+        if (triesLeft < 0) {
+            String fullMessage = String.format("Maximum number of errors was reached (%d), aborting.", maxErrorCount);
+            throw new CxClientException(fullMessage);
+        } else {
+            log.debug("Failed to get status from CxSCA. Retrying (tries left: {}). Error message: {}", triesLeft, message);
+        }
+    }
+
+    private boolean validateScanStatus(ScanInfoResponse response) {
+        if (response == null) {
+            throw new CxClientException("Empty response.");
         }
 
-        if (lastStatusResponse.getName() == StatusName.DONE) {
-            log.info("CxSCA scan finished.");
-        }
-        return lastStatusResponse;
-    }
+        StatusName status = response.getStatus();
+        String elapsedTimestamp = ShragaUtils.getTimestampSince(startTimestampSec);
+        log.info("Waiting for CxSCA scan results. Elapsed time: {}. Status: {}.", elapsedTimestamp, status.getValue());
 
-    @Override
-    public boolean isTaskInProgress(ScanStatusResponse statusResponse) {
-        return statusResponse != null && statusResponse.getName() == StatusName.SCANNING;
+        boolean completedSuccessfully = false;
+        if (status == StatusName.FAILED) {
+            throw new CxClientException("CxSCA scan cannot be completed.");
+        } else if (status == StatusName.DONE) {
+            completedSuccessfully = true;
+        }
+        return completedSuccessfully;
     }
 }
