@@ -2,7 +2,6 @@ package com.cx.restclient;
 
 import com.cx.restclient.common.DependencyScanner;
 import com.cx.restclient.common.UrlUtils;
-import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.LoginSettings;
@@ -16,8 +15,10 @@ import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
@@ -35,16 +36,17 @@ import java.util.List;
  */
 public class SCAClient implements DependencyScanner {
 
+    public static class UrlPaths {
+        private UrlPaths() { }
 
-    private static class UrlPaths {
         private static final String RISK_MANAGEMENT_API = "/risk-management/";
         private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
         private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
-        private static final String SCAN_STATUS = RISK_MANAGEMENT_API + "scans/%s/status";
         private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
 
-        public static final String GET_UPLOAD_URL_ENDPOINT = "/api/uploads";
-        public static final String CREATE_SCAN_ENDPOINT = "/api/scans";
+        public static final String GET_UPLOAD_URL = "/api/uploads";
+        public static final String CREATE_SCAN = "/api/scans";
+        public static final String GET_SCAN = "/api/scans/%s";
 
         private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     }
@@ -56,21 +58,15 @@ public class SCAClient implements DependencyScanner {
     private final CxHttpClient httpClient;
 
     private String projectId;
-    private final Waiter<ScanStatusResponse> waiter;
     private String scanId;
 
     SCAClient(CxScanConfig config, Logger log) {
         this.log = log;
         this.config = config;
 
-        int pollInterval = config.getOsaProgressInterval() != null ? config.getOsaProgressInterval() : 20;
-        int maxRetries = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
-
         SCAConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
-
-        waiter = new SCAWaiter("CxSCA scan", pollInterval, maxRetries, httpClient, UrlPaths.SCAN_STATUS, log);
     }
 
     @Override
@@ -90,11 +86,14 @@ public class SCAClient implements DependencyScanner {
         scanId = null;
         try {
             SourceLocationType locationType = getScaConfig().getSourceLocationType();
+            HttpResponse response;
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
-                submitSourcesFromRemoteRepo();
+                response = submitSourcesFromRemoteRepo();
             } else {
-                submitSourcesFromLocalDir();
+                response = submitSourcesFromLocalDir();
             }
+            scanId = extractScanIdFrom(response);
+            log.info("Scan started successfully. Scan ID: {}", scanId);
         } catch (IOException e) {
             throw new CxClientException("Error creating CxSCA scan.", e);
         }
@@ -102,36 +101,49 @@ public class SCAClient implements DependencyScanner {
         return scanId;
     }
 
-    private void submitSourcesFromRemoteRepo() {
+    private String extractScanIdFrom(HttpResponse response) {
+        if (response != null && response.getLastHeader("Location") != null) {
+            // Expecting a value like "/api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293"
+            String urlPathWithScanId = response.getLastHeader("Location").getValue();
+            String lastPathSegment = FilenameUtils.getName(urlPathWithScanId);
+            if (StringUtils.isNotEmpty(lastPathSegment)) {
+                return lastPathSegment;
+            }
+        }
+        throw new CxClientException("Unable to get scan ID.");
+    }
+
+    private HttpResponse submitSourcesFromRemoteRepo() throws IOException {
         log.info("Using remote repository flow.");
         RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
         validateRemoteRepoConfig(repoInfo);
+        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString());
     }
 
-    private void submitSourcesFromLocalDir() throws IOException {
+    private HttpResponse submitSourcesFromLocalDir() throws IOException {
         log.info("Using local directory flow.");
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
         File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
-        String uploadUrl = getSourcesUploadUrl();
-        uploadArchive(zipFile, uploadUrl);
+        String uploadedArchiveUrl = getSourcesUploadUrl();
+        uploadArchive(zipFile, uploadedArchiveUrl);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
-        sendStartScanRequest(uploadUrl);
+        return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
-    private void sendStartScanRequest(String uploadUrl) throws IOException {
+    private HttpResponse sendStartScanRequest(SourceLocationType sourceLocation, String sourceUrl) throws IOException {
         log.info("Sending a request to start scan.");
 
         UploadHandler handler = UploadHandler.builder()
-                .url(uploadUrl)
+                .url(sourceUrl)
                 .build();
 
         ProjectToScan project = ProjectToScan.builder()
                 .id(projectId)
-                .type(SourceLocationType.LOCAL_DIRECTORY.getApiValue())
+                .type(sourceLocation.getApiValue())
                 .handler(handler)
                 .build();
 
@@ -141,9 +153,8 @@ public class SCAClient implements DependencyScanner {
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
-        httpClient.postRequest(UrlPaths.CREATE_SCAN_ENDPOINT, ContentType.CONTENT_TYPE_APPLICATION_JSON_V1, entity, String.class, HttpStatus.SC_CREATED, "start CxSCA scan");
-
-        log.info("Scan started successfully.");
+        return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
+                HttpResponse.class, HttpStatus.SC_CREATED, "start CxSCA scan");
     }
 
     private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
@@ -158,7 +169,8 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getSourcesUploadUrl() throws IOException {
-        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL_ENDPOINT, null, null, JsonNode.class, HttpStatus.SC_OK, "get upload URL for sources");
+        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL, null, null, JsonNode.class,
+                HttpStatus.SC_OK, "get upload URL for sources");
         return response.get("url").asText();
     }
 
@@ -177,28 +189,17 @@ public class SCAClient implements DependencyScanner {
     @Override
     public void waitForScanResults(DependencyScanResults target) {
         log.info("------------------------------------Get CxSCA Results:-----------------------------------");
-
         log.info("Waiting for CxSCA scan to finish");
-        waiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
 
-        log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
-        SCAResults scaResult;
-        try {
-            scaResult = retrieveScanResults();
-        } catch (IOException e) {
-            throw new CxClientException("Error retrieving CxSCA scan results.", e);
-        }
+        SCAWaiter waiter = new SCAWaiter(httpClient, config);
+        waiter.waitForScanToComplete(scanId);
 
-        if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info("CxSCA scan results location: {}", scaResult.getWebReportLink());
-        }
-
-        target.setScaResults(scaResult);
+        log.info("CxSCA scan finished.");
     }
 
     @Override
     public DependencyScanResults getLatestScanResults() {
-        // TODO
+        // TODO: implement when someone actually needs this.
         return null;
     }
 
@@ -249,12 +250,8 @@ public class SCAClient implements DependencyScanner {
     }
 
     private List<Project> getProjects() throws IOException {
-        return (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS,
-                ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                Project.class,
-                HttpStatus.SC_OK,
-                "CxSCA projects",
-                true);
+        return (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS, ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                Project.class, HttpStatus.SC_OK, "CxSCA projects", true);
     }
 
     private String createProject(String name) throws IOException {
@@ -288,12 +285,12 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getWebReportLink(String reportId) {
-        final String MESSAGE = "Unable to generate web report link. ";
+        final String MESSAGE = "Unable to generate web report link.";
         String result = null;
         try {
             String webAppUrl = getScaConfig().getWebAppUrl();
             if (StringUtils.isEmpty(webAppUrl)) {
-                log.warn(MESSAGE + "Web app URL is not specified.");
+                log.warn("{} Web app URL is not specified.", MESSAGE);
             } else {
                 String encoding = StandardCharsets.UTF_8.name();
                 String path = String.format(UrlPaths.WEB_REPORT,
@@ -303,7 +300,7 @@ public class SCAClient implements DependencyScanner {
                 result = UrlUtils.parseURLToString(webAppUrl, path);
             }
         } catch (MalformedURLException e) {
-            log.warn(MESSAGE + "Invalid web app URL.", e);
+            log.warn("{} Invalid web app URL.", MESSAGE, e);
         } catch (Exception e) {
             log.warn(MESSAGE, e);
         }
@@ -311,7 +308,7 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getReportId() throws IOException {
-        log.debug("Getting report ID by scan ID: " + scanId);
+        log.debug("Getting report ID by scan ID: {}", scanId);
         String path = String.format(UrlPaths.REPORT_ID, scanId);
         String reportId = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
@@ -319,7 +316,7 @@ public class SCAClient implements DependencyScanner {
                 HttpStatus.SC_OK,
                 "Risk report ID",
                 false);
-        log.debug("Found report ID: " + reportId);
+        log.debug("Found report ID: {}", reportId);
         return reportId;
     }
 

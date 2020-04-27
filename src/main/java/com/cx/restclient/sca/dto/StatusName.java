@@ -1,7 +1,9 @@
 package com.cx.restclient.sca.dto;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 public enum StatusName {
     FAILED("Failed"),
     DONE("Done"),
@@ -12,9 +14,5 @@ public enum StatusName {
     @JsonValue
     public String getValue() {
         return value;
-    }
-
-    StatusName(String value) {
-        this.value = value;
     }
 }

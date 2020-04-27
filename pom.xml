@@ -196,6 +196,12 @@
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+
         <!-- API -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
