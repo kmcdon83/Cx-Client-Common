@@ -16,6 +16,8 @@ import org.apache.http.HttpStatus;
 import org.awaitility.Awaitility;
 import org.awaitility.core.ConditionTimeoutException;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,7 +28,7 @@ public class SCAWaiter {
     private final CxScanConfig config;
     private long startTimestampSec;
 
-    public void waitForScanToComplete(String scanId) {
+    public void waitForScanToFinish(String scanId) {
         startTimestampSec = System.currentTimeMillis() / 1000;
         Duration timeout = getTimeout(config);
         Duration pollInterval = getPollInterval(config);
@@ -34,9 +36,10 @@ public class SCAWaiter {
         int maxErrorCount = getMaxErrorCount(config);
         AtomicInteger errorCounter = new AtomicInteger();
 
-        String urlPath = String.format(SCAClient.UrlPaths.GET_SCAN, scanId);
-
         try {
+            String urlPath = String.format(SCAClient.UrlPaths.GET_SCAN,
+                    URLEncoder.encode(scanId, SCAClient.ENCODING));
+
             Awaitility.await()
                     .atMost(timeout)
                     .pollDelay(Duration.ZERO)
@@ -48,6 +51,8 @@ public class SCAWaiter {
                     "Failed to perform CxSCA scan. The scan has been automatically aborted: " +
                             "reached the user-specified timeout (%d minutes).", timeout.toMinutes());
             throw new CxClientException(message);
+        } catch (UnsupportedEncodingException e) {
+            log.error("Unexpected error.", e);
         }
     }
 
