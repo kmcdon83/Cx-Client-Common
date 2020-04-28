@@ -5,6 +5,7 @@ import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sca.dto.SCAResults;
 import com.cx.restclient.sca.dto.SourceLocationType;
@@ -14,6 +15,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 
 @Ignore
 public class ScaScanTests extends CommonClientTest {
@@ -21,6 +23,20 @@ public class ScaScanTests extends CommonClientTest {
     public void scan_locaDirUpload() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
         config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
+        scanUsing(config);
+    }
+
+    @Test
+    public void scan_remotePublicRepo() throws MalformedURLException {
+        CxScanConfig config = initScaConfig();
+        config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
+        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+
+        URL repoUrl = new URL(props.getProperty("sca.remotePublicRepoUrl"));
+        repoInfo.setUrl(repoUrl);
+
+        config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
+
         scanUsing(config);
     }
 

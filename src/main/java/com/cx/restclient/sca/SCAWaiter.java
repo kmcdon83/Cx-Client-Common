@@ -7,9 +7,10 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.sca.dto.ScanInfoResponse;
-import com.cx.restclient.sca.dto.StatusName;
+import com.cx.restclient.sca.dto.ScanStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.http.HttpStatus;
 import org.awaitility.Awaitility;
@@ -86,7 +87,7 @@ public class SCAWaiter {
             String fullMessage = String.format("Maximum number of errors was reached (%d), aborting.", maxErrorCount);
             throw new CxClientException(fullMessage);
         } else {
-            log.debug("Failed to get status from CxSCA. Retrying (tries left: {}). Error message: {}", triesLeft, message);
+            log.info("Failed to get status from CxSCA. Retrying (tries left: {}). Error message: {}", triesLeft, message);
         }
     }
 
@@ -95,15 +96,18 @@ public class SCAWaiter {
             throw new CxClientException("Empty response.");
         }
 
-        StatusName status = response.getStatus();
+        String rawStatus = response.getStatus();
         String elapsedTimestamp = ShragaUtils.getTimestampSince(startTimestampSec);
-        log.info("Waiting for CxSCA scan results. Elapsed time: {}. Status: {}.", elapsedTimestamp, status.getValue());
+        log.info("Waiting for CxSCA scan results. Elapsed time: {}. Status: {}.", elapsedTimestamp, rawStatus);
+        ScanStatus status = EnumUtils.getEnumIgnoreCase(ScanStatus.class, rawStatus);
 
         boolean completedSuccessfully = false;
-        if (status == StatusName.FAILED) {
-            throw new CxClientException("CxSCA scan cannot be completed.");
-        } else if (status == StatusName.DONE) {
+        if (status == ScanStatus.COMPLETED) {
             completedSuccessfully = true;
+        } else if (status == ScanStatus.FAILED) {
+            throw new CxClientException("CxSCA scan cannot be completed.");
+        } else if (status == null) {
+            log.warn("Unknown status: {}", rawStatus);
         }
         return completedSuccessfully;
     }
