@@ -5,5 +5,5 @@ import lombok.Getter;
 @Getter
 public class ScanInfoResponse {
     private String id;
-    private StatusName status;
+    private String status;
 }

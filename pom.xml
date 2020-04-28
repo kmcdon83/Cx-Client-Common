@@ -201,6 +201,11 @@
             <artifactId>awaitility</artifactId>
             <version>4.0.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.10</version>
+        </dependency>
 
         <!-- API -->
         <dependency>
