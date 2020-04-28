@@ -8,5 +8,5 @@ import lombok.Getter;
 public class ProjectToScan {
     private String id;
     private String type;
-    private UploadHandler handler;
+    private ScanStartHandler handler;
 }
