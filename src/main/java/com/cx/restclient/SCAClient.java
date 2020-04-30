@@ -216,7 +216,7 @@ public class SCAClient implements DependencyScanner {
 
     private void printWebReportLink(SCAResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info("CxSCA scan results location: " + scaResult.getWebReportLink());
+            log.info("CxSCA scan results location: {}", scaResult.getWebReportLink());
         }
     }
 
@@ -356,27 +356,27 @@ public class SCAClient implements DependencyScanner {
         String path = String.format(UrlPaths.SUMMARY_REPORT,
                 URLEncoder.encode(reportId, ENCODING));
 
-        SCASummaryResults result = httpClient.getRequest(path,
+        return httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 SCASummaryResults.class,
                 HttpStatus.SC_OK,
                 "CxSCA report summary",
                 false);
-
-        return result;
     }
 
     private void printSummary(SCASummaryResults summary) {
-        log.info("\n----CxSCA risk report summary----");
-        log.info("Created on: " + summary.getCreatedOn());
-        log.info("Direct packages: " + summary.getDirectPackages());
-        log.info("High vulnerabilities: " + summary.getHighVulnerabilityCount());
-        log.info("Medium vulnerabilities: " + summary.getMediumVulnerabilityCount());
-        log.info("Low vulnerabilities: " + summary.getLowVulnerabilityCount());
-        log.info("Risk report ID: " + summary.getRiskReportId());
-        log.info("Risk score: " + summary.getRiskScore());
-        log.info("Total packages: " + summary.getTotalPackages());
-        log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
+        if (log.isInfoEnabled()) {
+            log.info("\n----CxSCA risk report summary----");
+            log.info("Created on: {}", summary.getCreatedOn());
+            log.info("Direct packages: {}", summary.getDirectPackages());
+            log.info("High vulnerabilities: {}", summary.getHighVulnerabilityCount());
+            log.info("Medium vulnerabilities: {}", summary.getMediumVulnerabilityCount());
+            log.info("Low vulnerabilities: {}", summary.getLowVulnerabilityCount());
+            log.info("Risk report ID: {}", summary.getRiskReportId());
+            log.info("Risk score: {}", summary.getRiskScore());
+            log.info("Total packages: {}", summary.getTotalPackages());
+            log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
+        }
     }
 
     private SCAConfig getScaConfig() {
