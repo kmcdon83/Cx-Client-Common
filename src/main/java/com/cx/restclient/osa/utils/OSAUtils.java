@@ -101,6 +101,7 @@ public abstract class OSAUtils {
     }
 
     private static void setResolveDependencies(Properties ret, String resolveDependencies) {
+        ret.put("gradle.runAssembleCommand", resolveDependencies);
         ret.put("nuget.resolveDependencies", resolveDependencies);
         ret.put("nuget.restoreDependencies", resolveDependencies);
         ret.put("python.resolveDependencies", resolveDependencies);
