@@ -20,8 +20,10 @@ import java.net.URL;
 @Ignore
 public class ScaScanTests extends CommonClientTest {
     @Test
-    public void scan_locaDirUpload() throws MalformedURLException, CxClientException {
+    public void scan_localDirUpload() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
+        config.setSourceDir(props.getProperty("dependencyScanSourceDir"));
+        config.setOsaThresholdsEnabled(true);
         config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
         scanUsing(config);
     }
@@ -70,9 +72,7 @@ public class ScaScanTests extends CommonClientTest {
         CxScanConfig config = new CxScanConfig();
         config.setDependencyScannerType(DependencyScannerType.SCA);
         config.setSastEnabled(false);
-        config.setSourceDir(props.getProperty("dependencyScanSourceDir"));
-        config.setOsaThresholdsEnabled(true);
-        config.setProjectName("commonClient-test-scaOnlyScan");
+        config.setProjectName(props.getProperty("sca.projectName"));
 
         SCAConfig sca = TestingUtils.getScaConfig(props);
         config.setScaConfig(sca);
