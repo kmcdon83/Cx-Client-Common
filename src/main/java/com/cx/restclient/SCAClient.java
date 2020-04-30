@@ -248,17 +248,19 @@ public class SCAClient implements DependencyScanner {
 
     private void resolveProject() throws IOException {
         String projectName = config.getProjectName();
+        log.info("Getting project by name: '{}'", projectName);
         projectId = getProjectIdByName(projectName);
         if (projectId == null) {
-            log.debug("Project not found, creating a new one.");
+            log.info("Project not found, creating a new one.");
             projectId = createProject(projectName);
+            log.info("Created a project with ID {}", projectId);
         }
-        log.debug("Using project ID: {}", projectId);
+        else {
+            log.info("Project already exists with ID {}", projectId);
+        }
     }
 
     private String getProjectIdByName(String name) throws IOException {
-        log.debug("Getting project by name: {}", name);
-
         if (StringUtils.isEmpty(name)) {
             throw new CxClientException("Non-empty project name must be provided.");
         }
