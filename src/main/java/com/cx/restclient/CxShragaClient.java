@@ -26,8 +26,7 @@ import java.util.Properties;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
-import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V1;
-import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V21;
+import static com.cx.restclient.httpClient.utils.ContentType.*;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.convertToJson;
 import static com.cx.restclient.sast.utils.SASTParam.*;
 
@@ -476,7 +475,7 @@ public class CxShragaClient {
         Project projects = null;
         try {
             httpClient.setTeamPathHeader(this.teamPath);
-            projects = httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V21, Project.class, 200, "project by id: " + projectId, false);
+            projects = httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V2, Project.class, 200, "project by id: " + projectId, false);
         } catch (CxHTTPClientException ex) {
             if (ex.getStatusCode() != 404) {
                 throw ex;
