@@ -73,14 +73,37 @@ public class SCAWaiter {
     }
 
     private boolean scanIsCompleted(String path, AtomicInteger errorCounter, int maxErrorCount) {
-        boolean completedSuccessfully = false;
+        ScanInfoResponse response = null;
+        String errorMessage = null;
         try {
-            ScanInfoResponse response = httpClient.getRequest(path, ContentType.CONTENT_TYPE_APPLICATION_JSON,
+            response = httpClient.getRequest(path, ContentType.CONTENT_TYPE_APPLICATION_JSON,
                     ScanInfoResponse.class, HttpStatus.SC_OK, "CxSCA scan", false);
-
-            completedSuccessfully = validateScanStatus(response);
         } catch (Exception e) {
-            countError(errorCounter, maxErrorCount, e.getMessage());
+            errorMessage = e.getMessage();
+        }
+
+        boolean completedSuccessfully = false;
+        if (response == null) {
+            // A network error is likely to have occurred -> retry.
+            countError(errorCounter, maxErrorCount, errorMessage);
+        } else {
+            ScanStatus status = extractScanStatusFrom(response);
+            completedSuccessfully = handleScanStatus(status);
+        }
+
+        return completedSuccessfully;
+    }
+
+    private boolean handleScanStatus(ScanStatus status) {
+        boolean completedSuccessfully = false;
+        if (status == ScanStatus.COMPLETED) {
+            completedSuccessfully = true;
+        } else if (status == ScanStatus.FAILED) {
+            // Scan has failed on the back end, no need to retry.
+            throw new CxClientException(String.format("Scan status is %s, aborting.", status));
+        }
+        else if (status == null) {
+            log.warn("Unknown status.");
         }
         return completedSuccessfully;
     }
@@ -92,28 +115,19 @@ public class SCAWaiter {
             String fullMessage = String.format("Maximum number of errors was reached (%d), aborting.", maxErrorCount);
             throw new CxClientException(fullMessage);
         } else {
-            log.info("Failed to get status from CxSCA. Retrying (tries left: {}). Error message: {}", triesLeft, message);
+            String note = (triesLeft == 0 ? "last attempt" : String.format("tries left: %d", triesLeft));
+            log.info("Failed to get status from CxSCA with the message: {}. Retrying ({})", message, note);
         }
     }
 
-    private boolean validateScanStatus(ScanInfoResponse response) {
-        if (response == null) {
-            throw new CxClientException("Empty response.");
-        }
-
+    private ScanStatus extractScanStatusFrom(ScanInfoResponse response) {
         String rawStatus = response.getStatus();
         String elapsedTimestamp = ShragaUtils.getTimestampSince(startTimestampSec);
         log.info("Waiting for CxSCA scan results. Elapsed time: {}. Status: {}.", elapsedTimestamp, rawStatus);
         ScanStatus status = EnumUtils.getEnumIgnoreCase(ScanStatus.class, rawStatus);
-
-        boolean completedSuccessfully = false;
-        if (status == ScanStatus.COMPLETED) {
-            completedSuccessfully = true;
-        } else if (status == ScanStatus.FAILED) {
-            throw new CxClientException("CxSCA scan cannot be completed.");
-        } else if (status == null) {
-            log.warn("Unknown status: {}", rawStatus);
+        if (status == null) {
+            log.warn("Unknown status: '{}'", rawStatus);
         }
-        return completedSuccessfully;
+        return status;
     }
 }
