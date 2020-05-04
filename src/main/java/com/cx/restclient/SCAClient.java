@@ -368,15 +368,15 @@ public class SCAClient implements DependencyScanner {
 
     private void printSummary(SCASummaryResults summary) {
         if (log.isInfoEnabled()) {
-            log.info("----CxSCA risk report summary----");
-            log.info("Created on: ", summary.getCreatedOn());
-            log.info("Direct packages: ");
-            log.info("High vulnerabilities: ", summary.getHighVulnerabilityCount());
-            log.info("Medium vulnerabilities: ", summary.getMediumVulnerabilityCount());
-            log.info("Low vulnerabilities: ");
-            log.info("Risk report ID: ", summary.getRiskReportId());
-            log.info("Risk score: ", summary.getRiskScore());
-            log.info("Total packages: ", summary.getTotalPackages());
+            log.info("\n----CxSCA risk report summary----");
+            log.info("Created on: {}", summary.getCreatedOn());
+            log.info("Direct packages: {}", summary.getDirectPackages());
+            log.info("High vulnerabilities: {}", summary.getHighVulnerabilityCount());
+            log.info("Medium vulnerabilities: {}", summary.getMediumVulnerabilityCount());
+            log.info("Low vulnerabilities: {}", summary.getLowVulnerabilityCount());
+            log.info("Risk report ID: {}", summary.getRiskReportId());
+            log.info("Risk score: {}", summary.getRiskScore());
+            log.info("Total packages: {}", summary.getTotalPackages());
             log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
         }
     }
