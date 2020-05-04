@@ -5,6 +5,7 @@ import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.SASTResults;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -13,6 +14,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 
 @Ignore
+@Slf4j
 public class SastScanTests extends CommonClientTest {
     @Test
     public void runSastScan() throws MalformedURLException, CxClientException {
