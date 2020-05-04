@@ -5,12 +5,14 @@ import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.exception.CxClientException;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.net.MalformedURLException;
 
+@Slf4j
 public class OsaScanTests extends CommonClientTest {
     @Test
     public void runOsaScan() throws MalformedURLException, CxClientException {
