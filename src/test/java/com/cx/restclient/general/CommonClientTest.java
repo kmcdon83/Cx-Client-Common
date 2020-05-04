@@ -3,17 +3,16 @@ package com.cx.restclient.general;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ProxyConfig;
 import com.cx.utility.TestingUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Properties;
 
+@Slf4j
 public abstract class CommonClientTest {
     private static final String PROPERTIES_FILE = "config.properties";
-    Logger log = LoggerFactory.getLogger(ConnectionTests.class.getName());
     static Properties props;
 
     @BeforeClass
@@ -29,7 +28,7 @@ public abstract class CommonClientTest {
     }
 
     void failOnException(Exception e) {
-        log.error("Unexpected exception.", e);
+        log.error("Unexpected exception during test.", e);
         Assert.fail(e.getMessage());
     }
 }
