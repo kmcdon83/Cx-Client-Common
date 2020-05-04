@@ -381,7 +381,7 @@ public class SCAClient implements DependencyScanner {
             log.info("Risk report ID: {}", summary.getRiskReportId());
             log.info("Risk score: {}", summary.getRiskScore());
             log.info("Total packages: {}", summary.getTotalPackages());
-            log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
+            log.info(String.format("Total outdated packages: %d%n",summary.getTotalOutdatedPackages()));
         }
     }
 
