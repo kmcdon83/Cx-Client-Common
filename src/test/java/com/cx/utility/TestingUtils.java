@@ -9,10 +9,13 @@ import java.util.Properties;
 
 public final class TestingUtils {
 
-    public static Properties getProps(String propsName, Class clazz) throws IOException {
+    public static Properties getProps(String propsName, Class<?> clazz) throws IOException {
         Properties properties = new Properties();
         ClassLoader classLoader = clazz.getClassLoader();
         URL resource = classLoader.getResource(propsName);
+        if (resource == null) {
+            throw new IOException(String.format("Resource '%s' is not found.", propsName));
+        }
         properties.load(new FileReader(resource.getFile()));
 
         return properties;
