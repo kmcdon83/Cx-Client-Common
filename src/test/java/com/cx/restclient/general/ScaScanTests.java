@@ -49,28 +49,10 @@ public class ScaScanTests extends CommonClientTest {
             config.setSourceDir(sourcesDir.toString());
 
             DependencyScanResults scanResults = scanUsing(config);
-
-            checkCommonAssertions(scanResults);
-            checkDirectoryUploadAssertions(scanResults);
+            verify(scanResults);
         } finally {
             deleteDir(sourcesDir);
         }
-    }
-
-    private void checkDirectoryUploadAssertions(DependencyScanResults scanResults) {
-        if (scanResults == null ||
-                scanResults.getScaResults() == null ||
-                scanResults.getScaResults().getSummary() == null) {
-            Assert.fail("Unable to find summary.");
-        }
-
-        SCASummaryResults summary = scanResults.getScaResults().getSummary();
-        Assert.assertTrue("SCA hasn't found any packages.", summary.getTotalPackages() > 0);
-
-        boolean anyVulnerabilitiesDetected = summary.getHighVulnerabilityCount() > 0 ||
-                summary.getMediumVulnerabilityCount() > 0 ||
-                summary.getLowVulnerabilityCount() > 0;
-        Assert.assertTrue("No vulnerabilities were detected.", anyVulnerabilitiesDetected);
     }
 
     @Test
@@ -79,13 +61,13 @@ public class ScaScanTests extends CommonClientTest {
         config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
         RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
 
-        URL repoUrl = new URL(props.getProperty("sca.remotePublicRepoUrl"));
+        URL repoUrl = new URL(props.getProperty("sca.remoteRepoUrl"));
         repoInfo.setUrl(repoUrl);
 
         config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
 
         DependencyScanResults scanResults = scanUsing(config);
-        checkCommonAssertions(scanResults);
+        verify(scanResults);
 
     }
 
@@ -95,7 +77,7 @@ public class ScaScanTests extends CommonClientTest {
         CxScanConfig config = initScaConfig();
         setProxy(config);
         DependencyScanResults scanResults = scanUsing(config);
-        checkCommonAssertions(scanResults);
+        verify(scanResults);
     }
 
     private Path extractTestProjectFromResources() {
@@ -190,15 +172,23 @@ public class ScaScanTests extends CommonClientTest {
         return results;
     }
 
-    private void checkCommonAssertions(DependencyScanResults results) {
+    private void verify(DependencyScanResults results) {
         Assert.assertNotNull("Scan results are null.", results);
         Assert.assertNull("OSA results are not null.", results.getOsaResults());
 
         SCAResults scaResults = results.getScaResults();
         Assert.assertNotNull("SCA results are null", scaResults);
-        Assert.assertNotNull("SCA summary is null", scaResults.getSummary());
         Assert.assertTrue("Scan ID is empty", StringUtils.isNotEmpty(scaResults.getScanId()));
         Assert.assertTrue("Web report link is empty", StringUtils.isNotEmpty(scaResults.getWebReportLink()));
+
+        SCASummaryResults summary = scaResults.getSummary();
+        Assert.assertNotNull("SCA summary is null", summary);
+        Assert.assertTrue("SCA hasn't found any packages.", summary.getTotalPackages() > 0);
+
+        boolean anyVulnerabilitiesDetected = summary.getHighVulnerabilityCount() > 0 ||
+                summary.getMediumVulnerabilityCount() > 0 ||
+                summary.getLowVulnerabilityCount() > 0;
+        Assert.assertTrue("Expected that at least one vulnerability would be detected.", anyVulnerabilitiesDetected);
     }
 
     private static CxScanConfig initScaConfig() {

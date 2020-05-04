@@ -140,7 +140,11 @@ public class SCAClient implements DependencyScanner {
         log.info("Using remote repository flow.");
         RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
         validateRemoteRepoConfig(repoInfo);
-        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString());
+
+        String repoUrl = repoInfo.getUrl().toString();
+        log.info("Repository URL: {}", repoUrl);
+
+        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoUrl);
     }
 
     private HttpResponse submitSourcesFromLocalDir() throws IOException {
