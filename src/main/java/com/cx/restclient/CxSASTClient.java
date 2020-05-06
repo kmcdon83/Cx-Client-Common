@@ -125,7 +125,7 @@ class CxSASTClient {
     }
 
     private long createLocalSASTScan(long projectId) throws IOException, CxClientException {
-        ConfigureScanSettings(projectId);
+        configureScanSettings(projectId);
         //prepare sources for scan
         PathFilter filter = new PathFilter(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
         File zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
@@ -189,14 +189,14 @@ class CxSASTClient {
                 entity = new StringEntity("", StandardCharsets.UTF_8);
 
         }
-        ConfigureScanSettings(projectId);
+        configureScanSettings(projectId);
         createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
 
         return createScan(projectId);
     }
 
 
-    private void  ConfigureScanSettings(long projectId) throws IOException {
+    private void  configureScanSettings(long projectId) throws IOException {
         ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
         ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
         scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
