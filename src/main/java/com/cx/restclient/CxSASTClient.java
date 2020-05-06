@@ -126,18 +126,7 @@ class CxSASTClient {
     }
 
     private long createLocalSASTScan(long projectId) throws IOException, CxClientException {
-
-        ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
-        ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
-        scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
-        scanSettingRequest.setProjectId(projectId);
-        scanSettingRequest.setPresetId(config.getPresetId());
-        if (config.getEngineConfigurationId() != null) {
-            scanSettingRequest.setEngineConfigurationId(config.getEngineConfigurationId());
-        }
-        //Define createSASTScan settings
-        defineScanSetting(scanSettingRequest);
-
+        configureScanSettings(projectId);
         //prepare sources for scan
         if (config.getZipFile() == null) {
             log.info("Zipping sources");
@@ -214,6 +203,7 @@ class CxSASTClient {
                 entity = new StringEntity("", StandardCharsets.UTF_8);
 
         }
+        configureScanSettings(projectId);
         createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
 
         CreateScanRequest scanRequest = new CreateScanRequest(projectId, config.getIncremental(), config.getPublic(), config.getForceScan(), config.getScanComment() == null ? "" : config.getScanComment());
@@ -224,6 +214,19 @@ class CxSASTClient {
         return createScanResponse.getId();
     }
 
+
+    private void  configureScanSettings(long projectId) throws IOException {
+        ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
+        ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
+        scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
+        scanSettingRequest.setProjectId(projectId);
+        scanSettingRequest.setPresetId(config.getPresetId());
+        if (config.getEngineConfigurationId() != null) {
+            scanSettingRequest.setEngineConfigurationId(config.getEngineConfigurationId());
+        }
+        //Define createSASTScan settings
+        defineScanSetting(scanSettingRequest);
+    }
 
     //GET SAST results + reports
     public SASTResults waitForSASTResults(long scanId, long projectId) throws InterruptedException, IOException, CxClientException {
