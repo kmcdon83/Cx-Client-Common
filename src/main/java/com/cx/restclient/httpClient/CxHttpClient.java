@@ -9,8 +9,8 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.exception.CxTokenExpiredException;
 import com.cx.restclient.osa.dto.ClientType;
-import org.apache.commons.lang3.StringUtils;
 import com.google.gson.Gson;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -54,7 +54,6 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
@@ -67,7 +66,6 @@ import java.util.List;
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.*;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 
 /**
@@ -432,7 +430,7 @@ public class CxHttpClient {
         request(patch, contentType, entity, null, expectStatus, failedMsg, false, true);
     }
 
-    public void setTeamPathHeader(String teamPath){
+    public void setTeamPathHeader(String teamPath) {
         this.teamPath = teamPath;
     }
 

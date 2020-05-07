@@ -3,7 +3,10 @@ package com.cx.restclient;
 import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.*;
+import com.cx.restclient.dto.PathFilter;
+import com.cx.restclient.dto.RemoteSourceRequest;
+import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.dto.Status;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.sast.dto.*;
@@ -196,7 +199,7 @@ class CxSASTClient {
     }
 
 
-    private void  configureScanSettings(long projectId) throws IOException {
+    private void configureScanSettings(long projectId) throws IOException {
         ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
         ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
         scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
@@ -359,7 +362,7 @@ class CxSASTClient {
     }
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
-        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), CONTENT_TYPE_APPLICATION_JSON_V1,
+        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), null,
                 entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
 
         return cxID;
