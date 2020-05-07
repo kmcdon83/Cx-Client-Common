@@ -57,6 +57,7 @@ public class ScaScanTests extends CommonClientTest {
 
     @Test
     public void scan_remotePublicRepo() throws MalformedURLException {
+        log.info("test");
         CxScanConfig config = initScaConfig();
         config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
         RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
@@ -108,7 +109,7 @@ public class ScaScanTests extends CommonClientTest {
         } catch (IOException | ArchiveException e) {
             failOnException(e);
         }
-        log.info("Files extracted: {}", fileCount);
+        log.info("Files extracted:", fileCount);
     }
 
     private static void extractFile(ArchiveInputStream inputStream, File targetFile) throws IOException {
@@ -130,7 +131,7 @@ public class ScaScanTests extends CommonClientTest {
         String subdir = String.format("common-client-tests-%s", UUID.randomUUID());
         Path result = Paths.get(systemTempDir, subdir);
 
-        log.info("Creating a temp dir: {}", result);
+        log.info("Creating a temp dir:", result);
         boolean success = result.toFile().mkdir();
         if (!success) {
             Assert.fail("Failed to create temp dir.");
@@ -143,7 +144,7 @@ public class ScaScanTests extends CommonClientTest {
             return;
         }
 
-        log.info("Deleting '{}'", directory);
+        log.info("Deleting ", directory);
         try {
             FileUtils.deleteDirectory(directory.toFile());
         } catch (IOException e) {
@@ -153,7 +154,7 @@ public class ScaScanTests extends CommonClientTest {
 
     private static InputStream getTestProjectStream() {
         String srcResourceName = ScaScanTests.PACKED_SOURCES_TO_SCAN;
-        log.info("Getting resource stream from '{}'", srcResourceName);
+        log.info("Getting resource stream from ", srcResourceName);
         return Thread.currentThread()
                 .getContextClassLoader()
                 .getResourceAsStream(srcResourceName);

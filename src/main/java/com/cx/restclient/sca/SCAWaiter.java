@@ -116,17 +116,17 @@ public class SCAWaiter {
             throw new CxClientException(fullMessage);
         } else {
             String note = (triesLeft == 0 ? "last attempt" : String.format("tries left: %d", triesLeft));
-            log.info("Failed to get status from CxSCA with the message: {}. Retrying ({})", message, note);
+            log.info("Failed to get status from CxSCA with the message: . Retrying ()", message, note);
         }
     }
 
     private ScanStatus extractScanStatusFrom(ScanInfoResponse response) {
         String rawStatus = response.getStatus();
         String elapsedTimestamp = ShragaUtils.getTimestampSince(startTimestampSec);
-        log.info("Waiting for CxSCA scan results. Elapsed time: {}. Status: {}.", elapsedTimestamp, rawStatus);
+        log.info("Waiting for CxSCA scan results. Elapsed time: . Status: .", elapsedTimestamp, rawStatus);
         ScanStatus status = EnumUtils.getEnumIgnoreCase(ScanStatus.class, rawStatus);
         if (status == null) {
-            log.warn("Unknown status: '{}'", rawStatus);
+            log.warn("Unknown status: ", rawStatus);
         }
         return status;
     }

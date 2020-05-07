@@ -116,7 +116,7 @@ public class SCAClient implements DependencyScanner {
                 response = submitSourcesFromLocalDir();
             }
             scanId = extractScanIdFrom(response);
-            log.info("Scan started successfully. Scan ID: {}", scanId);
+            log.info("Scan started successfully. Scan ID:", scanId);
         } catch (IOException e) {
             throw new CxClientException("Error creating CxSCA scan.", e);
         }
@@ -142,7 +142,7 @@ public class SCAClient implements DependencyScanner {
         validateRemoteRepoConfig(repoInfo);
 
         String repoUrl = repoInfo.getUrl().toString();
-        log.info("Repository URL: {}", repoUrl);
+        log.info("Repository URL:", repoUrl);
 
         return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoUrl);
     }
@@ -220,7 +220,7 @@ public class SCAClient implements DependencyScanner {
 
     private void printWebReportLink(SCAResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info("CxSCA scan results location: {}", scaResult.getWebReportLink());
+            log.info("CxSCA scan results location:", scaResult.getWebReportLink());
         }
     }
 
@@ -252,15 +252,15 @@ public class SCAClient implements DependencyScanner {
 
     private void resolveProject() throws IOException {
         String projectName = config.getProjectName();
-        log.info("Getting project by name: '{}'", projectName);
+        log.info("Getting project by name:", projectName);
         projectId = getProjectIdByName(projectName);
         if (projectId == null) {
             log.info("Project not found, creating a new one.");
             projectId = createProject(projectName);
-            log.info("Created a project with ID {}", projectId);
+            log.info("Created a project with ID ", projectId);
         }
         else {
-            log.info("Project already exists with ID {}", projectId);
+            log.info("Project already exists with ID ", projectId);
         }
     }
 
@@ -325,7 +325,7 @@ public class SCAClient implements DependencyScanner {
         try {
             String webAppUrl = getScaConfig().getWebAppUrl();
             if (StringUtils.isEmpty(webAppUrl)) {
-                log.warn("{} Web app URL is not specified.", MESSAGE);
+                log.warn(" Web app URL is not specified.", MESSAGE);
             } else {
                 String path = String.format(UrlPaths.WEB_REPORT,
                         URLEncoder.encode(projectId, ENCODING),
@@ -342,7 +342,7 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getReportId() throws IOException {
-        log.debug("Getting report ID by scan ID: {}", scanId);
+        log.debug("Getting report ID by scan ID:", scanId);
         String path = String.format(UrlPaths.REPORT_ID,
                 URLEncoder.encode(scanId, ENCODING));
 
@@ -352,7 +352,7 @@ public class SCAClient implements DependencyScanner {
                 HttpStatus.SC_OK,
                 "Risk report ID",
                 false);
-        log.debug("Found report ID: {}", reportId);
+        log.debug("Found report ID:", reportId);
         return reportId;
     }
 
@@ -373,13 +373,13 @@ public class SCAClient implements DependencyScanner {
     private void printSummary(SCASummaryResults summary) {
         if (log.isInfoEnabled()) {
             log.info("----CxSCA risk report summary----");
-            log.info("Created on:", summary.getCreatedOn());
-            log.info("Direct packages:");
-            log.info("High vulnerabilities:", summary.getHighVulnerabilityCount());
-            log.info("Medium vulnerabilities:", summary.getMediumVulnerabilityCount());
-            log.info("Low vulnerabilities:", summary.getLowVulnerabilityCount());
+            log.info("Created on: ", summary.getCreatedOn());
+            log.info("Direct packages: ");
+            log.info("High vulnerabilities: ", summary.getHighVulnerabilityCount());
+            log.info(String.format("Medium vulnerabilities: %d%n", summary.getMediumVulnerabilityCount()));
+            log.info("Low vulnerabilities: ", summary.getLowVulnerabilityCount());
             log.info("Risk report ID:", summary.getRiskReportId());
-            log.info("Risk score: ", summary.getRiskScore());
+            log.info("Risk score:", summary.getRiskScore());
             log.info("Total packages: ");
             log.info(String.format("Total outdated packages: %d%n",summary.getTotalOutdatedPackages()));
         }
