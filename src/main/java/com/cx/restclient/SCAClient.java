@@ -220,7 +220,7 @@ public class SCAClient implements DependencyScanner {
 
     private void printWebReportLink(SCAResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info("CxSCA scan results location:", scaResult.getWebReportLink());
+            log.info(String.format("CxSCA scan results location:%s%n", scaResult.getWebReportLink()));
         }
     }
 
@@ -373,14 +373,14 @@ public class SCAClient implements DependencyScanner {
     private void printSummary(SCASummaryResults summary) {
         if (log.isInfoEnabled()) {
             log.info("----CxSCA risk report summary----");
-            log.info("Created on: ", summary.getCreatedOn());
+            log.info(String.format("Created on:%s%n", summary.getCreatedOn()));
             log.info("Direct packages: ");
-            log.info("High vulnerabilities: ", summary.getHighVulnerabilityCount());
+            log.info(String.format("High vulnerabilities:%d%n", summary.getHighVulnerabilityCount()));
             log.info(String.format("Medium vulnerabilities: %d%n", summary.getMediumVulnerabilityCount()));
-            log.info("Low vulnerabilities: ", summary.getLowVulnerabilityCount());
-            log.info("Risk report ID:", summary.getRiskReportId());
-            log.info("Risk score:", summary.getRiskScore());
-            log.info("Total packages: ");
+            log.info(String.format("Low vulnerabilities:%d%n", summary.getLowVulnerabilityCount()));
+            log.info(String.format("Risk report ID:%s%n", summary.getRiskReportId()));
+            log.info(String.format("Risk score:%d%n", summary.getRiskScore()));
+            log.info(String.format("Total packages: "));
             log.info(String.format("Total outdated packages: %d%n",summary.getTotalOutdatedPackages()));
         }
     }
