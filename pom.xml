@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>8.90.11</version>
+    <version>8.90.12</version>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
     <url>https://www.checkmarx.com</url>
@@ -138,7 +138,7 @@
         <dependency>
             <groupId>com.checkmarx</groupId>
             <artifactId>cx-ws-fs-agent</artifactId>
-            <version>20.0.3</version>
+            <version>20.0.5</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.xml.bind</groupId>
