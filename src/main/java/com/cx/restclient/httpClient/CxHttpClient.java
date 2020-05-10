@@ -62,6 +62,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
@@ -311,15 +312,15 @@ public class CxHttpClient {
 
     private String retrieveCookies() {
         List<Cookie> cookieList = cookieStore.getCookies();
+        List<String> cookieName = cookieList.stream().map(cookie -> cookie.getName()).collect(Collectors.toList());
+        List<String> cookieValue = cookieList.stream().map(cookie -> cookie.getValue()).collect(Collectors.toList());
         String cookies = "";
-        String name;
-        String value;
-        for (Cookie cookie : cookieList) {
-            name = cookie.getName();
-            value = cookie.getValue();
-            cookies += name + "=" + value + ";";
+/*        for (Cookie cookie : cookieList) {
+            cookies += cookie.getName() + "=" + cookie.getValue() + ";";
+        }*/
+        for (int i = 0; i < cookieName.size(); i++) {
+            cookies += cookieName.get(i) + "=" + cookieValue.get(i) +';';
         }
-
         return cookies;
     }
 
