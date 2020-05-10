@@ -62,6 +62,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
@@ -311,12 +312,11 @@ public class CxHttpClient {
 
     private String retrieveCookies() {
         List<Cookie> cookieList = cookieStore.getCookies();
-        String cookies = "";
-        for (Cookie cookie : cookieList) {
-            cookies += cookie.getName() + "=" + cookie.getValue() + ";";
-        }
-
-        return cookies;
+        final String[] cookies = {""};
+        cookieList.forEach(cookie -> {
+            cookies[0] += cookie.getName() + "=" + cookie.getValue() +';';
+        });
+        return cookies[0];
     }
 
     public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
