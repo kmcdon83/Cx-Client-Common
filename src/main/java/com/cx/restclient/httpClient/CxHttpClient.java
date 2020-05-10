@@ -312,8 +312,6 @@ public class CxHttpClient {
 
     private String retrieveCookies() {
         List<Cookie> cookieList = cookieStore.getCookies();
-        List<String> cookieName = cookieList.stream().map(cookie -> cookie.getName()).collect(Collectors.toList());
-        List<String> cookieValue = cookieList.stream().map(cookie -> cookie.getValue()).collect(Collectors.toList());
         final String[] cookies = {""};
         cookieList.forEach(cookie -> {
             cookies[0] += cookie.getName() + "=" + cookie.getValue() +';';
