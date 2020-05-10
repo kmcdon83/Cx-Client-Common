@@ -312,8 +312,12 @@ public class CxHttpClient {
     private String retrieveCookies() {
         List<Cookie> cookieList = cookieStore.getCookies();
         String cookies = "";
+        String name;
+        String value;
         for (Cookie cookie : cookieList) {
-            cookies += cookie.getName() + "=" + cookie.getValue() + ";";
+            name = cookie.getName();
+            value = cookie.getValue();
+            cookies += name + "=" + value + ";";
         }
 
         return cookies;
