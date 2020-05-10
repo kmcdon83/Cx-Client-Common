@@ -362,7 +362,7 @@ class CxSASTClient {
     }
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
-        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), null,
+        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), isSSH? null : CONTENT_TYPE_APPLICATION_JSON_V1,
                 entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
 
         return cxID;
