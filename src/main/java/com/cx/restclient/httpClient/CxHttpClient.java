@@ -314,14 +314,11 @@ public class CxHttpClient {
         List<Cookie> cookieList = cookieStore.getCookies();
         List<String> cookieName = cookieList.stream().map(cookie -> cookie.getName()).collect(Collectors.toList());
         List<String> cookieValue = cookieList.stream().map(cookie -> cookie.getValue()).collect(Collectors.toList());
-        String cookies = "";
-/*        for (Cookie cookie : cookieList) {
-            cookies += cookie.getName() + "=" + cookie.getValue() + ";";
-        }*/
-        for (int i = 0; i < cookieName.size(); i++) {
-            cookies += cookieName.get(i) + "=" + cookieValue.get(i) +';';
-        }
-        return cookies;
+        final String[] cookies = {""};
+        cookieList.forEach(cookie -> {
+            cookies[0] += cookie.getName() + "=" + cookie.getValue() +';';
+        });
+        return cookies[0];
     }
 
     public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
