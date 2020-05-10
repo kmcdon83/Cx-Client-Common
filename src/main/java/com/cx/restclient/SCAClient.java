@@ -14,6 +14,9 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.*;
+import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.sca.dto.report.Package;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -45,6 +48,9 @@ public class SCAClient implements DependencyScanner {
         private static final String RISK_MANAGEMENT_API = "/risk-management/";
         private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
         private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
+        public static final String FINDINGS = RISK_MANAGEMENT_API + "riskReports/%s/vulnerabilities";
+        public static final String PACKAGES = RISK_MANAGEMENT_API + "riskReports/%s/packages";
+
         private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
 
         public static final String GET_UPLOAD_URL = "/api/uploads";
@@ -258,8 +264,7 @@ public class SCAClient implements DependencyScanner {
             log.info("Project not found, creating a new one.");
             projectId = createProject(projectName);
             log.info(String.format("Created a project with ID %s", projectId));
-        }
-        else {
+        } else {
             log.info(String.format("Project already exists with ID %s", projectId));
         }
     }
@@ -309,6 +314,12 @@ public class SCAClient implements DependencyScanner {
             SCASummaryResults scanSummary = getSummaryReport(reportId);
             result.setSummary(scanSummary);
             printSummary(scanSummary);
+
+            List<Finding> findings = getFindings(reportId);
+            result.setFindings(findings);
+
+            List<Package> packages = getPackages(reportId);
+            result.setPackages(packages);
 
             String reportLink = getWebReportLink(reportId);
             result.setWebReportLink(reportLink);
@@ -370,6 +381,32 @@ public class SCAClient implements DependencyScanner {
                 false);
     }
 
+    private List<Finding> getFindings(String reportId) throws IOException {
+        log.debug("Getting findings.");
+
+        String path = String.format(UrlPaths.FINDINGS, URLEncoder.encode(reportId, ENCODING));
+
+        return (List<Finding>) httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                Finding.class,
+                HttpStatus.SC_OK,
+                "CxSCA findings",
+                true);
+    }
+
+    private List<Package> getPackages(String reportId) throws IOException {
+        log.debug("Getting packages.");
+
+        String path = String.format(UrlPaths.PACKAGES, URLEncoder.encode(reportId, ENCODING));
+
+        return (List<Package>) httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                Package.class,
+                HttpStatus.SC_OK,
+                "CxSCA findings",
+                true);
+    }
+
     private void printSummary(SCASummaryResults summary) {
         if (log.isInfoEnabled()) {
             log.info(String.format("%n----CxSCA risk report summary----"));
@@ -381,7 +418,7 @@ public class SCAClient implements DependencyScanner {
             log.info(String.format("Risk report ID: %s", summary.getRiskReportId()));
             log.info(String.format("Risk score: %.2f", summary.getRiskScore()));
             log.info(String.format("Total packages: %d", summary.getTotalPackages()));
-            log.info(String.format("Total outdated packages: %d%n",summary.getTotalOutdatedPackages()));
+            log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
         }
     }
 

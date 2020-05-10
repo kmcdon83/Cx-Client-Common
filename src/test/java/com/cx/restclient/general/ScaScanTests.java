@@ -6,6 +6,9 @@ import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sca.dto.*;
+import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.sca.dto.report.Package;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -15,7 +18,6 @@ import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -28,7 +30,10 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
+
+import static org.junit.Assert.*;
 
 @Slf4j
 public class ScaScanTests extends CommonClientTest {
@@ -49,14 +54,14 @@ public class ScaScanTests extends CommonClientTest {
             config.setSourceDir(sourcesDir.toString());
 
             DependencyScanResults scanResults = scanUsing(config);
-            verify(scanResults);
+            verifyScanResults(scanResults);
         } finally {
             deleteDir(sourcesDir);
         }
     }
 
     @Test
-    public void scan_remotePublicRepo() throws MalformedURLException {
+    public void scan_remoteRepo() throws MalformedURLException {
         CxScanConfig config = initScaConfig();
         config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
         RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
@@ -67,8 +72,7 @@ public class ScaScanTests extends CommonClientTest {
         config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
 
         DependencyScanResults scanResults = scanUsing(config);
-        verify(scanResults);
-
+        verifyScanResults(scanResults);
     }
 
     @Test
@@ -77,7 +81,7 @@ public class ScaScanTests extends CommonClientTest {
         CxScanConfig config = initScaConfig();
         setProxy(config);
         DependencyScanResults scanResults = scanUsing(config);
-        verify(scanResults);
+        verifyScanResults(scanResults);
     }
 
     private Path extractTestProjectFromResources() {
@@ -133,7 +137,7 @@ public class ScaScanTests extends CommonClientTest {
         log.info("Creating a temp dir: {}", result);
         boolean success = result.toFile().mkdir();
         if (!success) {
-            Assert.fail("Failed to create temp dir.");
+            fail("Failed to create temp dir.");
         }
         return result;
     }
@@ -172,23 +176,45 @@ public class ScaScanTests extends CommonClientTest {
         return results;
     }
 
-    private void verify(DependencyScanResults results) {
-        Assert.assertNotNull("Scan results are null.", results);
-        Assert.assertNull("OSA results are not null.", results.getOsaResults());
+    private void verifyScanResults(DependencyScanResults results) {
+        assertNotNull("Scan results are null.", results);
+        assertNull("OSA results are not null.", results.getOsaResults());
 
         SCAResults scaResults = results.getScaResults();
-        Assert.assertNotNull("SCA results are null", scaResults);
-        Assert.assertTrue("Scan ID is empty", StringUtils.isNotEmpty(scaResults.getScanId()));
-        Assert.assertTrue("Web report link is empty", StringUtils.isNotEmpty(scaResults.getWebReportLink()));
+        assertNotNull("SCA results are null", scaResults);
+        assertTrue("Scan ID is empty", StringUtils.isNotEmpty(scaResults.getScanId()));
+        assertTrue("Web report link is empty", StringUtils.isNotEmpty(scaResults.getWebReportLink()));
 
-        SCASummaryResults summary = scaResults.getSummary();
-        Assert.assertNotNull("SCA summary is null", summary);
-        Assert.assertTrue("SCA hasn't found any packages.", summary.getTotalPackages() > 0);
+        verifySummary(scaResults.getSummary());
+        verifyPackages(scaResults);
+        verifyFindings(scaResults);
+    }
+
+    private void verifySummary(SCASummaryResults summary) {
+        assertNotNull("SCA summary is null", summary);
+        assertTrue("SCA hasn't found any packages.", summary.getTotalPackages() > 0);
 
         boolean anyVulnerabilitiesDetected = summary.getHighVulnerabilityCount() > 0 ||
                 summary.getMediumVulnerabilityCount() > 0 ||
                 summary.getLowVulnerabilityCount() > 0;
-        Assert.assertTrue("Expected that at least one vulnerability would be detected.", anyVulnerabilitiesDetected);
+        assertTrue("Expected that at least one vulnerability would be detected.", anyVulnerabilitiesDetected);
+    }
+
+    private void verifyPackages(SCAResults scaResults) {
+        List<Package> packages = scaResults.getPackages();
+
+        assertNotNull("Packages are null.", packages);
+
+        assertEquals("Actual package count differs from package count in summary.",
+                scaResults.getSummary().getTotalPackages(),
+                packages.size());
+    }
+
+    private void verifyFindings(SCAResults scaResults) {
+        List<Finding> findings = scaResults.getFindings();
+        SCASummaryResults summary = scaResults.getSummary();
+        assertNotNull("Findings are null", findings);
+        assertFalse("No findings detected", findings.isEmpty());
     }
 
     private static CxScanConfig initScaConfig() {

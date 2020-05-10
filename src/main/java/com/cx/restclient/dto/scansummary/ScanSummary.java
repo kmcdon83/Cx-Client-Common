@@ -9,7 +9,7 @@ import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
 import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.SCASummaryResults;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
 
 import java.util.ArrayList;
 import java.util.List;
