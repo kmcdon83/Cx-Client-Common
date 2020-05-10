@@ -7,6 +7,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Info about a package that SCA retrieves by analyzing project dependencies.
+ */
 @Getter
 @Setter
 public class Package implements Serializable {
@@ -14,23 +17,23 @@ public class Package implements Serializable {
     public String name;
     public String version;
     public List<String> licenses = new ArrayList<>();
-    public String matchType;
-    public Integer highVulnerabilityCount;
-    public Integer mediumVulnerabilityCount;
-    public Integer lowVulnerabilityCount;
-    public Integer ignoredVulnerabilityCount;
-    public Integer numberOfVersionsSinceLastUpdate;
-    public Object newestVersionReleaseDate;
-    public Object newestVersion;
-    public Boolean outdated;
+    public String matchType;                            // enum values besides 'Filename'?
+    public int highVulnerabilityCount;
+    public int mediumVulnerabilityCount;
+    public int lowVulnerabilityCount;
+    public int ignoredVulnerabilityCount;
+    public int numberOfVersionsSinceLastUpdate;
+    public String newestVersionReleaseDate;
+    public String newestVersion;
+    public boolean outdated;
     public String releaseDate;
-    public String confidenceLevel;
-    public Double riskScore;
-    public String severity;
+    public String confidenceLevel;                      // int, double or string?
+    public double riskScore;
+    public String severity;                             // other values besides NONE,MEDIUM, HIGH - ?
     public List<String> locations = new ArrayList<>();
-    public List<Object> dependencyPaths = new ArrayList<>();
-    public Object packageRepository;
-    public Boolean isDirectDependency;
-    public Boolean isDevelopment;
+    public List<DependencyPath> dependencyPaths = new ArrayList<>(); // Is DependencyPathElement a suitable name?
+    public String packageRepository;
+    public boolean isDirectDependency;
+    public boolean isDevelopment;
     public PackageUsage packageUsage;
 }
