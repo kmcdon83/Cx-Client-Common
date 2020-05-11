@@ -312,11 +312,11 @@ public class CxHttpClient {
 
     private String retrieveCookies() {
         List<Cookie> cookieList = cookieStore.getCookies();
-        final String[] cookies = {""};
+        final StringBuilder builder = new StringBuilder();
         cookieList.forEach(cookie -> {
-            cookies[0] += cookie.getName() + "=" + cookie.getValue() +';';
+            builder.append(cookie.getName()).append("=").append(cookie.getValue()).append(";");
         });
-        return cookies[0];
+        return builder.toString();
     }
 
     public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
