@@ -27,11 +27,11 @@ public class Package implements Serializable {
     public String newestVersion;
     public boolean outdated;
     public String releaseDate;
-    public String confidenceLevel;                      // int, double or string?
+    public String confidenceLevel;
     public double riskScore;
     public String severity;                             // other values besides NONE,MEDIUM, HIGH - ?
     public List<String> locations = new ArrayList<>();
-    public List<DependencyPath> dependencyPaths = new ArrayList<>(); // Is DependencyPathElement a suitable name?
+    public List<DependencyPath> dependencyPaths = new ArrayList<>();
     public String packageRepository;
     public boolean isDirectDependency;
     public boolean isDevelopment;

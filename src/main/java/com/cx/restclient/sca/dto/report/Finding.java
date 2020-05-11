@@ -21,9 +21,9 @@ public class Finding implements Serializable {
     public String publishDate;
     public List<String> references = new ArrayList<>();
     public String description;
-    public Object recommendations;  // always null. What is the field type?
+    public String recommendations;
     public String packageId;
-    public Object similarityId;     // always null. What is the field type?
+    public String similarityId;
     public String fixResolutionText;
     public boolean isIgnored;
 }

@@ -7,7 +7,7 @@ import java.io.Serializable;
 
 @Getter
 @Setter
-public class DependencyPathElement implements Serializable {
+public class DependencyPathSegment implements Serializable {
     public String id;
     public String name;
     public String version;

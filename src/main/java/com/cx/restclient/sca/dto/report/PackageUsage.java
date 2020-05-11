@@ -11,7 +11,7 @@ import java.util.List;
 @Setter
 public class PackageUsage implements Serializable {
     public String usageType;        // Enum values besides 'Used'?
-    public Object packageId;        // Type?
+    public String packageId;
     public List<Object> importsCalled = new ArrayList<>();  // List item type - ?
     public List<Object> methodsCalled = new ArrayList<>();  // List item type - ?
 }

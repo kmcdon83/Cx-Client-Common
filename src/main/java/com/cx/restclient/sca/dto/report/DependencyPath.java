@@ -11,5 +11,5 @@ import java.util.ArrayList;
  */
 @Getter
 @Setter
-public class DependencyPath extends ArrayList<DependencyPathElement> implements Serializable {
+public class DependencyPath extends ArrayList<DependencyPathSegment> implements Serializable {
 }
