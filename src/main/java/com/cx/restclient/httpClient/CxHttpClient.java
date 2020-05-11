@@ -314,7 +314,7 @@ public class CxHttpClient {
         List<Cookie> cookieList = cookieStore.getCookies();
         final StringBuilder builder = new StringBuilder();
         cookieList.forEach(cookie -> {
-            builder.append(cookie.getName() + "=" + cookie.getValue() +';');
+            builder.append(cookie.getName()).append("=").append(cookie.getValue()).append(";");
         });
         return builder.toString();
     }
