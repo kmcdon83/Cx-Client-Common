@@ -1,33 +1,20 @@
 package com.cx.restclient.sca.dto;
 
-import java.io.Serializable;
+import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.sca.dto.report.Package;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.io.Serializable;
+import java.util.List;
+
+@Getter
+@Setter
 public class SCAResults implements Serializable {
     private String scanId;
     private SCASummaryResults summary;
     private String webReportLink;
-
-    public void setScanId(String scanId) {
-        this.scanId = scanId;
-    }
-
-    public String getScanId() {
-        return scanId;
-    }
-
-    public void setSummary(SCASummaryResults summary) {
-        this.summary = summary;
-    }
-
-    public SCASummaryResults getSummary() {
-        return summary;
-    }
-
-    public void setWebReportLink(String webReportLink) {
-        this.webReportLink = webReportLink;
-    }
-
-    public String getWebReportLink() {
-        return webReportLink;
-    }
+    private List<Finding> findings;
+    private List<Package> packages;
 }

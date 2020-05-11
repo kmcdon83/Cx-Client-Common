@@ -22,6 +22,12 @@ import java.util.List;
 public abstract class HttpClientHelper {
 
     public static <T> T convertToObject(HttpResponse response, Class<T> responseType, boolean isCollection) throws IOException, CxClientException {
+        // If the caller is asking for the whole response, return the response (instead of just its entity),
+        // no matter if the entity is empty.
+        if (responseType != null && responseType.isAssignableFrom(response.getClass())) {
+            return (T)response;
+        }
+
         //No content
         if (responseType == null || response.getEntity() == null || response.getEntity().getContentLength() == 0) {
             return null;
@@ -83,13 +89,20 @@ public abstract class HttpClientHelper {
         return result;
     }
 
-    public static void validateResponse(HttpResponse response, int status, String message) throws CxClientException {
-        if (response.getStatusLine().getStatusCode() != status) {
+    public static void validateResponse(HttpResponse response, int expectedStatus, String message) throws CxClientException {
+        int actualStatusCode = response.getStatusLine().getStatusCode();
+        if (actualStatusCode != expectedStatus) {
             String responseBody = extractResponseBody(response);
-            responseBody = responseBody.replace("{", "").replace("}", "").replace(System.getProperty("line.separator"), " ").replace("  ", "");
-            throw new CxHTTPClientException(response.getStatusLine().getStatusCode(), message + ": " + responseBody);
-        }
+            responseBody = responseBody.replace("{", "")
+                    .replace("}", "")
+                    .replace(System.getProperty("line.separator"), " ")
+                    .replace("  ", "");
 
+            String exceptionMessage = String.format("Status code: %d, message: '%s', response body: %s",
+                    actualStatusCode, message, responseBody);
+
+            throw new CxHTTPClientException(actualStatusCode, exceptionMessage);
+        }
     }
 
     public static String extractResponseBody(HttpResponse response) {

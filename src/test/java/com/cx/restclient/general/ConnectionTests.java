@@ -1,14 +1,16 @@
-package com.cx.restclient.connection;
+package com.cx.restclient.general;
 
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.utility.TestingUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 
+@Slf4j
 public class ConnectionTests extends CommonClientTest {
 
     @Test
