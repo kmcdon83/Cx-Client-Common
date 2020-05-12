@@ -86,4 +86,5 @@ public class LoginSettings {
     public List<Cookie> getSessionCookies() {
         return sessionCookies;
     }
+
 }

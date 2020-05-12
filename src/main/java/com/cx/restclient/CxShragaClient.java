@@ -266,6 +266,11 @@ public class CxShragaClient {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
 
+        if(config.getToken() != null){
+            httpClient.setToken(config.getToken());
+            return;
+        }
+
         LoginSettings settings = getDefaultLoginSettings();
         settings.setRefreshToken(config.getRefreshToken());
         settings.setVersion(version);
@@ -470,12 +475,12 @@ public class CxShragaClient {
         return projects;
     }
 
-    public Project getProjectById(String projectId) throws IOException, CxClientException {
+    public Project getProjectById(String projectId,String contentType) throws IOException, CxClientException {
         String projectNamePath = SAST_GET_PROJECT_BY_ID.replace("{projectId}", projectId);
         Project projects = null;
         try {
             httpClient.setTeamPathHeader(this.teamPath);
-            projects = httpClient.getRequest(projectNamePath, CONTENT_TYPE_APPLICATION_JSON_V2, Project.class, 200, "project by id: " + projectId, false);
+            projects = httpClient.getRequest(projectNamePath, contentType, Project.class, 200, "project by id: " + projectId, false);
         } catch (CxHTTPClientException ex) {
             if (ex.getStatusCode() != 404) {
                 throw ex;

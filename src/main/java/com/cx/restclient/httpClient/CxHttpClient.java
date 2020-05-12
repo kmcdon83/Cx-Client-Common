@@ -533,4 +533,8 @@ public class CxHttpClient {
         }
     }
 
+    public void setToken(TokenLoginResponse token){
+        this.token = token;
+    }
+
 }
