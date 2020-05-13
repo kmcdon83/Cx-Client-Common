@@ -213,6 +213,7 @@ public class ScaScanTests extends CommonClientTest {
         List<Package> packages = scaResults.getPackages();
 
         assertNotNull("Packages are null.", packages);
+        assertFalse("Response contains no packages.", packages.isEmpty());
 
         assertEquals("Actual package count differs from package count in summary.",
                 scaResults.getSummary().getTotalPackages(),
@@ -223,7 +224,13 @@ public class ScaScanTests extends CommonClientTest {
         List<Finding> findings = scaResults.getFindings();
         SCASummaryResults summary = scaResults.getSummary();
         assertNotNull("Findings are null", findings);
-        assertFalse("No findings detected", findings.isEmpty());
+        assertFalse("Response contains no findings.", findings.isEmpty());
+
+        // Special check due to a case-sensitivity issue.
+        boolean allSeveritiesAreSpecified = findings.stream()
+                .allMatch(finding -> finding.getSeverity() != null);
+
+        assertTrue("Some of the findings have severity set to null.", allSeveritiesAreSpecified);
     }
 
     private static CxScanConfig initScaConfig() {
