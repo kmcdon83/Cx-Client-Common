@@ -18,6 +18,9 @@ import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -30,8 +33,10 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -40,6 +45,10 @@ import java.util.List;
 public class SCAClient implements DependencyScanner {
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
+
+    // We need this mapper to properly deserialize finding severity, e.g. "High" (in JSON) -> Severity.HIGH (in Java).
+    private static final ObjectMapper caseInsensitiveObjectMapper = new ObjectMapper()
+            .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 
     public static class UrlPaths {
         private UrlPaths() {
@@ -130,7 +139,7 @@ public class SCAClient implements DependencyScanner {
         return scanId;
     }
 
-    private String extractScanIdFrom(HttpResponse response) {
+    private static String extractScanIdFrom(HttpResponse response) {
         if (response != null && response.getLastHeader("Location") != null) {
             // Expecting a value like "/api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293"
             String urlPathWithScanId = response.getLastHeader("Location").getValue();
@@ -147,10 +156,18 @@ public class SCAClient implements DependencyScanner {
         RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
         validateRemoteRepoConfig(repoInfo);
 
-        String repoUrl = repoInfo.getUrl().toString();
-        log.info(String.format("Repository URL: %s", repoUrl));
+        URL sanitizedUrl = sanitize(repoInfo.getUrl());
+        log.info(String.format("Repository URL: %s", sanitizedUrl));
 
-        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoUrl);
+        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString());
+    }
+
+    /**
+     * Removes the userinfo part of the input URL (if present), so that the URL may be logged safely.
+     * The URL may contain userinfo when a private repo is scanned.
+     */
+    private URL sanitize(URL url) throws MalformedURLException {
+        return new URL(url.getProtocol(), url.getHost(), url.getFile());
     }
 
     private HttpResponse submitSourcesFromLocalDir() throws IOException {
@@ -386,12 +403,16 @@ public class SCAClient implements DependencyScanner {
 
         String path = String.format(UrlPaths.FINDINGS, URLEncoder.encode(reportId, ENCODING));
 
-        return (List<Finding>) httpClient.getRequest(path,
+        ArrayNode responseJson = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                Finding.class,
+                ArrayNode.class,
                 HttpStatus.SC_OK,
                 "CxSCA findings",
-                true);
+                false);
+
+        Finding[] findings = caseInsensitiveObjectMapper.treeToValue(responseJson, Finding[].class);
+
+        return Arrays.asList(findings);
     }
 
     private List<Package> getPackages(String reportId) throws IOException {

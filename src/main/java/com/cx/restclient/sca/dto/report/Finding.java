@@ -1,5 +1,6 @@
 package com.cx.restclient.sca.dto.report;
 
+import com.cx.restclient.dto.scansummary.Severity;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,7 +18,7 @@ public class Finding implements Serializable {
     public String id;
     public String cveName;
     public double score;
-    public String severity;         // other enum values besides 'Medium', 'High' - ?
+    public Severity severity;
     public String publishDate;
     public List<String> references = new ArrayList<>();
     public String description;

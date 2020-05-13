@@ -61,18 +61,13 @@ public class ScaScanTests extends CommonClientTest {
     }
 
     @Test
-    public void scan_remoteRepo() throws MalformedURLException {
-        CxScanConfig config = initScaConfig();
-        config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
-        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+    public void scan_remotePublicRepo() throws MalformedURLException {
+        scanRemoteRepo("sca.remoteRepoUrl.public");
+    }
 
-        URL repoUrl = new URL(props.getProperty("sca.remoteRepoUrl"));
-        repoInfo.setUrl(repoUrl);
-
-        config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
-
-        DependencyScanResults scanResults = scanUsing(config);
-        verifyScanResults(scanResults);
+    @Test
+    public void scan_remotePrivateRepo() throws MalformedURLException {
+        scanRemoteRepo("sca.remoteRepoUrl.private");
     }
 
     @Test
@@ -80,6 +75,20 @@ public class ScaScanTests extends CommonClientTest {
     public void runScaScanWithProxy() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
         setProxy(config);
+        DependencyScanResults scanResults = scanUsing(config);
+        verifyScanResults(scanResults);
+    }
+
+    private void scanRemoteRepo(String propertyKey) throws MalformedURLException {
+        CxScanConfig config = initScaConfig();
+        config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
+        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+
+        URL repoUrl = new URL(props.getProperty(propertyKey));
+        repoInfo.setUrl(repoUrl);
+
+        config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
+
         DependencyScanResults scanResults = scanUsing(config);
         verifyScanResults(scanResults);
     }
@@ -204,6 +213,7 @@ public class ScaScanTests extends CommonClientTest {
         List<Package> packages = scaResults.getPackages();
 
         assertNotNull("Packages are null.", packages);
+        assertFalse("Response contains no packages.", packages.isEmpty());
 
         assertEquals("Actual package count differs from package count in summary.",
                 scaResults.getSummary().getTotalPackages(),
@@ -214,7 +224,13 @@ public class ScaScanTests extends CommonClientTest {
         List<Finding> findings = scaResults.getFindings();
         SCASummaryResults summary = scaResults.getSummary();
         assertNotNull("Findings are null", findings);
-        assertFalse("No findings detected", findings.isEmpty());
+        assertFalse("Response contains no findings.", findings.isEmpty());
+
+        // Special check due to a case-sensitivity issue.
+        boolean allSeveritiesAreSpecified = findings.stream()
+                .allMatch(finding -> finding.getSeverity() != null);
+
+        assertTrue("Some of the findings have severity set to null.", allSeveritiesAreSpecified);
     }
 
     private static CxScanConfig initScaConfig() {

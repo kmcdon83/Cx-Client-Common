@@ -17,7 +17,12 @@ public class Package implements Serializable {
     public String name;
     public String version;
     public List<String> licenses = new ArrayList<>();
-    public String matchType;                            // enum values besides 'Filename'?
+
+    /**
+     * The current values are [Filename, Sha1]. Not considered an enum in SCA API.
+     */
+    public String matchType;
+
     public int highVulnerabilityCount;
     public int mediumVulnerabilityCount;
     public int lowVulnerabilityCount;
@@ -29,7 +34,7 @@ public class Package implements Serializable {
     public String releaseDate;
     public String confidenceLevel;
     public double riskScore;
-    public String severity;                             // other values besides NONE,MEDIUM, HIGH - ?
+    public PackageSeverity severity;
     public List<String> locations = new ArrayList<>();
     public List<DependencyPath> dependencyPaths = new ArrayList<>();
     public String packageRepository;
