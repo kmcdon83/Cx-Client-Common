@@ -61,18 +61,13 @@ public class ScaScanTests extends CommonClientTest {
     }
 
     @Test
-    public void scan_remoteRepo() throws MalformedURLException {
-        CxScanConfig config = initScaConfig();
-        config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
-        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+    public void scan_remotePublicRepo() throws MalformedURLException {
+        scanRemoteRepo("sca.remoteRepoUrl.public");
+    }
 
-        URL repoUrl = new URL(props.getProperty("sca.remoteRepoUrl"));
-        repoInfo.setUrl(repoUrl);
-
-        config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
-
-        DependencyScanResults scanResults = scanUsing(config);
-        verifyScanResults(scanResults);
+    @Test
+    public void scan_remotePrivateRepo() throws MalformedURLException {
+        scanRemoteRepo("sca.remoteRepoUrl.private");
     }
 
     @Test
@@ -80,6 +75,20 @@ public class ScaScanTests extends CommonClientTest {
     public void runScaScanWithProxy() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig();
         setProxy(config);
+        DependencyScanResults scanResults = scanUsing(config);
+        verifyScanResults(scanResults);
+    }
+
+    private void scanRemoteRepo(String propertyKey) throws MalformedURLException {
+        CxScanConfig config = initScaConfig();
+        config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
+        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+
+        URL repoUrl = new URL(props.getProperty(propertyKey));
+        repoInfo.setUrl(repoUrl);
+
+        config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
+
         DependencyScanResults scanResults = scanUsing(config);
         verifyScanResults(scanResults);
     }
