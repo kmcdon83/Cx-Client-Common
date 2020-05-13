@@ -313,7 +313,7 @@ public class SCAClient implements DependencyScanner {
 
             SCASummaryResults scanSummary = getSummaryReport(reportId);
             result.setSummary(scanSummary);
-            printSummary(scanSummary);
+            printSummary(scanSummary,scanId);
 
             List<Finding> findings = getFindings(reportId);
             result.setFindings(findings);
@@ -407,7 +407,7 @@ public class SCAClient implements DependencyScanner {
                 true);
     }
 
-    private void printSummary(SCASummaryResults summary) {
+    private void printSummary(SCASummaryResults summary,String scanId) {
         if (log.isInfoEnabled()) {
             log.info(String.format("%n----CxSCA risk report summary----"));
             log.info(String.format("Created on: %s", summary.getCreatedOn()));
@@ -416,6 +416,7 @@ public class SCAClient implements DependencyScanner {
             log.info(String.format("Medium vulnerabilities: %d", summary.getMediumVulnerabilityCount()));
             log.info(String.format("Low vulnerabilities: %d", summary.getLowVulnerabilityCount()));
             log.info(String.format("Risk report ID: %s", summary.getRiskReportId()));
+            log.info(String.format("Scan ID: %s", scanId));
             log.info(String.format("Risk score: %.2f", summary.getRiskScore()));
             log.info(String.format("Total packages: %d", summary.getTotalPackages()));
             log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
