@@ -7,12 +7,12 @@
     <version>2020.2.10.SCA</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
-    <description>Enables web services access Checkmarx SAST and OSA scan.</description>
+    <description>Web client for interaction with Checkmarx SAST, SCA and OSA products</description>
     <url>https://www.checkmarx.com</url>
     <scm>
-        <connection>scm:git:git://github.com/CxRepositories/Cx-Client-Common.git</connection>
-        <developerConnection>scm:git:ssh://github.com/CxRepositories/Cx-Client-Common.git</developerConnection>
-        <url>https://github.com/CxRepositories/Cx-Client-Common/tree/master</url>
+        <connection>scm:git:git://github.com/checkmarx-ltd/Cx-Client-Common.git</connection>
+        <developerConnection>scm:git:ssh://github.com/checkmarx-ltd/Cx-Client-Common.git</developerConnection>
+        <url>https://github.com/checkmarx-ltd/Cx-Client-Common/tree/master</url>
     </scm>
     <licenses>
         <license>
@@ -68,6 +68,27 @@
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
+            </plugin>
+
+            <!-- Build a fat JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
         <resources>
@@ -304,4 +325,12 @@
             </build>
         </profile>
     </profiles>
+    <developers>
+        <developer>
+            <name>Alexey Kononov</name>
+            <email>alexey.kononov@checkmarx.com</email>
+            <organization>Checkmarx Ltd</organization>
+            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
+        </developer>
+    </developers>
 </project>
