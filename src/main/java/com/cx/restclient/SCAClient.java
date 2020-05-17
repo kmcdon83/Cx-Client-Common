@@ -17,6 +17,7 @@ import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,8 +47,11 @@ public class SCAClient implements DependencyScanner {
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
 
-    // We need this mapper to properly deserialize finding severity, e.g. "High" (in JSON) -> Severity.HIGH (in Java).
     private static final ObjectMapper caseInsensitiveObjectMapper = new ObjectMapper()
+            // Ignore any fields that can be added to SCA API in the future.
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            // We need this feature to properly deserialize finding severity,
+            // e.g. "High" (in JSON) -> Severity.HIGH (in Java).
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 
     public static class UrlPaths {
@@ -330,7 +334,7 @@ public class SCAClient implements DependencyScanner {
 
             SCASummaryResults scanSummary = getSummaryReport(reportId);
             result.setSummary(scanSummary);
-            printSummary(scanSummary,scanId);
+            printSummary(scanSummary, scanId);
 
             List<Finding> findings = getFindings(reportId);
             result.setFindings(findings);
@@ -428,7 +432,7 @@ public class SCAClient implements DependencyScanner {
                 true);
     }
 
-    private void printSummary(SCASummaryResults summary,String scanId) {
+    private void printSummary(SCASummaryResults summary, String scanId) {
         if (log.isInfoEnabled()) {
             log.info(String.format("%n----CxSCA risk report summary----"));
             log.info(String.format("Created on: %s", summary.getCreatedOn()));
