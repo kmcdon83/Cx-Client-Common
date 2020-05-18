@@ -437,7 +437,7 @@ public class CxHttpClient {
     }
 
     public void addCustomHeader(String name, String value) {
-        log.info(String.format("Adding a custom header: %s: %s", name, value));
+        log.debug(String.format("Adding a custom header: %s: %s", name, value));
         customHeaders.put(name, value);
     }
 

@@ -93,6 +93,10 @@ public class SCAClient implements DependencyScanner {
         SCAConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
+
+        // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
+        // and then use this token for SCA authentication in cloud.
+        httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
     }
 
     @Override
@@ -242,11 +246,11 @@ public class SCAClient implements DependencyScanner {
 
         HttpEntity request = new FileEntity(source);
 
-        CxHttpClient client = createHttpClient(uploadUrl);
+        CxHttpClient uploader = createHttpClient(uploadUrl);
 
         // Relative path is empty, because we use the whole upload URL as the base URL for the HTTP client.
         // Content type is empty, because the server at uploadUrl throws an error if Content-Type is non-empty.
-        client.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
+        uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
     }
 
     private void printWebReportLink(SCAResults scaResult) {
@@ -468,15 +472,12 @@ public class SCAClient implements DependencyScanner {
     }
 
     private CxHttpClient createHttpClient(String baseUrl) {
-        CxHttpClient result = new CxHttpClient(baseUrl,
+        return new CxHttpClient(baseUrl,
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 null,
                 config.getProxyConfig(),
                 log);
-
-        result.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
-        return result;
     }
 }
