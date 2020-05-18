@@ -42,8 +42,4 @@ public final class TestingUtils {
         result.setPassword(props.getProperty(passwordProp));
         return result;
     }
-
-    public static SCAConfig getScaConfig(Properties props) {
-        return getScaConfig(props, false);
-    }
 }
