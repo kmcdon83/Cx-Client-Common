@@ -465,7 +465,7 @@ public class CxHttpClient {
             response = apacheClient.execute(httpMethod);
             statusCode = response.getStatusLine().getStatusCode();
 
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) { //Token expired
+            if (statusCode == HttpStatus.SC_UNAUTHORIZED) { // Token has probably expired
                 throw new CxTokenExpiredException(extractResponseBody(response));
             }
 
@@ -477,7 +477,7 @@ public class CxHttpClient {
             throw new CxHTTPClientException(ErrorMessage.CHECKMARX_SERVER_CONNECTION_FAILED.getErrorMessage());
         } catch (CxTokenExpiredException ex) {
             if (retry) {
-                log.warn("Access token expired for request: " + httpMethod.getURI() + ", Status code:" + statusCode + "requesting a new token. message: " + ex.getMessage());
+                logTokenError(httpMethod, statusCode, ex);
                 login(lastLoginSettings);
                 return request(httpMethod, contentType, entity, responseType, expectStatus, failedMsg, isCollection, false);
             }
@@ -528,5 +528,16 @@ public class CxHttpClient {
         } catch (UnsupportedEncodingException e) {
             throw new CxClientException(e.getMessage());
         }
+    }
+
+    private void logTokenError(HttpRequestBase httpMethod, int statusCode, CxTokenExpiredException ex) {
+        String message = String.format("Received status code %d for URL: %s with the message: %s",
+                statusCode,
+                httpMethod.getURI(),
+                ex.getMessage());
+
+        log.warn(message);
+
+        log.info("Possible reason: access token has expired. Trying to request a new token...");
     }
 }
