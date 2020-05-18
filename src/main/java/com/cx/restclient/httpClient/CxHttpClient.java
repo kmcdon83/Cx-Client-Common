@@ -61,8 +61,9 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
@@ -96,6 +97,7 @@ public class CxHttpClient {
     private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
     private HttpClientBuilder cb = HttpClients.custom();
+    private final Map<String,String> customHeaders = new HashMap<>();
 
     public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
                         @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
@@ -434,6 +436,11 @@ public class CxHttpClient {
         this.teamPath = teamPath;
     }
 
+    public void addCustomHeader(String name, String value) {
+        log.info(String.format("Adding a custom header: %s: %s", name, value));
+        customHeaders.put(name, value);
+    }
+
     private <T> T request(HttpRequestBase httpMethod, String contentType, HttpEntity entity, Class<T> responseType, int expectStatus, String failedMsg, boolean isCollection, boolean retry) throws IOException, CxClientException {
         if (contentType != null) {
             httpMethod.addHeader("Content-type", contentType);
@@ -449,6 +456,10 @@ public class CxHttpClient {
             httpMethod.addHeader(TEAM_PATH, this.teamPath);
             if (token != null) {
                 httpMethod.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
+            }
+
+            for (Map.Entry<String, String> entry : customHeaders.entrySet()) {
+                httpMethod.addHeader(entry.getKey(), entry.getValue());
             }
 
             response = apacheClient.execute(httpMethod);
@@ -518,5 +529,4 @@ public class CxHttpClient {
             throw new CxClientException(e.getMessage());
         }
     }
-
 }

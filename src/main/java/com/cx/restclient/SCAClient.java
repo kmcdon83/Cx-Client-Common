@@ -47,12 +47,16 @@ public class SCAClient implements DependencyScanner {
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
 
+    private static final String TENANT_HEADER_NAME = "Account-Name";
+
     private static final ObjectMapper caseInsensitiveObjectMapper = new ObjectMapper()
             // Ignore any fields that can be added to SCA API in the future.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             // We need this feature to properly deserialize finding severity,
             // e.g. "High" (in JSON) -> Severity.HIGH (in Java).
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
+
+    private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
 
     public static class UrlPaths {
         private UrlPaths() {
@@ -268,11 +272,18 @@ public class SCAClient implements DependencyScanner {
         SCAConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
-        settings.setAccessControlBaseUrl(scaConfig.getAccessControlUrl());
+
+        String acUrl = scaConfig.getAccessControlUrl();
+        boolean isAccessControlInCloud = (acUrl != null && acUrl.startsWith(CLOUD_ACCESS_CONTROL_BASE_URL));
+        log.info(isAccessControlInCloud ? "Using cloud authentication." : "Using on-premise authentication.");
+
+        settings.setAccessControlBaseUrl(acUrl);
         settings.setUsername(scaConfig.getUsername());
         settings.setPassword(scaConfig.getPassword());
         settings.setTenant(scaConfig.getTenant());
-        settings.setClientTypeForPasswordAuth(ClientType.SCA_CLI);
+
+        ClientType clientType = isAccessControlInCloud ? ClientType.SCA_CLI : ClientType.RESOURCE_OWNER;
+        settings.setClientTypeForPasswordAuth(clientType);
 
         httpClient.login(settings);
     }
@@ -457,12 +468,15 @@ public class SCAClient implements DependencyScanner {
     }
 
     private CxHttpClient createHttpClient(String baseUrl) {
-        return new CxHttpClient(baseUrl,
+        CxHttpClient result = new CxHttpClient(baseUrl,
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 null,
                 config.getProxyConfig(),
                 log);
+
+        result.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
+        return result;
     }
 }
