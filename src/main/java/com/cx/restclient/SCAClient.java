@@ -47,12 +47,16 @@ public class SCAClient implements DependencyScanner {
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
 
+    private static final String TENANT_HEADER_NAME = "Account-Name";
+
     private static final ObjectMapper caseInsensitiveObjectMapper = new ObjectMapper()
             // Ignore any fields that can be added to SCA API in the future.
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             // We need this feature to properly deserialize finding severity,
             // e.g. "High" (in JSON) -> Severity.HIGH (in Java).
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
+
+    private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
 
     public static class UrlPaths {
         private UrlPaths() {
@@ -89,6 +93,10 @@ public class SCAClient implements DependencyScanner {
         SCAConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
+
+        // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
+        // and then use this token for SCA authentication in cloud.
+        httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
     }
 
     @Override
@@ -238,11 +246,11 @@ public class SCAClient implements DependencyScanner {
 
         HttpEntity request = new FileEntity(source);
 
-        CxHttpClient client = createHttpClient(uploadUrl);
+        CxHttpClient uploader = createHttpClient(uploadUrl);
 
         // Relative path is empty, because we use the whole upload URL as the base URL for the HTTP client.
         // Content type is empty, because the server at uploadUrl throws an error if Content-Type is non-empty.
-        client.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
+        uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
     }
 
     private void printWebReportLink(SCAResults scaResult) {
@@ -268,11 +276,18 @@ public class SCAClient implements DependencyScanner {
         SCAConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
-        settings.setAccessControlBaseUrl(scaConfig.getAccessControlUrl());
+
+        String acUrl = scaConfig.getAccessControlUrl();
+        boolean isAccessControlInCloud = (acUrl != null && acUrl.startsWith(CLOUD_ACCESS_CONTROL_BASE_URL));
+        log.info(isAccessControlInCloud ? "Using cloud authentication." : "Using on-premise authentication.");
+
+        settings.setAccessControlBaseUrl(acUrl);
         settings.setUsername(scaConfig.getUsername());
         settings.setPassword(scaConfig.getPassword());
         settings.setTenant(scaConfig.getTenant());
-        settings.setClientTypeForPasswordAuth(ClientType.SCA_CLI);
+
+        ClientType clientType = isAccessControlInCloud ? ClientType.SCA_CLI : ClientType.RESOURCE_OWNER;
+        settings.setClientTypeForPasswordAuth(clientType);
 
         httpClient.login(settings);
     }
