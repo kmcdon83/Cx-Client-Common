@@ -34,7 +34,7 @@ public class CVEReportTableRow implements Serializable {
 
     public CVEReportTableRow(Finding finding){
         this.state = finding.isIgnored()?"NOT_EXPLOITABLE":"EXPLOITABLE";
-        this.name = finding.getCveName();
+        this.name = finding.getId();
         this.publishDate = formatDate(finding.getPublishDate(), "yyyy-MM-dd'T'HH:mm:ss", "dd/MM/yy");
         this.libraryName = finding.getPackageId();
     }

@@ -39,7 +39,8 @@ public class DependencyResult {
         this.vulnerableAndOutdated = scaResults.getSummary().getTotalOutdatedPackages();
         this.nonVulnerableLibraries = scaResults.getSummary().getTotalOkLibraries();
         this.scanStartTime = formatDate(scaResults.getSummary().getCreatedOn(), "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS", "dd/MM/yy HH:mm");
-        this.scanEndTime = formatDate(scaResults.getSummary().getCreatedOn(), "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS", "dd/MM/yy HH:mm");
+        //this.scanEndTime = formatDate(scaResults.getSummary().getCreatedOn(), "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS", "dd/MM/yy HH:mm");
+        this.scanEndTime ="";
         this.setDependencyCVEReportTableSCA(scaResults.getFindings());
         this.setTotalLibraries(scaResults.getSummary().getTotalPackages());
     }
