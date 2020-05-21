@@ -1,8 +1,11 @@
 package com.cx.restclient.osa.dto;
 
+import com.cx.restclient.sca.dto.report.Finding;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.io.Serializable;
+
+import static com.cx.restclient.common.ShragaUtils.formatDate;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CVEReportTableRow implements Serializable {
@@ -19,6 +22,21 @@ public class CVEReportTableRow implements Serializable {
         this.publishDate = publishDate;
         this.libraryName = libraryName;
         this.state = state;
+    }
+
+    public CVEReportTableRow(CVE cve) {
+        this.state = cve.getState().getName();
+        this.name = cve.getCveName();
+        this.publishDate = cve.getPublishDate();
+        this.libraryName = cve.getLibraryId();
+
+    }
+
+    public CVEReportTableRow(Finding finding){
+        this.state = finding.isIgnored()?"NOT_EXPLOITABLE":"EXPLOITABLE";
+        this.name = finding.getCveName();
+        this.publishDate = formatDate(finding.getPublishDate(), "yyyy-MM-dd'T'HH:mm:ss", "dd/MM/yy");
+        this.libraryName = finding.getPackageId();
     }
 
     public String getName() {
