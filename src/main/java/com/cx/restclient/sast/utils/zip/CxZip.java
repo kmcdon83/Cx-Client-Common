@@ -36,9 +36,8 @@ public class CxZip {
         };
 
         File tempFile = File.createTempFile(tempFileName, ".bin");
-        OutputStream fileOutputStream = new FileOutputStream(tempFile);
 
-        try {
+        try (OutputStream fileOutputStream = new FileOutputStream(tempFile)) {
             new Zipper(log).zip(baseDir, filter.getIncludes(), filter.getExcludes(), fileOutputStream, maxZipSizeInBytes, zipListener);
         } catch (Zipper.MaxZipSizeReached e) {
             tempFile.delete();

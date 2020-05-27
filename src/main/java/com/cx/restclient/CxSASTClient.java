@@ -424,11 +424,15 @@ class CxSASTClient {
     }
 
     private ResponseQueueScanStatus resolveSASTStatus(ResponseQueueScanStatus scanStatus) throws CxClientException {
-        if (scanStatus != null && Status.SUCCEEDED == scanStatus.getBaseStatus()) {
-            log.info("SAST scan finished successfully.");
-            return scanStatus;
-        } else {
-            throw new CxClientException("SAST scan cannot be completed. status [" + scanStatus.getStage().getValue() + "]: " + scanStatus.getStageDetails());
+        if(scanStatus != null ) {
+            if (Status.SUCCEEDED == scanStatus.getBaseStatus()) {
+                log.info("SAST scan finished successfully.");
+                return scanStatus;
+            } else {
+                throw new CxClientException("SAST scan cannot be completed. status [" + scanStatus.getStage().getValue() + "]: " + scanStatus.getStageDetails());
+            }
+        }else{
+            throw new CxClientException("SAST scan cannot be completed.");
         }
     }
 
@@ -454,10 +458,14 @@ class CxSASTClient {
     }
 
     private ReportStatus resolveReportStatus(ReportStatus reportStatus) throws CxClientException {
-        if (reportStatus != null && Status.SUCCEEDED == reportStatus.getBaseStatus()) {
-            return reportStatus;
-        } else {
-            throw new CxClientException("Generation of scan report [id=" + reportStatus.getBaseId() + "] failed.");
+        if(reportStatus != null ) {
+            if (Status.SUCCEEDED == reportStatus.getBaseStatus()) {
+                return reportStatus;
+            } else {
+                throw new CxClientException("Generation of scan report [id=" + reportStatus.getBaseId() + "] failed.");
+            }
+        }else{
+            throw new CxClientException("Generation of scan report failed.");
         }
     }
 
@@ -482,14 +490,18 @@ class CxSASTClient {
     }
 
     private void printCxARMProgress(CxARMStatus cxARMStatus, long startTime) {
-        log.info("Waiting for server to retrieve policy violations. " + (startTime + cxARMTimeoutSec - (System.currentTimeMillis() / 1000)) + " seconds left to timeout"); //todo Liran
+        log.info("Waiting for server to retrieve policy violations. " + (startTime + cxARMTimeoutSec - (System.currentTimeMillis() / 1000)) + " seconds left to timeout");
     }
 
     private CxARMStatus resolveCxARMStatus(CxARMStatus cxARMStatus) throws CxClientException {
-        if (cxARMStatus != null && Status.SUCCEEDED == cxARMStatus.getBaseStatus()) {
-            return cxARMStatus;
-        } else {
-            throw new CxClientException("Getting policy violations of project [id=" + cxARMStatus.getBaseId() + "] failed."); //todo Liran
+        if (cxARMStatus != null) {
+            if (Status.SUCCEEDED == cxARMStatus.getBaseStatus()) {
+                return cxARMStatus;
+            } else {
+                throw new CxClientException("Getting policy violations of project [id=" + cxARMStatus.getBaseId() + "] failed.");
+            }
+        }else{
+            throw new CxClientException("Getting policy violations of project failed.");
         }
     }
 

@@ -265,9 +265,11 @@ class CxOSAClient implements DependencyScanner {
     }
 
     private OSAScanStatus resolveOSAStatus(OSAScanStatus scanStatus) throws CxClientException {
-        if (scanStatus == null || Status.FAILED == scanStatus.getBaseStatus()) {
+        if (scanStatus != null || Status.FAILED == scanStatus.getBaseStatus()) {
             String failedMsg = scanStatus.getState() == null ? "" : "status [" + scanStatus.getState().getName() + "]. Reason: " + scanStatus.getState().getFailureReason();
             throw new CxClientException("OSA scan cannot be completed. " + failedMsg);
+        }else if(scanStatus ==null){
+            throw new CxClientException("OSA scan cannot be completed. ");
         }
         if (Status.SUCCEEDED == scanStatus.getBaseStatus()) {
             log.info("OSA scan finished.");

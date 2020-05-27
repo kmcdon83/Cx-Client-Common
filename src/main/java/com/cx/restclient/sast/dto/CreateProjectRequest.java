@@ -38,6 +38,6 @@ public class CreateProjectRequest {
     }
 
     public void setIsPublic(boolean isPublic) {
-        isPublic = isPublic;
+        this.isPublic = isPublic;
     }
 }
