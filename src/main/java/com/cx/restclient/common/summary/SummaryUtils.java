@@ -151,7 +151,11 @@ public abstract class SummaryUtils {
             if (dependencyResult.isResultReady()) {
                 boolean thresholdExceeded = scanSummary.isOsaThresholdExceeded();
                 templateData.put("dependencyThresholdExceeded", thresholdExceeded);
-                buildFailed |= thresholdExceeded;
+                if(config.getSastEnabled()){
+                    buildFailed |= thresholdExceeded || buildFailed;
+                }else{
+                    buildFailed |= thresholdExceeded;
+                }
 
                 //calculate dependency results bars:
                 //DependencyResult dependencyResult1 = dependencyResult;

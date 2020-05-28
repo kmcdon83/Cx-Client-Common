@@ -326,7 +326,7 @@ public class SCAClient implements DependencyScanner {
             result.setWebReportLink(reportLink);
             printWebReportLink(result);
             result.setScaResultReady(true);
-            log.info("we set sca result ready");
+            log.info("Retrieved SCA results successfully.");
             return result;
         } catch (IOException e) {
             throw new CxClientException("Error retrieving CxSCA scan results.", e);
