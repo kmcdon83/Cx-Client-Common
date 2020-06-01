@@ -17,13 +17,12 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.InputStreamBody;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -41,14 +40,15 @@ import static com.cx.restclient.sast.utils.SASTUtils.*;
 /**
  * Created by Galn on 05/02/2018.
  */
-
 class CxSASTClient {
+
     public static final String JENKINS = "jenkins";
     private Logger log;
     private CxHttpClient httpClient;
     private CxScanConfig config;
     private int reportTimeoutSec = 5000;
     private int cxARMTimeoutSec = 1000;
+
     private Waiter<ResponseQueueScanStatus> sastWaiter = new Waiter<ResponseQueueScanStatus>("CxSAST scan", 20) {
         @Override
         public ResponseQueueScanStatus getStatus(String id) throws CxClientException, IOException {
@@ -176,17 +176,17 @@ class CxSASTClient {
                 } else {
                     req.setBrowseMode("Depot");
                 }
-                entity = new StringEntity(convertToJson(req), ContentType.APPLICATION_JSON);
+                entity = new StringEntity(convertToJson(req), StandardCharsets.UTF_8);
                 break;
             case SHARED:
-                entity = new StringEntity(new Gson().toJson(req), ContentType.APPLICATION_JSON);
+                entity = new StringEntity(new Gson().toJson(req), StandardCharsets.UTF_8);
                 break;
             case GIT:
                 if (req.getPrivateKey().length < 1) {
                     Map<String, String> content = new HashMap<>();
                     content.put("url", config.getRemoteSrcUrl());
                     content.put("branch", config.getRemoteSrcBranch());
-                    entity = new StringEntity(new JSONObject(content).toString(), ContentType.APPLICATION_JSON);
+                    entity = new StringEntity(new JSONObject(content).toString(), StandardCharsets.UTF_8);
                 } else {
                     builder = MultipartEntityBuilder.create();
                     builder.addTextBody("url", req.getUrl(), ContentType.APPLICATION_JSON);
@@ -197,7 +197,7 @@ class CxSASTClient {
                 break;
             default:
                 log.error("todo");
-                entity = new StringEntity("");
+                entity = new StringEntity("", StandardCharsets.UTF_8);
 
         }
         return createRemoteSourceScan(projectId, entity, type.value()).getId();
@@ -277,7 +277,7 @@ class CxSASTClient {
     public void cancelSASTScan(long scanId) throws IOException, CxClientException {
         UpdateScanStatusRequest request = new UpdateScanStatusRequest(CurrentStatus.CANCELED);
         String json = convertToJson(request);
-        StringEntity entity = new StringEntity(json);
+        StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);
         httpClient.patchRequest(SAST_QUEUE_SCAN_STATUS.replace("{scanId}", Long.toString(scanId)), CONTENT_TYPE_APPLICATION_JSON_V1, entity, 200, "cancel SAST scan");
         log.info("SAST Scan canceled. (scanId: " + scanId + ")");
     }
@@ -313,21 +313,20 @@ class CxSASTClient {
     }
 
     private void defineScanSetting(ScanSettingRequest scanSetting) throws IOException, CxClientException {
-        StringEntity entity = new StringEntity(convertToJson(scanSetting));
+        StringEntity entity = new StringEntity(convertToJson(scanSetting), StandardCharsets.UTF_8);
         httpClient.putRequest(SAST_UPDATE_SCAN_SETTINGS, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 200, "define scan setting");
     }
 
     private void uploadZipFile(File zipFile, long projectId) throws CxClientException, IOException {
-        InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-        builder.addPart("zippedSource", streamBody);
+        builder.addBinaryBody("zippedSource", zipFile);
         HttpEntity entity = builder.build();
         httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, entity, null, 204, "upload ZIP file");
     }
 
     private CxID createScan(CreateScanRequest request) throws CxClientException, IOException {
-        StringEntity entity = new StringEntity(convertToJson(request));
+        StringEntity entity = new StringEntity(convertToJson(request), StandardCharsets.UTF_8);
         return httpClient.postRequest(SAST_CREATE_SCAN, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 201, "create new SAST Scan");
     }
 
@@ -348,7 +347,7 @@ class CxSASTClient {
     }
 
     private CreateReportResponse createScanReport(CreateReportRequest reportRequest) throws CxClientException, IOException {
-        StringEntity entity = new StringEntity(convertToJson(reportRequest));
+        StringEntity entity = new StringEntity(convertToJson(reportRequest), StandardCharsets.UTF_8);
         return httpClient.postRequest(SAST_CREATE_REPORT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CreateReportResponse.class, 202, "to create " + reportRequest.getReportType() + " scan report");
     }
 

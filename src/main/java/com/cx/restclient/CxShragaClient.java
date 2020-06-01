@@ -17,10 +17,9 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
-
-import org.whitesource.fs.FSAConfigProperties;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
@@ -47,8 +46,8 @@ public class CxShragaClient {
     private SASTResults sastResults = new SASTResults();
     private OSAResults osaResults = new OSAResults();
 
-
-    public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException {
+    public CxShragaClient(CxScanConfig config, Logger log, String proxyHost, int proxyPort,
+                          String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
         this.config = config;
         this.log = log;
         this.httpClient = new CxHttpClient(
@@ -56,13 +55,33 @@ public class CxShragaClient {
                 config.getUsername(),
                 config.getPassword(),
                 config.getCxOrigin(),
-                config.isDisableCertificateValidation(), config.isUseSSOLogin(), log);
+                config.isDisableCertificateValidation(),
+                log,
+                proxyHost, proxyPort, proxyUser, proxyPassword);
         sastClient = new CxSASTClient(httpClient, log, config);
         osaClient = new CxOSAClient(httpClient, log, config);
     }
 
-    //For Test Connection
-    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException {
+    public CxShragaClient(CxScanConfig config, Logger log) throws MalformedURLException, CxClientException {
+        this.config = config;
+        this.log = log;
+        this.httpClient = new CxHttpClient(
+                config.getUrl(),
+                config.getUsername(),
+                config.getPassword(),
+                config.getCxOrigin(),
+                config.isDisableCertificateValidation(),
+                log);
+        sastClient = new CxSASTClient(httpClient, log, config);
+        osaClient = new CxOSAClient(httpClient, log, config);
+    }
+
+    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation,
+                          Logger log, String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
+        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log, proxyHost, proxyPort, proxyUser, proxyPassword);
+    }
+
+    public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException, CxClientException {
         this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log);
     }
 
@@ -197,7 +216,8 @@ public class CxShragaClient {
                 if (config.getCxVersion().getHotFix() != null && Integer.parseInt(config.getCxVersion().getHotFix()) > 0) {
                     hotfix = " Hotfix [" + config.getCxVersion().getHotFix() + "].";
                 }
-            }  catch (Exception ex){}
+            } catch (Exception ex) {
+            }
 
             log.info("Checkmarx server version [" + config.getCxVersion().getVersion() + "]." + hotfix);
 
@@ -219,7 +239,7 @@ public class CxShragaClient {
     }
 
     private String replaceDelimiters(String teamName) {
-        while(teamName.contains("\\") || teamName.contains("//")) {
+        while (teamName.contains("\\") || teamName.contains("//")) {
             teamName = teamName.replace("\\", "/");
             teamName = teamName.replace("//", "/");
         }
@@ -263,7 +283,7 @@ public class CxShragaClient {
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
     }
 
-    public void setOsaFSAProperties(FSAConfigProperties fsaConfig) {  //For CxMaven plugin
+    public void setOsaFSAProperties(Properties fsaConfig) {  //For CxMaven plugin
         config.setOsaFsaConfig(fsaConfig);
     }
 
@@ -343,7 +363,8 @@ public class CxShragaClient {
 
     private Project createNewProject(CreateProjectRequest request) throws CxClientException, IOException {
         String json = convertToJson(request);
-        StringEntity entity = new StringEntity(json);
+        StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);
         return httpClient.postRequest(CREATE_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, Project.class, 201, "create new project: " + request.getName());
     }
+
 }

@@ -6,8 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.Serializable;
-
-import org.whitesource.fs.FSAConfigProperties;
+import java.util.Properties;
 
 /**
  * Created by galn on 21/12/2016.
@@ -64,7 +63,7 @@ public class CxScanConfig implements Serializable {
     private Integer osaHighThreshold;
     private Integer osaMediumThreshold;
     private Integer osaLowThreshold;
-    private FSAConfigProperties osaFsaConfig; //for MAVEN
+    private Properties osaFsaConfig; //for MAVEN
     private String osaDependenciesJson;
     private Boolean avoidDuplicateProjectScans = false;
     private boolean enablePolicyViolations = false;
@@ -436,11 +435,11 @@ public class CxScanConfig implements Serializable {
         this.osaLowThreshold = osaLowThreshold;
     }
 
-    public FSAConfigProperties getOsaFsaConfig() {
+    public Properties getOsaFsaConfig() {
         return osaFsaConfig;
     }
 
-    public void setOsaFsaConfig(FSAConfigProperties osaFsaConfig) {
+    public void setOsaFsaConfig(Properties osaFsaConfig) {
         this.osaFsaConfig = osaFsaConfig;
     }
 

@@ -2,7 +2,6 @@ package com.cx.restclient;
 
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.cxArm.dto.Policy;
 import com.cx.restclient.dto.Status;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
@@ -13,11 +12,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 import org.whitesource.fs.ComponentScan;
-import org.whitesource.fs.FSAConfigProperties;
-
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Properties;
 
 import static com.cx.restclient.cxArm.dto.CxProviders.OPEN_SOURCE;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getProjectViolatedPolicies;
@@ -34,6 +33,7 @@ class CxOSAClient {
     private CxHttpClient httpClient;
     private Logger log;
     private CxScanConfig config;
+
     private Waiter<OSAScanStatus> osaWaiter = new Waiter<OSAScanStatus>("CxOSA scan", 20) {
         @Override
         public OSAScanStatus getStatus(String id) throws CxClientException, IOException {
@@ -74,7 +74,7 @@ class CxOSAClient {
 
     private String resolveOSADependencies() throws JsonProcessingException {
         log.info("Scanning for CxOSA compatible files");
-        FSAConfigProperties scannerProperties = config.getOsaFsaConfig();
+        Properties scannerProperties = config.getOsaFsaConfig();
         if (scannerProperties == null) {
             scannerProperties = OSAUtils.generateOSAScanConfiguration(
                     config.getOsaFolderExclusions(),
@@ -95,7 +95,7 @@ class CxOSAClient {
     public OSAResults getOSAResults(String scanId, long projectId) throws CxClientException, InterruptedException, IOException {
         log.info("-------------------------------------Get CxOSA Results:-----------------------------------");
         log.info("Waiting for OSA scan to finish");
-        OSAScanStatus osaScanStatus = osaWaiter.waitForTaskToFinish(scanId,this.config.getOsaScanTimeoutInMinutes(), log);
+        OSAScanStatus osaScanStatus = osaWaiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
         log.info("OSA scan finished successfully. Retrieving OSA scan results");
 
         log.info("Creating OSA reports");
@@ -105,7 +105,7 @@ class CxOSAClient {
             resolveOSAViolation(osaResults, projectId);
         }
 
-        OSAUtils.printOSAResultsToConsole(osaResults, config.getEnablePolicyViolations(),  log);
+        OSAUtils.printOSAResultsToConsole(osaResults, config.getEnablePolicyViolations(), log);
 
         if (config.getReportsDir() != null) {
             writeJsonToFile(OSA_SUMMARY_NAME, osaResults.getResults(), config.getReportsDir(), log);
@@ -127,11 +127,11 @@ class CxOSAClient {
         return results;
     }
 
-    private void resolveOSAViolation(OSAResults osaResults, long projectId){
+    private void resolveOSAViolation(OSAResults osaResults, long projectId) {
         try {
             getProjectViolatedPolicies(httpClient, config.getCxARMUrl(), projectId, OPEN_SOURCE.value())
                     .forEach(osaResults::addPolicy);
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             log.error("CxARM is not available. Policy violations for OSA cannot be calculated: " + ex.getMessage());
         }
     }
@@ -160,7 +160,7 @@ class CxOSAClient {
 
     private CreateOSAScanResponse sendOSARequest(long projectId, String osaDependenciesJson) throws IOException, CxClientException {
         CreateOSAScanRequest req = new CreateOSAScanRequest(projectId, osaDependenciesJson);
-        StringEntity entity = new StringEntity(convertToJson(req));
+        StringEntity entity = new StringEntity(convertToJson(req), StandardCharsets.UTF_8);
         return httpClient.postRequest(OSA_SCAN_PROJECT, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CreateOSAScanResponse.class, 201, "create OSA scan");
     }
 
@@ -212,7 +212,7 @@ class CxOSAClient {
     }
 
     private OSAScanStatus resolveOSAStatus(OSAScanStatus scanStatus) throws CxClientException {
-        if (scanStatus ==null || Status.FAILED == scanStatus.getBaseStatus()) {
+        if (scanStatus == null || Status.FAILED == scanStatus.getBaseStatus()) {
             String failedMsg = scanStatus.getState() == null ? "" : "status [" + scanStatus.getState().getName() + "]. Reason: " + scanStatus.getState().getFailureReason();
             throw new CxClientException("OSA scan cannot be completed. " + failedMsg);
         }
