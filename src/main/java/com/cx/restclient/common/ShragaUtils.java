@@ -16,6 +16,9 @@ import java.util.Map;
 public abstract class ShragaUtils {
     public static Map<String, List<String>> generateIncludesExcludesPatternLists(String folderExclusions, String filterPattern, Logger log) {
 
+        folderExclusions = removeSpaceAndNewLine(folderExclusions);
+        filterPattern = removeSpaceAndNewLine(filterPattern);
+
         String excludeFoldersPattern = processExcludeFolders(folderExclusions, log);
         String combinedPatterns = "";
 
@@ -30,6 +33,11 @@ public abstract class ShragaUtils {
         }
 
         return convertPatternsToLists(combinedPatterns);
+    }
+
+    public static String removeSpaceAndNewLine(String string){
+        string = string.replace("\\s","").replace("\n", "").replace("\r", "").replace(" ","").replace("\t","");
+        return string;
     }
 
     public static String processExcludeFolders(String folderExclusions, Logger log) {
