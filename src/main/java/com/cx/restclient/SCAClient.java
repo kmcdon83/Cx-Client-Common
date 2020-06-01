@@ -2,7 +2,6 @@ package com.cx.restclient;
 
 import com.cx.restclient.common.DependencyScanner;
 import com.cx.restclient.common.UrlUtils;
-import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.LoginSettings;
@@ -15,38 +14,65 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.*;
+import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.sca.dto.report.Package;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.ContentBody;
-import org.apache.http.entity.mime.content.InputStreamBody;
-import org.apache.http.entity.mime.content.StringBody;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 public class SCAClient implements DependencyScanner {
-    private static class UrlPaths {
+
+    public static final String ENCODING = StandardCharsets.UTF_8.name();
+
+    private static final String TENANT_HEADER_NAME = "Account-Name";
+
+    private static final ObjectMapper caseInsensitiveObjectMapper = new ObjectMapper()
+            // Ignore any fields that can be added to SCA API in the future.
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            // We need this feature to properly deserialize finding severity,
+            // e.g. "High" (in JSON) -> Severity.HIGH (in Java).
+            .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
+
+    private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
+
+    public static class UrlPaths {
+        private UrlPaths() {
+        }
+
         private static final String RISK_MANAGEMENT_API = "/risk-management/";
         private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
         private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
-        private static final String SCAN_STATUS = RISK_MANAGEMENT_API + "scans/%s/status";
+        public static final String FINDINGS = RISK_MANAGEMENT_API + "riskReports/%s/vulnerabilities";
+        public static final String PACKAGES = RISK_MANAGEMENT_API + "riskReports/%s/packages";
+
         private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
 
-        private static final String ZIP_UPLOAD = "/scan-runner/scans/zip";
+        public static final String GET_UPLOAD_URL = "/api/uploads";
+        public static final String CREATE_SCAN = "/api/scans";
+        public static final String GET_SCAN = "/api/scans/%s";
 
         private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     }
@@ -58,31 +84,23 @@ public class SCAClient implements DependencyScanner {
     private final CxHttpClient httpClient;
 
     private String projectId;
-    private final Waiter<ScanStatusResponse> waiter;
     private String scanId;
 
-    SCAClient(CxScanConfig config, Logger log) throws CxClientException {
+    SCAClient(CxScanConfig config, Logger log) {
         this.log = log;
         this.config = config;
 
-        int pollInterval = config.getOsaProgressInterval() != null ? config.getOsaProgressInterval() : 20;
-        int maxRetries = config.getConnectionRetries() != null ? config.getConnectionRetries() : 3;
-
         SCAConfig scaConfig = getScaConfig();
 
-        httpClient = new CxHttpClient(scaConfig.getApiUrl(),
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                null,
-                config.getProxyConfig(),
-                log);
+        httpClient = createHttpClient(scaConfig.getApiUrl());
 
-        waiter = new SCAWaiter("CxSCA scan", pollInterval, maxRetries, httpClient, UrlPaths.SCAN_STATUS, log);
+        // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
+        // and then use this token for SCA authentication in cloud.
+        httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
     }
 
     @Override
-    public void init() throws CxClientException {
+    public void init() {
         try {
             login();
             resolveProject();
@@ -91,17 +109,41 @@ public class SCAClient implements DependencyScanner {
         }
     }
 
+    /**
+     * Waits for SCA scan to finish, then gets scan results.
+     *
+     * @param target scan results will be written into this object
+     *               ({@link com.cx.restclient.dto.DependencyScanResults#setScaResults}).
+     * @throws CxClientException in case of a network error, scan failure or when scan is aborted by timeout.
+     */
     @Override
-    public String createScan(DependencyScanResults target) throws CxClientException {
-        log.info("----------------------------------- Create CxSCA Scan:------------------------------------");
+    public void waitForScanResults(DependencyScanResults target) {
+        log.info("------------------------------------Get CxSCA Results:-----------------------------------");
 
-        PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
+        log.info("Waiting for CxSCA scan to finish");
+        SCAWaiter waiter = new SCAWaiter(httpClient, config);
+        waiter.waitForScanToFinish(scanId);
+        log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
+
+        SCAResults scaResult = retrieveScanResults();
+        target.setScaResults(scaResult);
+    }
+
+    @Override
+    public String createScan(DependencyScanResults target) {
+        log.info("----------------------------------- Creating CxSCA Scan:------------------------------------");
+
         scanId = null;
         try {
-            String sourceDir = config.getEffectiveSourceDirForDependencyScan();
-            File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
-            scanId = uploadZipFile(zipFile);
-            CxZipUtils.deleteZippedSources(zipFile, config, log);
+            SourceLocationType locationType = getScaConfig().getSourceLocationType();
+            HttpResponse response;
+            if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
+                response = submitSourcesFromRemoteRepo();
+            } else {
+                response = submitSourcesFromLocalDir();
+            }
+            scanId = extractScanIdFrom(response);
+            log.info(String.format("Scan started successfully. Scan ID: %s", scanId));
         } catch (IOException e) {
             throw new CxClientException("Error creating CxSCA scan.", e);
         }
@@ -109,67 +151,161 @@ public class SCAClient implements DependencyScanner {
         return scanId;
     }
 
-    @Override
-    public void waitForScanResults(DependencyScanResults target) throws CxClientException {
-        log.info("------------------------------------Get CxSCA Results:-----------------------------------");
+    private static String extractScanIdFrom(HttpResponse response) {
+        if (response != null && response.getLastHeader("Location") != null) {
+            // Expecting a value like "/api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293"
+            String urlPathWithScanId = response.getLastHeader("Location").getValue();
+            String lastPathSegment = FilenameUtils.getName(urlPathWithScanId);
+            if (StringUtils.isNotEmpty(lastPathSegment)) {
+                return lastPathSegment;
+            }
+        }
+        throw new CxClientException("Unable to get scan ID.");
+    }
 
-        log.info("Waiting for CxSCA scan to finish");
-        waiter.waitForTaskToFinish(scanId, this.config.getOsaScanTimeoutInMinutes(), log);
+    private HttpResponse submitSourcesFromRemoteRepo() throws IOException {
+        log.info("Using remote repository flow.");
+        RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
+        validateRemoteRepoConfig(repoInfo);
 
-        log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
-        SCAResults scaResult;
-        try {
-            scaResult = retrieveScanResults();
-        } catch (IOException e) {
-            throw new CxClientException("Error retrieving CxSCA scan results.", e);
+        URL sanitizedUrl = sanitize(repoInfo.getUrl());
+        log.info(String.format("Repository URL: %s", sanitizedUrl));
+
+        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString());
+    }
+
+    /**
+     * Removes the userinfo part of the input URL (if present), so that the URL may be logged safely.
+     * The URL may contain userinfo when a private repo is scanned.
+     */
+    private URL sanitize(URL url) throws MalformedURLException {
+        return new URL(url.getProtocol(), url.getHost(), url.getFile());
+    }
+
+    private HttpResponse submitSourcesFromLocalDir() throws IOException {
+        log.info("Using local directory flow.");
+
+        PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
+        String sourceDir = config.getEffectiveSourceDirForDependencyScan();
+        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
+
+        String uploadedArchiveUrl = getSourcesUploadUrl();
+        uploadArchive(zipFile, uploadedArchiveUrl);
+        CxZipUtils.deleteZippedSources(zipFile, config, log);
+
+        return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
+    }
+
+    private HttpResponse sendStartScanRequest(SourceLocationType sourceLocation, String sourceUrl) throws IOException {
+        log.info("Sending a request to start scan.");
+
+        ScanStartHandler handler = ScanStartHandler.builder()
+                .url(sourceUrl)
+                .build();
+
+        ProjectToScan project = ProjectToScan.builder()
+                .id(projectId)
+                .type(sourceLocation.getApiValue())
+                .handler(handler)
+                .build();
+
+        StartScanRequest request = StartScanRequest.builder()
+                .project(project)
+                .build();
+
+        StringEntity entity = HttpClientHelper.convertToStringEntity(request);
+
+        return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
+                HttpResponse.class, HttpStatus.SC_CREATED, "start CxSCA scan");
+    }
+
+    private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
+        if (repoInfo == null) {
+            String message = String.format(
+                    "%s must be provided in CxSCA configuration when using source location of type %s.",
+                    RemoteRepositoryInfo.class.getName(),
+                    SourceLocationType.REMOTE_REPOSITORY.name());
+
+            throw new CxClientException(message);
+        }
+    }
+
+    private String getSourcesUploadUrl() throws IOException {
+        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL, null, null, JsonNode.class,
+                HttpStatus.SC_OK, "get upload URL for sources");
+
+        if (response == null || response.get("url") == null) {
+            throw new CxClientException("Unable to get the upload URL.");
         }
 
+        return response.get("url").asText();
+    }
+
+    private void uploadArchive(File source, String uploadUrl) throws IOException {
+        log.info("Uploading the zipped sources.");
+
+        HttpEntity request = new FileEntity(source);
+
+        CxHttpClient uploader = createHttpClient(uploadUrl);
+
+        // Relative path is empty, because we use the whole upload URL as the base URL for the HTTP client.
+        // Content type is empty, because the server at uploadUrl throws an error if Content-Type is non-empty.
+        uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
+    }
+
+    private void printWebReportLink(SCAResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info("CxSCA scan results location: " + scaResult.getWebReportLink());
+            log.info(String.format("CxSCA scan results location: %s", scaResult.getWebReportLink()));
         }
-
-        target.setScaResults(scaResult);
     }
 
     @Override
     public DependencyScanResults getLatestScanResults() {
-        // TODO
+        // TODO: implement when someone actually needs this.
         return null;
     }
 
-    void testConnection() throws IOException, CxClientException {
+    void testConnection() throws IOException {
         // The calls below allow to check both access control and API connectivity.
         login();
         getProjects();
     }
 
-    private void login() throws IOException, CxClientException {
+    private void login() throws IOException {
         log.info("Logging into CxSCA.");
         SCAConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
-        settings.setAccessControlBaseUrl(scaConfig.getAccessControlUrl());
+
+        String acUrl = scaConfig.getAccessControlUrl();
+        boolean isAccessControlInCloud = (acUrl != null && acUrl.startsWith(CLOUD_ACCESS_CONTROL_BASE_URL));
+        log.info(isAccessControlInCloud ? "Using cloud authentication." : "Using on-premise authentication.");
+
+        settings.setAccessControlBaseUrl(acUrl);
         settings.setUsername(scaConfig.getUsername());
         settings.setPassword(scaConfig.getPassword());
         settings.setTenant(scaConfig.getTenant());
-        settings.setClientTypeForPasswordAuth(ClientType.SCA_CLI);
+
+        ClientType clientType = isAccessControlInCloud ? ClientType.SCA_CLI : ClientType.RESOURCE_OWNER;
+        settings.setClientTypeForPasswordAuth(clientType);
 
         httpClient.login(settings);
     }
 
-    private void resolveProject() throws IOException, CxClientException {
+    private void resolveProject() throws IOException {
         String projectName = config.getProjectName();
+        log.info(String.format("Getting project by name: '%s'", projectName));
         projectId = getProjectIdByName(projectName);
         if (projectId == null) {
-            log.debug("Project not found, creating a new one.");
+            log.info("Project not found, creating a new one.");
             projectId = createProject(projectName);
+            log.info(String.format("Created a project with ID %s", projectId));
+        } else {
+            log.info(String.format("Project already exists with ID %s", projectId));
         }
-        log.debug("Using project ID: " + projectId);
     }
 
-    private String getProjectIdByName(String name) throws IOException, CxClientException {
-        log.debug("Getting project by name: " + name);
-
+    private String getProjectIdByName(String name) throws IOException {
         if (StringUtils.isEmpty(name)) {
             throw new CxClientException("Non-empty project name must be provided.");
         }
@@ -183,16 +319,12 @@ public class SCAClient implements DependencyScanner {
                 .orElse(null);
     }
 
-    private List<Project> getProjects() throws IOException, CxClientException {
-        return (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS,
-                    ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                    Project.class,
-                    HttpStatus.SC_OK,
-                    "CxSCA projects",
-                    true);
+    private List<Project> getProjects() throws IOException {
+        return (List<Project>) httpClient.getRequest(UrlPaths.PROJECTS, ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                Project.class, HttpStatus.SC_OK, "CxSCA projects", true);
     }
 
-    private String createProject(String name) throws CxClientException, IOException {
+    private String createProject(String name) throws IOException {
         CreateProjectRequest request = new CreateProjectRequest();
         request.setName(name);
 
@@ -208,113 +340,144 @@ public class SCAClient implements DependencyScanner {
         return newProject.getId();
     }
 
-    private String uploadZipFile(File zipFile) throws IOException, CxClientException {
-        log.info("Uploading zipped sources.");
+    private SCAResults retrieveScanResults() {
+        try {
+            String reportId = getReportId();
 
-        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-        builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+            SCAResults result = new SCAResults();
+            result.setScanId(scanId);
 
-        InputStream input = new FileInputStream(zipFile.getAbsoluteFile());
-        InputStreamBody fileBody = new InputStreamBody(input, org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
-        builder.addPart("zipFile", fileBody);
+            SCASummaryResults scanSummary = getSummaryReport(reportId);
+            result.setSummary(scanSummary);
+            printSummary(scanSummary, scanId);
 
-        ContentBody projectIdBody = new StringBody(projectId, org.apache.http.entity.ContentType.APPLICATION_FORM_URLENCODED);
-        builder.addPart("projectId", projectIdBody);
+            List<Finding> findings = getFindings(reportId);
+            result.setFindings(findings);
 
-        HttpEntity entity = builder.build();
+            List<Package> packages = getPackages(reportId);
+            result.setPackages(packages);
 
-        String scanId = httpClient.postRequest(UrlPaths.ZIP_UPLOAD, null, entity, String.class, HttpStatus.SC_CREATED, "upload ZIP file");
-        log.debug("Scan ID: " + scanId);
-
-        return scanId;
-    }
-
-    private SCAResults retrieveScanResults() throws IOException, CxClientException {
-        String reportId = getReportId();
-
-        SCAResults result = new SCAResults();
-        result.setScanId(scanId);
-
-        SCASummaryResults scanSummary = getSummaryReport(reportId);
-        result.setSummary(scanSummary);
-
-        String reportLink = getWebReportLink(reportId);
-        result.setWebReportLink(reportLink);
-        return result;
+            String reportLink = getWebReportLink(reportId);
+            result.setWebReportLink(reportLink);
+            printWebReportLink(result);
+            return result;
+        } catch (IOException e) {
+            throw new CxClientException("Error retrieving CxSCA scan results.", e);
+        }
     }
 
     private String getWebReportLink(String reportId) {
-        String MESSAGE = "Unable to generate web report link. ";
+        final String MESSAGE = "Unable to generate web report link.";
         String result = null;
         try {
             String webAppUrl = getScaConfig().getWebAppUrl();
             if (StringUtils.isEmpty(webAppUrl)) {
-                log.warn(MESSAGE + "Web app URL is not specified.");
+                log.warn(String.format("%s Web app URL is not specified.", MESSAGE));
             } else {
-                String encoding = StandardCharsets.UTF_8.name();
                 String path = String.format(UrlPaths.WEB_REPORT,
-                        URLEncoder.encode(projectId, encoding),
-                        URLEncoder.encode(reportId, encoding));
+                        URLEncoder.encode(projectId, ENCODING),
+                        URLEncoder.encode(reportId, ENCODING));
 
                 result = UrlUtils.parseURLToString(webAppUrl, path);
             }
         } catch (MalformedURLException e) {
-            log.warn(MESSAGE + "Invalid web app URL.", e);
+            log.warn("Unable to generate web report link: invalid web app URL.", e);
         } catch (Exception e) {
-            log.warn(MESSAGE, e);
+            log.warn("Unable to generate web report link: general error.", e);
         }
         return result;
     }
 
-    private String getReportId() throws IOException, CxClientException {
-        log.debug("Getting report ID by scan ID: " + scanId);
-        String path = String.format(UrlPaths.REPORT_ID, scanId);
+    private String getReportId() throws IOException {
+        log.debug(String.format("Getting report ID by scan ID: %s", scanId));
+        String path = String.format(UrlPaths.REPORT_ID,
+                URLEncoder.encode(scanId, ENCODING));
+
         String reportId = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 String.class,
                 HttpStatus.SC_OK,
                 "Risk report ID",
                 false);
-        log.debug("Found report ID: " + reportId);
+        log.debug(String.format("Found report ID: %s", reportId));
         return reportId;
     }
 
-    private SCASummaryResults getSummaryReport(String reportId) throws IOException, CxClientException {
+    private SCASummaryResults getSummaryReport(String reportId) throws IOException {
         log.debug("Getting summary report.");
 
-        String path = String.format(UrlPaths.SUMMARY_REPORT, reportId);
+        String path = String.format(UrlPaths.SUMMARY_REPORT,
+                URLEncoder.encode(reportId, ENCODING));
 
-        SCASummaryResults result = httpClient.getRequest(path,
+        return httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 SCASummaryResults.class,
                 HttpStatus.SC_OK,
                 "CxSCA report summary",
                 false);
-
-        printSummary(result);
-
-        return result;
     }
 
-    // This method is for demo purposes and probably should be replaced in the future.
-    private void printSummary(SCASummaryResults summary) {
-        log.info("\n----CxSCA risk report summary----");
-        log.info("Created on: " + summary.getCreatedOn());
-        log.info("Direct packages: " + summary.getDirectPackages());
-        log.info("High vulnerabilities: " + summary.getHighVulnerabilityCount());
-        log.info("Medium vulnerabilities: " + summary.getMediumVulnerabilityCount());
-        log.info("Low vulnerabilities: " + summary.getLowVulnerabilityCount());
-        log.info("Risk report ID: " + summary.getRiskReportId());
-        log.info("Risk score: " + summary.getRiskScore());
-        log.info("Total packages: " + summary.getTotalPackages());
-        log.info(String.format("Total outdated packages: %d\n", summary.getTotalOutdatedPackages()));
+    private List<Finding> getFindings(String reportId) throws IOException {
+        log.debug("Getting findings.");
+
+        String path = String.format(UrlPaths.FINDINGS, URLEncoder.encode(reportId, ENCODING));
+
+        ArrayNode responseJson = httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                ArrayNode.class,
+                HttpStatus.SC_OK,
+                "CxSCA findings",
+                false);
+
+        Finding[] findings = caseInsensitiveObjectMapper.treeToValue(responseJson, Finding[].class);
+
+        return Arrays.asList(findings);
     }
 
-    private SCAConfig getScaConfig() throws CxClientException {
+    private List<Package> getPackages(String reportId) throws IOException {
+        log.debug("Getting packages.");
+
+        String path = String.format(UrlPaths.PACKAGES, URLEncoder.encode(reportId, ENCODING));
+
+        return (List<Package>) httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                Package.class,
+                HttpStatus.SC_OK,
+                "CxSCA findings",
+                true);
+    }
+
+    private void printSummary(SCASummaryResults summary, String scanId) {
+        if (log.isInfoEnabled()) {
+            log.info(String.format("%n----CxSCA risk report summary----"));
+            log.info(String.format("Created on: %s", summary.getCreatedOn()));
+            log.info(String.format("Direct packages: %d", summary.getDirectPackages()));
+            log.info(String.format("High vulnerabilities: %d", summary.getHighVulnerabilityCount()));
+            log.info(String.format("Medium vulnerabilities: %d", summary.getMediumVulnerabilityCount()));
+            log.info(String.format("Low vulnerabilities: %d", summary.getLowVulnerabilityCount()));
+            log.info(String.format("Risk report ID: %s", summary.getRiskReportId()));
+            log.info(String.format("Scan ID: %s", scanId));
+            log.info(String.format("Risk score: %.2f", summary.getRiskScore()));
+            log.info(String.format("Total packages: %d", summary.getTotalPackages()));
+            log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
+        }
+    }
+
+    private SCAConfig getScaConfig() {
         SCAConfig result = config.getScaConfig();
         if (result == null) {
             throw new CxClientException("CxSCA scan configuration is missing.");
         }
         return result;
+    }
+
+    private CxHttpClient createHttpClient(String baseUrl) {
+        return new CxHttpClient(baseUrl,
+                config.getCxOrigin(),
+                config.isDisableCertificateValidation(),
+                config.isUseSSOLogin(),
+                null,
+                config.getProxyConfig(),
+                log);
     }
 }

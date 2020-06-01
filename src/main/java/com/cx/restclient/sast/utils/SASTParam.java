@@ -6,8 +6,8 @@ package com.cx.restclient.sast.utils;
 public class SASTParam {
     //REST PATH
     public static final String SAST_ENGINE_CONFIG = "sast/engineConfigurations";
-    public static final String SAST_UPDATE_SCAN_SETTINGS = "sast/pluginsScanSettings"; //Update preset and configuration
-    public static final String SAST_GET_SCAN_SETTINGS = "/sast/scanSettings/{projectId}"; //Update preset and configuration
+    public static final String SAST_UPDATE_SCAN_SETTINGS = "sast/scanSettings"; //Update preset and configuration
+    public static final String SAST_GET_SCAN_SETTINGS = "/sast/scanSettings/{projectId}"; //Get preset and configuration
     public static final String SAST_CREATE_SCAN = "sast/scans"; //Run a new Scan
     public static final String SAST_SCAN = "sast/scans/{scanId}"; //Get Scan status (by scan ID)
     public static final String SAST_QUEUE_SCAN_STATUS = "sast/scansQueue/{scanId}";
@@ -20,6 +20,7 @@ public class SASTParam {
 
 
     public static final String SAST_CREATE_REMOTE_SOURCE_SCAN = "projects/%s/sourceCode/remoteSettings/%s/%s";
+    public static final String SAST_EXCLUDE_FOLDERS_FILES_PATTERNS = "projects/%s/sourceCode/excludeSettings";
 
 
 

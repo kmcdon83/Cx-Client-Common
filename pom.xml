@@ -7,12 +7,12 @@
     <version>2020.1.16.SCA</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
-    <description>Enables web services access Checkmarx SAST and OSA scan.</description>
+    <description>Web client for interaction with Checkmarx SAST, SCA and OSA products</description>
     <url>https://www.checkmarx.com</url>
     <scm>
-        <connection>scm:git:git://github.com/CxRepositories/Cx-Client-Common.git</connection>
-        <developerConnection>scm:git:ssh://github.com/CxRepositories/Cx-Client-Common.git</developerConnection>
-        <url>https://github.com/CxRepositories/Cx-Client-Common/tree/master</url>
+        <connection>scm:git:git://github.com/checkmarx-ltd/Cx-Client-Common.git</connection>
+        <developerConnection>scm:git:ssh://github.com/checkmarx-ltd/Cx-Client-Common.git</developerConnection>
+        <url>https://github.com/checkmarx-ltd/Cx-Client-Common/tree/master</url>
     </scm>
     <licenses>
         <license>
@@ -69,6 +69,27 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+
+            <!-- Build a fat JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <resources>
             <resource>
@@ -86,8 +107,13 @@
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.28</version>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.21</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
         </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>
@@ -152,7 +178,7 @@
         <dependency>
             <groupId>com.checkmarx</groupId>
             <artifactId>cx-ws-fs-agent</artifactId>
-            <version>20.0.3</version>
+            <version>20.0.5</version>
             <exclusions>
                 <exclusion>
                     <groupId>javax.xml.bind</groupId>
@@ -191,6 +217,17 @@
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.10</version>
+        </dependency>
+
         <!-- API -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
@@ -255,7 +292,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!--<plugin>
+                    <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
                         <version>1.6.7</version>
@@ -283,9 +320,17 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>-->
+                    </plugin>
                 </plugins>
             </build>
         </profile>
     </profiles>
+    <developers>
+        <developer>
+            <name>Alexey Kononov</name>
+            <email>alexey.kononov@checkmarx.com</email>
+            <organization>Checkmarx Ltd</organization>
+            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
+        </developer>
+    </developers>
 </project>

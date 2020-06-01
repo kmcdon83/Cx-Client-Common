@@ -9,8 +9,8 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.exception.CxTokenExpiredException;
 import com.cx.restclient.osa.dto.ClientType;
-import org.apache.commons.lang3.StringUtils;
 import com.google.gson.Gson;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -61,7 +61,9 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
@@ -95,6 +97,7 @@ public class CxHttpClient {
     private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
     private HttpClientBuilder cb = HttpClients.custom();
+    private final Map<String,String> customHeaders = new HashMap<>();
 
     public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
                         @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
@@ -324,12 +327,11 @@ public class CxHttpClient {
 
     private String retrieveCookies() {
         List<Cookie> cookieList = cookieStore.getCookies();
-        String cookies = "";
-        for (Cookie cookie : cookieList) {
-            cookies += cookie.getName() + "=" + cookie.getValue() + ";";
-        }
-
-        return cookies;
+        final StringBuilder builder = new StringBuilder();
+        cookieList.forEach(cookie -> {
+            builder.append(cookie.getName()).append("=").append(cookie.getValue()).append(";");
+        });
+        return builder.toString();
     }
 
     public TokenLoginResponse generateToken(LoginSettings settings) throws IOException, CxClientException {
@@ -443,8 +445,13 @@ public class CxHttpClient {
         request(patch, contentType, entity, null, expectStatus, failedMsg, false, true);
     }
 
-    public void setTeamPathHeader(String teamPath){
+    public void setTeamPathHeader(String teamPath) {
         this.teamPath = teamPath;
+    }
+
+    public void addCustomHeader(String name, String value) {
+        log.debug(String.format("Adding a custom header: %s: %s", name, value));
+        customHeaders.put(name, value);
     }
 
     private <T> T request(HttpRequestBase httpMethod, String contentType, HttpEntity entity, Class<T> responseType, int expectStatus, String failedMsg, boolean isCollection, boolean retry) throws IOException, CxClientException {
@@ -459,16 +466,19 @@ public class CxHttpClient {
 
         try {
             httpMethod.addHeader(ORIGIN_HEADER, cxOrigin);
-            log.debug("request setTeamPathHeader " + this.teamPath);
             httpMethod.addHeader(TEAM_PATH, this.teamPath);
             if (token != null) {
                 httpMethod.addHeader(HttpHeaders.AUTHORIZATION, token.getToken_type() + " " + token.getAccess_token());
             }
 
+            for (Map.Entry<String, String> entry : customHeaders.entrySet()) {
+                httpMethod.addHeader(entry.getKey(), entry.getValue());
+            }
+
             response = apacheClient.execute(httpMethod);
             statusCode = response.getStatusLine().getStatusCode();
 
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_UNAUTHORIZED) { //Token expired
+            if (statusCode == HttpStatus.SC_UNAUTHORIZED) { // Token has probably expired
                 throw new CxTokenExpiredException(extractResponseBody(response));
             }
 
@@ -480,7 +490,7 @@ public class CxHttpClient {
             throw new CxHTTPClientException(ErrorMessage.CHECKMARX_SERVER_CONNECTION_FAILED.getErrorMessage());
         } catch (CxTokenExpiredException ex) {
             if (retry) {
-                log.warn("Access token expired for request: " + httpMethod.getURI() + ", Status code:" + statusCode + "requesting a new token. message: " + ex.getMessage());
+                logTokenError(httpMethod, statusCode, ex);
                 login(lastLoginSettings);
                 return request(httpMethod, contentType, entity, responseType, expectStatus, failedMsg, isCollection, false);
             }
@@ -535,6 +545,17 @@ public class CxHttpClient {
 
     public void setToken(TokenLoginResponse token){
         this.token = token;
+    }
+
+    private void logTokenError(HttpRequestBase httpMethod, int statusCode, CxTokenExpiredException ex) {
+        String message = String.format("Received status code %d for URL: %s with the message: %s",
+                statusCode,
+                httpMethod.getURI(),
+                ex.getMessage());
+
+        log.warn(message);
+
+        log.info("Possible reason: access token has expired. Trying to request a new token...");
     }
 
 }

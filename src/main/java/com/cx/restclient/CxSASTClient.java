@@ -3,7 +3,10 @@ package com.cx.restclient;
 import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.*;
+import com.cx.restclient.dto.PathFilter;
+import com.cx.restclient.dto.RemoteSourceRequest;
+import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.dto.Status;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.sast.dto.*;
@@ -25,10 +28,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.cx.restclient.cxArm.dto.CxProviders.SAST;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getProjectViolatedPolicies;
@@ -125,18 +126,7 @@ class CxSASTClient {
     }
 
     private long createLocalSASTScan(long projectId) throws IOException, CxClientException {
-
-        ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
-        ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
-        scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
-        scanSettingRequest.setProjectId(projectId);
-        scanSettingRequest.setPresetId(config.getPresetId());
-        if (config.getEngineConfigurationId() != null) {
-            scanSettingRequest.setEngineConfigurationId(config.getEngineConfigurationId());
-        }
-        //Define createSASTScan settings
-        defineScanSetting(scanSettingRequest);
-
+        configureScanSettings(projectId);
         //prepare sources for scan
         PathFilter filter = new PathFilter(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
         File zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
@@ -148,6 +138,7 @@ class CxSASTClient {
 
     private long createRemoteSourceScan(long projectId) throws IOException, CxClientException {
         HttpEntity entity;
+        excludeProjectSettings(projectId);
         RemoteSourceRequest req = new RemoteSourceRequest(config);
         RemoteSourceTypes type = req.getType();
         boolean isSSH = false;
@@ -200,9 +191,24 @@ class CxSASTClient {
                 entity = new StringEntity("", StandardCharsets.UTF_8);
 
         }
+        configureScanSettings(projectId);
         createRemoteSourceRequest(projectId, entity, type.value(), isSSH);
 
         return createScan(projectId);
+    }
+
+
+    private void configureScanSettings(long projectId) throws IOException {
+        ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
+        ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
+        scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
+        scanSettingRequest.setProjectId(projectId);
+        scanSettingRequest.setPresetId(config.getPresetId());
+        if (config.getEngineConfigurationId() != null) {
+            scanSettingRequest.setEngineConfigurationId(config.getEngineConfigurationId());
+        }
+        //Define createSASTScan settings
+        defineScanSetting(scanSettingRequest);
     }
 
     //GET SAST results + reports
@@ -332,6 +338,16 @@ class CxSASTClient {
         httpClient.putRequest(SAST_UPDATE_SCAN_SETTINGS, CONTENT_TYPE_APPLICATION_JSON_V1, entity, CxID.class, 200, "define scan setting");
     }
 
+    private void excludeProjectSettings(long projectId) throws IOException, CxClientException {
+        String excludeFoldersPattern = Arrays.stream(config.getSastFolderExclusions().split(",")).map(String::trim).collect(Collectors.joining(","));
+        String excludeFilesPattern = Arrays.stream(config.getSastFilterPattern().split(",")).map(String::trim).map(file -> file.replace("!**/", "")).collect(Collectors.joining(","));
+        ExcludeSettingsRequest excludeSettingsRequest = new ExcludeSettingsRequest(excludeFoldersPattern, excludeFilesPattern);
+        StringEntity entity = new StringEntity(convertToJson(excludeSettingsRequest), StandardCharsets.UTF_8);
+        log.info("Exclude folders pattern: " + excludeFoldersPattern);
+        log.info("Exclude files pattern: " + excludeFilesPattern);
+        httpClient.putRequest(String.format(SAST_EXCLUDE_FOLDERS_FILES_PATTERNS, projectId), CONTENT_TYPE_APPLICATION_JSON_V1, entity, null, 200, "exclude project's settings");
+    }
+
     private void uploadZipFile(File zipFile, long projectId) throws CxClientException, IOException {
         log.info("Uploading zip file");
 
@@ -355,7 +371,7 @@ class CxSASTClient {
     }
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
-        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), CONTENT_TYPE_APPLICATION_JSON_V1,
+        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), isSSH? null : CONTENT_TYPE_APPLICATION_JSON_V1,
                 entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
 
         return cxID;
