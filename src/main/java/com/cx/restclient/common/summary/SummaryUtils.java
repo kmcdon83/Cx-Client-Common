@@ -60,7 +60,7 @@ public abstract class SummaryUtils {
             if (sastResults.isSastResultsReady()) {
                 boolean sastThresholdExceeded = scanSummary.isSastThresholdExceeded();
                 boolean sastNewResultsExceeded = scanSummary.isSastThresholdForNewResultsExceeded();
-                templateData.put("sastThresholdExceeded", sastNewResultsExceeded);
+                templateData.put("sastThresholdExceeded", sastThresholdExceeded);
                 templateData.put("sastNewResultsExceeded", sastNewResultsExceeded);
                 buildFailed = sastThresholdExceeded || sastNewResultsExceeded;
                 //calculate sast bars:

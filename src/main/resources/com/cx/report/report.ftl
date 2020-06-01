@@ -947,18 +947,22 @@
                     <#if config.sastEnabled && !sast.sastResultsReady>
                         <li>SAST Scan Failed</li>
                     </#if>
-                    <#if config.dependencyScannerType == "OSA" && !osa.osaResultsReady>
+                    <#if config.dependencyScannerType == "OSA" && !dependencyResult.resultReady>
                         <li>OSA Scan Failed</li>
                     </#if>
                     <#if policyViolated>
                         <li>${policyViolatedCount} ${policyLabel}  Violated</li>
                     </#if>
-                    <#if config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && config.dependencyScannerType == "OSA" && osa.osaResultsReady && osaThresholdExceeded>
-                        <li>Exceeded CxSAST and CxOSA Vulnerability Thresholds</li>
+                    <#if config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && (config.dependencyScannerType == "OSA" || config.dependencyScannerType == "SCA") && dependencyResult.resultReady && dependencyThresholdExceeded>
+                        <li>Exceeded CxSAST and CxOSA/CxSCA Vulnerability Thresholds</li>
                     <#elseif config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded)>
                         <li>Exceeded CxSAST Vulnerability Threshold</li>
-                    <#elseif config.dependencyScannerType == "OSA" && osa.osaResultsReady && osaThresholdExceeded>
+                    <#elseif config.dependencyScannerType == "OSA" && dependencyResult.resultReady && dependencyThresholdExceeded>
                         <li>Exceeded CxOSA Vulnerability Threshold</li>
+                    <#elseif config.dependencyScannerType == "SCA" && dependencyResult.resultReady && dependencyThresholdExceeded>
+                        <li>Exceeded CxSCA Vulnerability Threshold</li>
+                    <#else>
+                        <li>CxScan Failed</li>
                     </#if>
                 </ul>
             </div>
