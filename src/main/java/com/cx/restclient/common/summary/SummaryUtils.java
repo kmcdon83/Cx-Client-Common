@@ -148,7 +148,7 @@ public abstract class SummaryUtils {
 
         if (config.getDependencyScannerType() == DependencyScannerType.OSA || config.getDependencyScannerType() == DependencyScannerType
         .SCA) {
-            if (dependencyResult.isResultReady()) {
+            if (dependencyResult!=null && dependencyResult.isResultReady()) {
                 boolean thresholdExceeded = scanSummary.isOsaThresholdExceeded();
                 templateData.put("dependencyThresholdExceeded", thresholdExceeded);
                 if(config.getSastEnabled()){
