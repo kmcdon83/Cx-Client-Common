@@ -267,7 +267,8 @@ class CxSASTClient {
         CreateReportResponse createReportResponse = createScanReport(reportRequest);
         int reportId = createReportResponse.getReportId();
         reportWaiter.waitForTaskToFinish(Long.toString(reportId), reportTimeoutSec, log);
-
+        //Add sleep, in pipeLine in some cases getReport return nothing
+        Thread.sleep(3000);
         return getReport(reportId, contentType);
     }
 
