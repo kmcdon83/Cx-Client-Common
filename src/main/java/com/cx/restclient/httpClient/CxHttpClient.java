@@ -196,9 +196,16 @@ public class CxHttpClient {
 
     public void login(LoginSettings settings) throws IOException, CxClientException {
         lastLoginSettings = settings;
+
+        if(!settings.getSessionCookies().isEmpty()){
+            setSessionCookies(settings.getSessionCookies());
+            return;
+        }
+
         if (settings.getRefreshToken() != null) {
             token = getAccessTokenFromRefreshToken(settings);
-        } else if (useSSo) {
+        }
+        else if (useSSo) {
             if (settings.getVersion().equals("lower than 9.0")) {
                 ssoLegacyLogin();
             } else {
@@ -209,12 +216,9 @@ public class CxHttpClient {
         }
     }
 
-    public void ssoLegacyLogin() throws CxClientException {
+    public ArrayList<Cookie> ssoLegacyLogin() throws CxClientException {
         HttpUriRequest request;
         HttpResponse loginResponse = null;
-
-        String cxCookie = null;
-        String csrfToken = null;
 
         try {
             request = RequestBuilder.post()
@@ -231,8 +235,17 @@ public class CxHttpClient {
         } finally {
             HttpClientUtils.closeQuietly(loginResponse);
         }
+        setSessionCookies(cookieStore.getCookies());
 
-        for (Cookie cookie : cookieStore.getCookies()) {
+        //return cookies clone - for IDE's usage
+        return new ArrayList<>(cookieStore.getCookies());
+    }
+
+    private void setSessionCookies(List<Cookie> cookies){
+        String cxCookie = null;
+        String csrfToken = null;
+
+        for (Cookie cookie : cookies) {
             if (cookie.getName().equals(CSRF_TOKEN_HEADER)) {
                 csrfToken = cookie.getValue();
             }
@@ -530,6 +543,10 @@ public class CxHttpClient {
         }
     }
 
+    public void setToken(TokenLoginResponse token){
+        this.token = token;
+    }
+
     private void logTokenError(HttpRequestBase httpMethod, int statusCode, CxTokenExpiredException ex) {
         String message = String.format("Received status code %d for URL: %s with the message: %s",
                 statusCode,
@@ -540,4 +557,5 @@ public class CxHttpClient {
 
         log.info("Possible reason: access token has expired. Trying to request a new token...");
     }
+
 }

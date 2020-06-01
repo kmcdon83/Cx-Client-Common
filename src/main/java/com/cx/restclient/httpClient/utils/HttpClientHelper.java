@@ -22,6 +22,11 @@ import java.util.List;
 public abstract class HttpClientHelper {
 
     public static <T> T convertToObject(HttpResponse response, Class<T> responseType, boolean isCollection) throws IOException, CxClientException {
+      
+        if(responseType != null && responseType.isInstance(response)) {
+            return (T) response;
+        }
+          
         // If the caller is asking for the whole response, return the response (instead of just its entity),
         // no matter if the entity is empty.
         if (responseType != null && responseType.isAssignableFrom(response.getClass())) {
@@ -40,6 +45,7 @@ public abstract class HttpClientHelper {
         if (isCollection) {
             return convertToCollectionObject(response, TypeFactory.defaultInstance().constructCollectionType(List.class, responseType));
         }
+
         //convert to T
         return convertToStrObject(response, responseType);
     }
