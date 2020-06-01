@@ -11,12 +11,7 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import org.whitesource.fs.FSAConfigProperties;
-
+import java.util.*;
 
 import static com.cx.restclient.common.CxPARAM.CX_REPORT_LOCATION;
 
@@ -50,8 +45,8 @@ public abstract class OSAUtils {
         return String.format(url + "/CxWebClient/SPA/#/viewer/project/%s", projectId);
     }
 
-    public static FSAConfigProperties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, Logger log) {
-        FSAConfigProperties ret = new FSAConfigProperties();
+    public static Properties generateOSAScanConfiguration(String folderExclusions, String filterPatterns, String archiveIncludes, String scanFolder, boolean installBeforeScan, Logger log) {
+        Properties ret = new Properties();
         filterPatterns = StringUtils.defaultString(filterPatterns);
         archiveIncludes = StringUtils.defaultString(archiveIncludes);
 
@@ -94,9 +89,12 @@ public abstract class OSAUtils {
             ret.put("npm.runPreStep", "true");
             ret.put("bower.runPreStep", "false");
             ret.put("npm.ignoreScripts", "true");
-            setResolveDependencies(ret,"true");
-        }else {
-            setResolveDependencies(ret,"false");
+            ret.put("php.runPreStep", "true");
+            ret.put("sbt.runPreStep", "true");
+            setResolveDependencies(ret, "true");
+            ret.put("sbt.targetFolder", getSbtTargetFolder(scanFolder));
+        } else {
+            setResolveDependencies(ret, "false");
         }
 
         ret.put("d", scanFolder);
@@ -109,7 +107,43 @@ public abstract class OSAUtils {
         ret.put("nuget.restoreDependencies", resolveDependencies);
         ret.put("python.resolveDependencies", resolveDependencies);
         ret.put("python.ignorePipInstallErrors", resolveDependencies);
+        ret.put("php.resolveDependencies", resolveDependencies);
+        ret.put("sbt.resolveDependencies", resolveDependencies);
     }
+
+    private static String getSbtTargetFolder(String sourceFolder){
+        List<File> files = new ArrayList<File>();
+        files = getBuildSbtFiles(sourceFolder, files);
+
+        if(!files.isEmpty()){
+            return files.get(0).getAbsolutePath().replace("build.sbt", "target");
+        }
+        return "target";
+    }
+
+    private static List<File> getBuildSbtFiles(String path, List<File> inputFiles)
+    {
+        File folder = new File(path);
+
+        List<File> files = Arrays.asList(folder.listFiles());
+
+        for (File file : files)
+        {
+            if (file.isFile())
+            {
+                if(file.getName().endsWith("build.sbt"))
+                {
+                    inputFiles.add(file);
+                }
+            }
+            else if (file.isDirectory())
+            {
+                inputFiles = getBuildSbtFiles(file.getAbsolutePath(), inputFiles);
+            }
+        }
+        return inputFiles;
+    }
+
 
     public static void printOSAResultsToConsole(OSAResults osaResults, boolean enableViolations, Logger log) {
         OSASummaryResults osaSummaryResults = osaResults.getResults();
