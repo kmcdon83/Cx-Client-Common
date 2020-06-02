@@ -48,15 +48,15 @@ public class DependencyResult {
 
     DependencyResult(OSAResults osaResults){
         this.dependencyScannerType = DependencyScannerType.OSA;
-        this.highVulnerability = osaResults.getResults().getHighVulnerabilityLibraries();
-        this.mediumVulnerability = osaResults.getResults().getMediumVulnerabilityLibraries();
-        this.lowVulnerability = osaResults.getResults().getLowVulnerabilityLibraries();
+        this.highVulnerability = osaResults.getResults().getTotalHighVulnerabilities();
+        this.mediumVulnerability = osaResults.getResults().getTotalMediumVulnerabilities();
+        this.lowVulnerability = osaResults.getResults().getTotalLowVulnerabilities();
         this.resultReady = osaResults.isOsaResultsReady();
         this.summaryLink = osaResults.getOsaProjectSummaryLink();
         this.vulnerableAndOutdated = osaResults.getResults().getVulnerableAndOutdated();
         this.nonVulnerableLibraries = osaResults.getResults().getNonVulnerableLibraries();
-        this.scanStartTime = formatDate(osaResults.getScanStartTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS", "dd/MM/yy HH:mm");
-        this.scanEndTime = formatDate(osaResults.getScanEndTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS", "dd/MM/yy HH:mm");
+        this.scanStartTime =osaResults.getScanStartTime();
+        this.scanEndTime = osaResults.getScanEndTime();
         this.setDependencyCVEReportTableOsa(osaResults.getOsaLowCVEReportTable(),osaResults.getOsaMediumCVEReportTable(),osaResults.getOsaHighCVEReportTable());
         this.setTotalLibraries(osaResults.getResults().getTotalLibraries());
     }
@@ -73,7 +73,7 @@ public class DependencyResult {
         }
         for(CVEReportTableRow highCVE :osaCVEResultsHigh ){
             row = highCVE;
-            this.dependencyMediumCVEReportTable.add(row);
+            this.dependencyHighCVEReportTable.add(row);
         }
     }
 

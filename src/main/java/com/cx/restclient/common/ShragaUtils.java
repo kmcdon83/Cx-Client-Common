@@ -36,7 +36,9 @@ public abstract class ShragaUtils {
     }
 
     public static String removeSpaceAndNewLine(String string){
-        string = string.replace("\\s","").replace("\n", "").replace("\r", "").replace(" ","").replace("\t","");
+        if(string!=null){
+            string = string.replace("\\s","").replace("\n", "").replace("\r", "").replace(" ","").replace("\t","");
+        }
         return string;
     }
 

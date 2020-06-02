@@ -2559,7 +2559,7 @@
                                         <th>Publish Date</th>
                                         <th>Library</th>
                                     </tr>
-                                    <#list osa.osaLowCVEReportTable as cve>
+                                    <#list dependencyResult.dependencyLowCVEReportTable as cve>
                                         <#if cve.state =="NOT_EXPLOITABLE">
                                         <tr style="text-decoration: line-through">
                                         <#else>

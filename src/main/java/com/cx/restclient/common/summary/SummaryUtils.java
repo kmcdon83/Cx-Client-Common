@@ -173,6 +173,8 @@ public abstract class SummaryUtils {
                 templateData.put("dependencyHighTotalHeight",   dependencyHighTotalHeight);
                 templateData.put("dependencyMediumTotalHeight", dependencyMediumTotalHeight);
                 templateData.put("dependencyLowTotalHeight",    dependencyLowTotalHeight);
+            }else{
+                buildFailed = true;
             }
         }
 
