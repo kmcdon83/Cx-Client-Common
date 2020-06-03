@@ -274,6 +274,7 @@ class CxOSAClient implements DependencyScanner {
             return scanStatus;
         }
         return scanStatus;
+
     }
 
     private void ensureProjectIdSpecified() throws CxClientException {

@@ -947,18 +947,22 @@
                     <#if config.sastEnabled && !sast.sastResultsReady>
                         <li>SAST Scan Failed</li>
                     </#if>
-                    <#if config.dependencyScannerType == "OSA" && !osa.osaResultsReady>
+                    <#if config.dependencyScannerType == "OSA" && !dependencyResult.resultReady>
                         <li>OSA Scan Failed</li>
                     </#if>
                     <#if policyViolated>
                         <li>${policyViolatedCount} ${policyLabel}  Violated</li>
                     </#if>
-                    <#if config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && config.dependencyScannerType == "OSA" && osa.osaResultsReady && osaThresholdExceeded>
-                        <li>Exceeded CxSAST and CxOSA Vulnerability Thresholds</li>
+                    <#if config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && (config.dependencyScannerType == "OSA" || config.dependencyScannerType == "SCA") && dependencyResult.resultReady && dependencyThresholdExceeded>
+                        <li>Exceeded CxSAST and CxOSA/CxSCA Vulnerability Thresholds</li>
                     <#elseif config.sastEnabled && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded)>
                         <li>Exceeded CxSAST Vulnerability Threshold</li>
-                    <#elseif config.dependencyScannerType == "OSA" && osa.osaResultsReady && osaThresholdExceeded>
+                    <#elseif config.dependencyScannerType == "OSA" && dependencyResult.resultReady && dependencyThresholdExceeded>
                         <li>Exceeded CxOSA Vulnerability Threshold</li>
+                    <#elseif config.dependencyScannerType == "SCA" && dependencyResult.resultReady && dependencyThresholdExceeded>
+                        <li>Exceeded CxSCA Vulnerability Threshold</li>
+                    <#else>
+                        <li>CxScan Failed</li>
                     </#if>
                 </ul>
             </div>
@@ -1307,277 +1311,549 @@
                 </div>
             </#if>
 
-            <#if config.dependencyScannerType == "OSA">
-                <div class="osa-summary <#if !config.sastEnabled>sast-summary chart-large</#if>" id="osa-summary">
-                    <div class="summary-report-title osa">
-                        <div class="summary-title-text osa">CxOSA Vulnerabilities & Libraries</div>
-                        <#if osa.osaResultsReady>
-                            <div id="osa-title-links" class="title-links">
-                                <div class="link-to-result summary-link">
-                                    <a href="${osa.osaProjectSummaryLink}" class="html-report"
-                                       id="osa-summary-html-link">
-                                        <div class="results-link-icon link-icon">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14"
-                                                 viewBox="0 0 12 14">
-                                                <title>analize</title>
-                                                <g fill="none" fill-rule="evenodd">
-                                                    <circle stroke="#4A90E2" stroke-width="2" cx="5" cy="5" r="4"/>
-                                                    <path fill="#4A90E2" d="M6.366 8.366l1.732-1 3.268 5.66-1.732 1z"/>
+            <#if config.dependencyScannerType == "OSA" || config.dependencyScannerType == "SCA">
+        <div class="osa-summary <#if !config.sastEnabled>sast-summary chart-large</#if>" id="osa-summary">
+            <div class="summary-report-title osa">
+                <div class="summary-title-text osa">Cx${config.dependencyScannerType} Vulnerabilities & Libraries</div>
+                <#if dependencyResult.resultReady>
+                    <div id="osa-title-links" class="title-links">
+                        <div class="link-to-result summary-link">
+                            <a href="${dependencyResult.summaryLink}" class="html-report"
+                               id="osa-summary-html-link">
+                                <div class="results-link-icon link-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14"
+                                         viewBox="0 0 12 14">
+                                        <title>analize</title>
+                                        <g fill="none" fill-rule="evenodd">
+                                            <circle stroke="#4A90E2" stroke-width="2" cx="5" cy="5" r="4"/>
+                                            <path fill="#4A90E2" d="M6.366 8.366l1.732-1 3.268 5.66-1.732 1z"/>
+                                        </g>
+                                    </svg>
+                                </div>
+                                <div class="link-text">Results</div>
+                            </a>
+                        </div>
+                    </div>
+                <#else>
+                    <div id="no-scan-message-osa-failed" class="no-scan-message-container osa-scan-failed">
+                        <div class="no-scan-message">
+                            <div class="no-scan-message-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                     xmlns:xlink="http://www.w3.org/1999/xlink"
+                                     width="48px" height="37px" viewBox="0 0 48 37"
+                                     version="1.1">
+                                    <!-- Generator: Sketch 45.2 (43514) - http:/*www.bohemiancoding.com/sketch -->
+                                    */
+                                    <title>scan_failed</title>
+                                    <desc>Created with Sketch.</desc>
+                                    <defs/>
+                                    <g id="Page-1" stroke="none" stroke-width="1" fill="none"
+                                       fill-rule="evenodd">
+                                        <g id="Jenkins-OSA-empty"
+                                           transform="translate(-936.000000, -335.000000)">
+                                            <g id="Group-2" transform="translate(683.000000, 179.000000)">
+                                                <g id="Group" transform="translate(81.000000, 155.202941)">
+                                                    <g id="Group-3" transform="translate(171.000000, 0.000000)">
+                                                        <g transform="translate(2.000606, 1.714748)">
+                                                            <path d="M24.3114123,0.619831205 L44.98533,32.7440758 L44.98533,32.7440758 C45.2842135,33.208497 45.1500186,33.8272778 44.6855974,34.1261613 C44.5242092,34.2300245 44.336342,34.2852522 44.1444209,34.2852522 L1.8977196,34.2852522 L1.8977196,34.2852522 C1.34543485,34.2852522 0.897719599,33.837537 0.897719599,33.2852522 C0.897719599,33.0866799 0.956838199,32.8926033 1.0675421,32.7277531 L22.6403257,0.60350849 L22.6403257,0.60350849 C22.948224,0.145014117 23.569508,0.0229318695 24.0280024,0.330830157 C24.1411852,0.406837189 24.2376306,0.50518529 24.3114123,0.619831205 Z"
+                                                                  id="Triangle" stroke="#373050"
+                                                                  stroke-width="2"/>
+                                                            <rect id="Rectangle-6" fill="#373050" x="21.9993936"
+                                                                  y="11.2852522" width="3" height="13"
+                                                                  rx="1.5"/>
+                                                            <path d="M23.4993936,26.2852522 L23.4993936,26.2852522 L23.4993936,26.2852522 C24.3278207,26.2852522 24.9993936,26.9568251 24.9993936,27.7852522 L24.9993936,27.7852522 L24.9993936,27.7852522 C24.9993936,28.6136794 24.3278207,29.2852522 23.4993936,29.2852522 L23.4993936,29.2852522 L23.4993936,29.2852522 C22.6709664,29.2852522 21.9993936,28.6136794 21.9993936,27.7852522 L21.9993936,27.7852522 L21.9993936,27.7852522 C21.9993936,26.9568251 22.6709664,26.2852522 23.4993936,26.2852522 Z"
+                                                                  id="Rectangle-6-Copy" fill="#373050"/>
+                                                        </g>
+                                                    </g>
+                                                </g>
+                                            </g>
+                                        </g>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="no-scan-message-text">OSA scan failed</div>
+                        </div>
+                    </div>
+                </#if>
+            </div>
+            <#if dependencyResult.resultReady>
+                <div class="osa-results" id="osa-results">
+                    <!--osa-libraries-count-->
+                    <div class="osa-libraries">
+                        <div class="osa-libraries-title">Libraries:</div>
+                        <!--osa-libs-vulnerable-->
+                        <div class="libraries-vulnerable">
+                            <div class="libraries-icon-number">
+                                <div class="libraries-vulnerable-number"
+                                     id="vulnerable-libraries">${dependencyResult.vulnerableAndOutdated}</div>
+                            </div>
+                            <div class="libraries-vulnerable-text">
+                                Vulnerable and Outdated Libraries
+                            </div>
+                        </div>
+                        <!--osa-libs-ok-->
+                        <div class="libraries-vulnerable">
+                            <div class="libraries-icon-number">
+                                <div class="libraries-vulnerable-number"
+                                     id="vulnerable-libraries">${dependencyResult.nonVulnerableLibraries}</div>
+                            </div>
+                            <div class="libraries-vulnerable-text">
+                                No Known Vulnerability Libraries
+                            </div>
+                        </div>
+                    </div>
+                    <!--osa-chart-->
+                    <div class="osa-chart">
+                        <ul class="osa-chart chart">
+                            <!--osa-high-->
+                            <li>
+                                            <span class="bar-1" id="osa-bar-high"
+                                                  style="height: ${dependencyHighTotalHeight}px">
+                                                <div id="osa-tooltip-high">
+                                                    <#if config.osaThresholdsEnabled && config.osaHighThreshold??>
+                                                        <@thresholdTooltip threshold=config.osaHighThreshold count=dependencyResult.highVulnerability/>
+                                                    </#if>
+                                                </div>
+                                            </span>
+
+                                <div class="bar-title-wrapper">
+                                    <div class="bar-title-container">
+                                        <div class="bar-title-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                 xmlns:xlink="http://www.w3.org/1999/xlink" width="16px"
+                                                 height="19px"
+                                                 viewBox="0 0 16 19"
+                                                 version="1.1">
+                                                <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+                                                <title>Med</title>
+                                                <desc>Created with Sketch.</desc>
+                                                <defs>
+                                                    <path d="M1,1 L8,0 L15,1 C15,1 16,4.01515152 16,7 C16,13.0151515 10.6766131,18.2701936 10.6766131,18.2701936 C10.30293,18.6732545 9.55664682,19 8.9906311,19 L7.0093689,19 C6.45190985,19 5.70245907,18.6673641 5.33497024,18.2411641 C5.33497024,18.2411641 3.70193273e-12,12.5151515 3.63797881e-12,8 C7.03437308e-13,4.82765152 1,1 1,1 Z"
+                                                          id="osa-high-path-1"/>
+                                                    <path d="M1,1 L8,0 L15,1 C15,1 16,4.01515152 16,7 C16,13.0151515 10.6766131,18.2701936 10.6766131,18.2701936 C10.30293,18.6732545 9.55664682,19 8.9906311,19 L7.0093689,19 C6.45190985,19 5.70245907,18.6673641 5.33497024,18.2411641 C5.33497024,18.2411641 3.70193273e-12,12.5151515 3.63797881e-12,8 C7.03437308e-13,4.82765152 1,1 1,1 Z"
+                                                          id="osa-high-path-2"/>
+                                                </defs>
+                                                <g id="osa-high-Page-1" stroke="none" stroke-width="1"
+                                                   fill="none"
+                                                   fill-rule="evenodd">
+                                                    <g id="osa-high-Icons"
+                                                       transform="translate(-47.000000, -88.000000)">
+                                                        <g id="osa-high-High"
+                                                           transform="translate(47.000000, 88.000000)">
+                                                            <g id="osa-high-Vonerability">
+                                                                <mask id="osa-high-mask-1" fill="white">
+                                                                    <use xlink:href="#osa-high-path-1"/>
+                                                                </mask>
+                                                                <g id="osa-high-Rectangle-1">
+                                                                    <use fill="#D82D49" fill-rule="evenodd"
+                                                                         xlink:href="#osa-high-path-1"/>
+                                                                    <path stroke="#BB1A34" stroke-width="1"
+                                                                          d="M1.4041953,1.44733409 L8,0.505076272 L14.6160396,1.45022478 C14.6341112,1.51124347 14.6539641,1.5795116 14.6753578,1.65465958 C14.7899552,2.05719756 14.9047222,2.50600605 15.0118679,2.98897331 C15.3098751,4.33226343 15.4915175,5.67204692 15.4997158,6.91419406 C15.4999523,6.95710967 15.4999523,6.95710967 15.5,7 C15.5,9.52090451 14.5340777,12.111589 12.9179883,14.6199787 C12.3484584,15.5039663 11.7377754,16.313821 11.1275564,17.0311249 C10.9144997,17.2815702 10.7170402,17.5022391 10.5403911,17.6908777 C10.4358029,17.8025645 10.3623853,17.8778048 10.3253512,17.9143634 C10.0291161,18.2331673 9.41484636,18.5 8.9906311,18.5 L7.0093689,18.5 C6.59080843,18.5 5.98194778,18.2258269 5.71364227,17.9146561 C5.66213668,17.8588317 5.58703389,17.7761053 5.4807125,17.6555634 C5.30200204,17.4529504 5.10247221,17.2193106 4.88735491,16.9580823 C4.27213719,16.2109907 3.656779,15.394289 3.08320773,14.5359605 C2.09721248,13.0604546 1.34127053,11.6205479 0.906388115,10.2835472 C0.639104683,9.46181216 0.5,8.69692293 0.5,8 C0.5,7.56658708 0.519280284,7.10494686 0.556403808,6.61890492 C0.63408435,5.60186781 0.786470164,4.51217341 0.991682584,3.40118912 C1.09968656,2.81647439 1.21542088,2.26333889 1.3310756,1.7595034 C1.35796875,1.64234673 1.3824953,1.53794489 1.4041953,1.44733409 Z"/>
+                                                                </g>
+                                                                <rect id="osa-high-Rectangle-2" fill="#BB1A34"
+                                                                      mask="url(#osa-high-mask-1)"
+                                                                      x="8" y="0" width="8" height="20"/>
+                                                                <mask id="osa-high-mask-2" fill="white">
+                                                                    <use xlink:href="#osa-high-path-2"/>
+                                                                </mask>
+                                                                <path stroke="#BB1A34"
+                                                                      d="M1.4041953,1.44733409 L8,0.505076272 L14.6160396,1.45022478 C14.6341112,1.51124347 14.6539641,1.5795116 14.6753578,1.65465958 C14.7899552,2.05719756 14.9047222,2.50600605 15.0118679,2.98897331 C15.3098751,4.33226343 15.4915175,5.67204692 15.4997158,6.91419406 C15.4999523,6.95710967 15.4999523,6.95710967 15.5,7 C15.5,9.52090451 14.5340777,12.111589 12.9179883,14.6199787 C12.3484584,15.5039663 11.7377754,16.313821 11.1275564,17.0311249 C10.9144997,17.2815702 10.7170402,17.5022391 10.5403911,17.6908777 C10.4358029,17.8025645 10.3623853,17.8778048 10.3253512,17.9143634 C10.0291161,18.2331673 9.41484636,18.5 8.9906311,18.5 L7.0093689,18.5 C6.59080843,18.5 5.98194778,18.2258269 5.71364227,17.9146561 C5.66213668,17.8588317 5.58703389,17.7761053 5.4807125,17.6555634 C5.30200204,17.4529504 5.10247221,17.2193106 4.88735491,16.9580823 C4.27213719,16.2109907 3.656779,15.394289 3.08320773,14.5359605 C2.09721248,13.0604546 1.34127053,11.6205479 0.906388115,10.2835472 C0.639104683,9.46181216 0.5,8.69692293 0.5,8 C0.5,7.56658708 0.519280284,7.10494686 0.556403808,6.61890492 C0.63408435,5.60186781 0.786470164,4.51217341 0.991682584,3.40118912 C1.09968656,2.81647439 1.21542088,2.26333889 1.3310756,1.7595034 C1.35796875,1.64234673 1.3824953,1.53794489 1.4041953,1.44733409 Z"/>
+                                                                <polygon id="osa-high-H" fill="#FFFFFF"
+                                                                         mask="url(#osa-high-Rectangle-2)"
+                                                                         points="5 12 7 12 7 9.5 9 9.5 9 12 11 12 11 5 9 5 9 7.5 7 7.5 7 5 5 5"/>
+                                                            </g>
+                                                        </g>
+                                                    </g>
                                                 </g>
                                             </svg>
                                         </div>
-                                        <div class="link-text">Results</div>
-                                    </a>
+                                        <div class="bar-title">High -</div>
+                                        <div class="bar-count"
+                                             id="osa-bar-count-high">${dependencyResult.highVulnerability}</div>
+                                    </div>
                                 </div>
+                            </li>
+
+                            <!--osa-medium-->
+                            <li>
+                                            <span class="bar-2" id="osa-bar-med"
+                                                  style="height: ${dependencyMediumTotalHeight}px">
+                                                <div id="osa-tooltip-med">
+                                                    <#if config.osaThresholdsEnabled && config.osaMediumThreshold??>
+                                                        <@thresholdTooltip threshold=config.osaMediumThreshold count=dependencyResult.mediumVulnerability/>
+                                                    </#if>
+                                                </div>
+                                            </span>
+                                <div class="bar-title-wrapper">
+                                    <div class="bar-title-container">
+                                        <div class="bar-title-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                 xmlns:xlink="http://www.w3.org/1999/xlink" width="16"
+                                                 height="20"
+                                                 viewBox="0 0 16 20">
+                                                <title>Med</title>
+                                                <defs>
+                                                    <path d="M1 1.053L8 0l7 1.053s1 3.173 1 6.315c0 6.332-5.346 11.89-5.346 11.89-.36.41-1.097.742-1.663.742H7.01c-.558 0-1.3-.34-1.652-.77 0 0-5.358-6.056-5.358-10.81 0-3.338 1-7.367 1-7.367z"
+                                                          id="osa-medium-path-1"/>
+                                                    <path d="M1 1.053L8 0l7 1.053s1 3.173 1 6.315c0 6.332-5.346 11.89-5.346 11.89-.36.41-1.097.742-1.663.742H7.01c-.558 0-1.3-.34-1.652-.77 0 0-5.358-6.056-5.358-10.81 0-3.338 1-7.367 1-7.367z"
+                                                          id="osa-medium-path-2"/>
+                                                </defs>
+                                                <g fill="none" fill-rule="evenodd">
+                                                    <mask id="osa-medium-mask-1" fill="#fff">
+                                                        <use xlink:href="#osa-medium-path-1"/>
+                                                    </mask>
+                                                    <use fill="#FFAC00" xlink:href="#osa-medium-path-1"/>
+                                                    <path stroke="#E49B16"
+                                                          d="M1.41 1.497L8 .507l6.61.993c.02.067.04.144.064.228.114.425.23.898.337 1.407.3 1.418.48 2.83.49 4.143v.09c0 2.665-.972 5.404-2.6 8.06-.57.934-1.185 1.79-1.8 2.55-.213.264-.412.498-.59.698-.105.118-.18.198-.216.237-.282.32-.882.587-1.302.587H7.01c-.414 0-1.01-.277-1.266-.587-.05-.06-.126-.146-.233-.274-.18-.216-.38-.464-.594-.74-.62-.79-1.237-1.654-1.814-2.56-.982-1.55-1.74-3.06-2.18-4.463C.645 9.994.5 9.17.5 8.42c0-.457.02-.944.057-1.457.077-1.072.23-2.22.435-3.392.11-.614.224-1.197.34-1.73L1.41 1.5z"/>
+                                                    <path fill="#D79201" mask="url(#osa-medium-mask-1)"
+                                                          d="M8 0h8v20H8z"/>
+                                                    <mask id="osa-medium-mask-2" fill="#fff">
+                                                        <use xlink:href="#osa-medium-path-2"/>
+                                                    </mask>
+                                                    <path stroke="#D49100"
+                                                          d="M1.41 1.497L8 .507l6.61.993c.02.067.04.144.064.228.114.425.23.898.337 1.407.3 1.418.48 2.83.49 4.143v.09c0 2.665-.972 5.404-2.6 8.06-.57.934-1.185 1.79-1.8 2.55-.213.264-.412.498-.59.698-.105.118-.18.198-.216.237-.282.32-.882.587-1.302.587H7.01c-.414 0-1.01-.277-1.266-.587-.05-.06-.126-.146-.233-.274-.18-.216-.38-.464-.594-.74-.62-.79-1.237-1.654-1.814-2.56-.982-1.55-1.74-3.06-2.18-4.463C.645 9.994.5 9.17.5 8.42c0-.457.02-.944.057-1.457.077-1.072.23-2.22.435-3.392.11-.614.224-1.197.34-1.73L1.41 1.5z"/>
+                                                    <path fill="#472F00" mask="url(#osa-medium-mask-2)"
+                                                          d="M4.28 12.632h1.9v-4.21l1.78 2.862H8L9.79 8.4v4.232h1.93v-7.37H9.67L8 8.117 6.33 5.263H4.28"/>
+                                                </g>
+                                            </svg>
+                                        </div>
+                                        <div class="bar-title">Medium -</div>
+                                        <div class="bar-count"
+                                             id="osa-bar-count-med">${dependencyResult.mediumVulnerability}</div>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <!--osa-low-->
+                            <li>
+                                            <span class="bar-3" id="osa-bar-low" style="height: ${dependencyLowTotalHeight}px">
+                                                <div id="osa-tooltip-low">
+                                                    <#if config.osaThresholdsEnabled && config.osaLowThreshold??>
+                                                        <@thresholdTooltip threshold=config.osaLowThreshold count=dependencyResult.lowVulnerability/>
+                                                    </#if>
+                                                </div>
+                                            </span>
+                                <div class="bar-title-wrapper">
+                                    <div class="bar-title-container">
+                                        <div class="bar-title-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                 xmlns:xlink="http://www.w3.org/1999/xlink" width="16"
+                                                 height="19"
+                                                 viewBox="0 0 16 19">
+                                                <title>Low</title>
+                                                <defs>
+                                                    <path d="M1 1l7-1 7 1s1 3.015 1 6c0 6.015-6 12-6 12H6S0 12.515 0 8c0-3.172 1-7 1-7z"
+                                                          id="osa-low-path-1"/>
+                                                    <path d="M1 1l7-1 7 1s1 3.015 1 6c0 6.015-6 12-6 12H6S0 12.515 0 8c0-3.172 1-7 1-7z"
+                                                          id="osa-low-path-2"/>
+                                                </defs>
+                                                <g fill="none" fill-rule="evenodd">
+                                                    <path d="M7.96 17.32L8 .015l-6.5 1s-.96 4.5-.96 8.75c1.272 4.602 5.968 9.25 5.968 9.25h.163l1.29-1.695z"
+                                                          fill="#EDEFF5"/>
+                                                    <mask id="osa-low-mask-1" fill="#fff">
+                                                        <use xlink:href="#osa-low-path-1"/>
+                                                    </mask>
+                                                    <use fill="#FFEB3B" xlink:href="#osa-low-path-1"/>
+                                                    <path stroke="#E4D200"
+                                                          d="M1.404 1.447L8 .505l6.616.945.06.205c.114.402.23.85.336 1.334.298 1.34.48 2.68.488 3.923V7c0 2.515-1.09 5.243-2.916 7.978-.644.966-1.335 1.863-2.026 2.667-.24.28-.465.53-.665.745-.04.04-.074.077-.105.11H6.222l-.105-.118c-.202-.23-.427-.492-.67-.785-.694-.837-1.388-1.744-2.035-2.687-.89-1.298-1.62-2.56-2.128-3.738C.772 9.982.5 8.912.5 8c0-.433.02-.895.056-1.38.078-1.02.23-2.11.436-3.22.108-.584.223-1.137.34-1.64.026-.118.05-.222.072-.313z"/>
+                                                    <path fill="#DDCE00" mask="url(#osa-low-mask-1)"
+                                                          d="M8-8h10v32H8z"/>
+                                                    <mask id="osa-low-mask-2" fill="#fff">
+                                                        <use xlink:href="#osa-low-path-2"/>
+                                                    </mask>
+                                                    <path stroke="#E4D200"
+                                                          d="M1.404 1.447L8 .505l6.616.945.06.205c.114.402.23.85.336 1.334.298 1.34.48 2.68.488 3.923V7c0 2.515-1.09 5.243-2.916 7.978-.644.966-1.335 1.863-2.026 2.667-.24.28-.465.53-.665.745-.04.04-.074.077-.105.11H6.222l-.105-.118c-.202-.23-.427-.492-.67-.785-.694-.837-1.388-1.744-2.035-2.687-.89-1.298-1.62-2.56-2.128-3.738C.772 9.982.5 8.912.5 8c0-.433.02-.895.056-1.38.078-1.02.23-2.11.436-3.22.108-.584.223-1.137.34-1.64.026-.118.05-.222.072-.313z"/>
+                                                    <path fill="#605900" mask="url(#osa-low-mask-2)"
+                                                          d="M5.54 12h5.33v-1.7H7.48V5H5.54"/>
+                                                </g>
+                                            </svg>
+                                        </div>
+                                        <div class="bar-title">Low -</div>
+                                        <div class="bar-count"
+                                             id="osa-bar-count-low">${dependencyResult.lowVulnerability}</div>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </#if>
+        </div>
+        </#if>
+    </div>
+</div>
+
+        <#--<#if config.dependencyScannerType == "SCA">
+            <div class="osa-summary <#if !config.sastEnabled>sast-summary chart-large</#if>" id="osa-summary">
+                <div class="summary-report-title osa">
+                    <div class="summary-title-text osa">SCA Vulnerabilities & Libraries</div>
+                    <#if sca.scaResultReady>
+                        <div id="osa-title-links" class="title-links">
+                            <div class="link-to-result summary-link">
+                                <a href="${sca.webReportLink}" class="html-report"
+                                   id="osa-summary-html-link">
+                                    <div class="results-link-icon link-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14"
+                                             viewBox="0 0 12 14">
+                                            <title>analize</title>
+                                            <g fill="none" fill-rule="evenodd">
+                                                <circle stroke="#4A90E2" stroke-width="2" cx="5" cy="5" r="4"/>
+                                                <path fill="#4A90E2" d="M6.366 8.366l1.732-1 3.268 5.66-1.732 1z"/>
+                                            </g>
+                                        </svg>
+                                    </div>
+                                    <div class="link-text">Results</div>
+                                </a>
                             </div>
-                        <#else>
-                            <div id="no-scan-message-osa-failed" class="no-scan-message-container osa-scan-failed">
-                                <div class="no-scan-message">
-                                    <div class="no-scan-message-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                             xmlns:xlink="http://www.w3.org/1999/xlink"
-                                             width="48px" height="37px" viewBox="0 0 48 37"
-                                             version="1.1">
-                                            <!-- Generator: Sketch 45.2 (43514) - http:/*www.bohemiancoding.com/sketch -->
-                                            */
-                                            <title>scan_failed</title>
-                                            <desc>Created with Sketch.</desc>
-                                            <defs/>
-                                            <g id="Page-1" stroke="none" stroke-width="1" fill="none"
-                                               fill-rule="evenodd">
-                                                <g id="Jenkins-OSA-empty"
-                                                   transform="translate(-936.000000, -335.000000)">
-                                                    <g id="Group-2" transform="translate(683.000000, 179.000000)">
-                                                        <g id="Group" transform="translate(81.000000, 155.202941)">
-                                                            <g id="Group-3" transform="translate(171.000000, 0.000000)">
-                                                                <g transform="translate(2.000606, 1.714748)">
-                                                                    <path d="M24.3114123,0.619831205 L44.98533,32.7440758 L44.98533,32.7440758 C45.2842135,33.208497 45.1500186,33.8272778 44.6855974,34.1261613 C44.5242092,34.2300245 44.336342,34.2852522 44.1444209,34.2852522 L1.8977196,34.2852522 L1.8977196,34.2852522 C1.34543485,34.2852522 0.897719599,33.837537 0.897719599,33.2852522 C0.897719599,33.0866799 0.956838199,32.8926033 1.0675421,32.7277531 L22.6403257,0.60350849 L22.6403257,0.60350849 C22.948224,0.145014117 23.569508,0.0229318695 24.0280024,0.330830157 C24.1411852,0.406837189 24.2376306,0.50518529 24.3114123,0.619831205 Z"
-                                                                          id="Triangle" stroke="#373050"
-                                                                          stroke-width="2"/>
-                                                                    <rect id="Rectangle-6" fill="#373050" x="21.9993936"
-                                                                          y="11.2852522" width="3" height="13"
-                                                                          rx="1.5"/>
-                                                                    <path d="M23.4993936,26.2852522 L23.4993936,26.2852522 L23.4993936,26.2852522 C24.3278207,26.2852522 24.9993936,26.9568251 24.9993936,27.7852522 L24.9993936,27.7852522 L24.9993936,27.7852522 C24.9993936,28.6136794 24.3278207,29.2852522 23.4993936,29.2852522 L23.4993936,29.2852522 L23.4993936,29.2852522 C22.6709664,29.2852522 21.9993936,28.6136794 21.9993936,27.7852522 L21.9993936,27.7852522 L21.9993936,27.7852522 C21.9993936,26.9568251 22.6709664,26.2852522 23.4993936,26.2852522 Z"
-                                                                          id="Rectangle-6-Copy" fill="#373050"/>
-                                                                </g>
+                        </div>
+                    <#else>
+                        <div id="no-scan-message-osa-failed" class="no-scan-message-container osa-scan-failed">
+                            <div class="no-scan-message">
+                                <div class="no-scan-message-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                         xmlns:xlink="http://www.w3.org/1999/xlink"
+                                         width="48px" height="37px" viewBox="0 0 48 37"
+                                         version="1.1">
+                                        <!-- Generator: Sketch 45.2 (43514) - http:/*www.bohemiancoding.com/sketch &ndash;&gt;
+                                        */
+                                        <title>scan_failed</title>
+                                        <desc>Created with Sketch.</desc>
+                                        <defs/>
+                                        <g id="Page-1" stroke="none" stroke-width="1" fill="none"
+                                           fill-rule="evenodd">
+                                            <g id="Jenkins-OSA-empty"
+                                               transform="translate(-936.000000, -335.000000)">
+                                                <g id="Group-2" transform="translate(683.000000, 179.000000)">
+                                                    <g id="Group" transform="translate(81.000000, 155.202941)">
+                                                        <g id="Group-3" transform="translate(171.000000, 0.000000)">
+                                                            <g transform="translate(2.000606, 1.714748)">
+                                                                <path d="M24.3114123,0.619831205 L44.98533,32.7440758 L44.98533,32.7440758 C45.2842135,33.208497 45.1500186,33.8272778 44.6855974,34.1261613 C44.5242092,34.2300245 44.336342,34.2852522 44.1444209,34.2852522 L1.8977196,34.2852522 L1.8977196,34.2852522 C1.34543485,34.2852522 0.897719599,33.837537 0.897719599,33.2852522 C0.897719599,33.0866799 0.956838199,32.8926033 1.0675421,32.7277531 L22.6403257,0.60350849 L22.6403257,0.60350849 C22.948224,0.145014117 23.569508,0.0229318695 24.0280024,0.330830157 C24.1411852,0.406837189 24.2376306,0.50518529 24.3114123,0.619831205 Z"
+                                                                      id="Triangle" stroke="#373050"
+                                                                      stroke-width="2"/>
+                                                                <rect id="Rectangle-6" fill="#373050" x="21.9993936"
+                                                                      y="11.2852522" width="3" height="13"
+                                                                      rx="1.5"/>
+                                                                <path d="M23.4993936,26.2852522 L23.4993936,26.2852522 L23.4993936,26.2852522 C24.3278207,26.2852522 24.9993936,26.9568251 24.9993936,27.7852522 L24.9993936,27.7852522 L24.9993936,27.7852522 C24.9993936,28.6136794 24.3278207,29.2852522 23.4993936,29.2852522 L23.4993936,29.2852522 L23.4993936,29.2852522 C22.6709664,29.2852522 21.9993936,28.6136794 21.9993936,27.7852522 L21.9993936,27.7852522 L21.9993936,27.7852522 C21.9993936,26.9568251 22.6709664,26.2852522 23.4993936,26.2852522 Z"
+                                                                      id="Rectangle-6-Copy" fill="#373050"/>
                                                             </g>
                                                         </g>
                                                     </g>
                                                 </g>
                                             </g>
-                                        </svg>
-                                    </div>
-                                    <div class="no-scan-message-text">OSA scan failed</div>
+                                        </g>
+                                    </svg>
                                 </div>
-                            </div>
-                        </#if>
-                    </div>
-                    <#if osa.osaResultsReady>
-                        <div class="osa-results" id="osa-results">
-                            <!--osa-libraries-count-->
-                            <div class="osa-libraries">
-                                <div class="osa-libraries-title">Libraries:</div>
-                                <!--osa-libs-vulnerable-->
-                                <div class="libraries-vulnerable">
-                                    <div class="libraries-icon-number">
-                                        <div class="libraries-vulnerable-number"
-                                             id="vulnerable-libraries">${osa.results.vulnerableAndOutdated}</div>
-                                    </div>
-                                    <div class="libraries-vulnerable-text">
-                                        Vulnerable and Outdated Libraries
-                                    </div>
-                                </div>
-                                <!--osa-libs-ok-->
-                                <div class="libraries-vulnerable">
-                                    <div class="libraries-icon-number">
-                                        <div class="libraries-vulnerable-number"
-                                             id="vulnerable-libraries">${osa.results.nonVulnerableLibraries}</div>
-                                    </div>
-                                    <div class="libraries-vulnerable-text">
-                                        No Known Vulnerability Libraries
-                                    </div>
-                                </div>
-                            </div>
-                            <!--osa-chart-->
-                            <div class="osa-chart">
-                                <ul class="osa-chart chart">
-                                    <!--osa-high-->
-                                    <li>
-                                            <span class="bar-1" id="osa-bar-high"
-                                                  style="height: ${osaHighTotalHeight}px">
-                                                <div id="osa-tooltip-high">
-                                                    <#if config.osaThresholdsEnabled && config.osaHighThreshold??>
-                                                        <@thresholdTooltip threshold=config.osaHighThreshold count=osa.results.totalHighVulnerabilities/>
-                                                    </#if>
-                                                </div>
-                                            </span>
-
-                                        <div class="bar-title-wrapper">
-                                            <div class="bar-title-container">
-                                                <div class="bar-title-icon">
-                                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                                         xmlns:xlink="http://www.w3.org/1999/xlink" width="16px"
-                                                         height="19px"
-                                                         viewBox="0 0 16 19"
-                                                         version="1.1">
-                                                        <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
-                                                        <title>Med</title>
-                                                        <desc>Created with Sketch.</desc>
-                                                        <defs>
-                                                            <path d="M1,1 L8,0 L15,1 C15,1 16,4.01515152 16,7 C16,13.0151515 10.6766131,18.2701936 10.6766131,18.2701936 C10.30293,18.6732545 9.55664682,19 8.9906311,19 L7.0093689,19 C6.45190985,19 5.70245907,18.6673641 5.33497024,18.2411641 C5.33497024,18.2411641 3.70193273e-12,12.5151515 3.63797881e-12,8 C7.03437308e-13,4.82765152 1,1 1,1 Z"
-                                                                  id="osa-high-path-1"/>
-                                                            <path d="M1,1 L8,0 L15,1 C15,1 16,4.01515152 16,7 C16,13.0151515 10.6766131,18.2701936 10.6766131,18.2701936 C10.30293,18.6732545 9.55664682,19 8.9906311,19 L7.0093689,19 C6.45190985,19 5.70245907,18.6673641 5.33497024,18.2411641 C5.33497024,18.2411641 3.70193273e-12,12.5151515 3.63797881e-12,8 C7.03437308e-13,4.82765152 1,1 1,1 Z"
-                                                                  id="osa-high-path-2"/>
-                                                        </defs>
-                                                        <g id="osa-high-Page-1" stroke="none" stroke-width="1"
-                                                           fill="none"
-                                                           fill-rule="evenodd">
-                                                            <g id="osa-high-Icons"
-                                                               transform="translate(-47.000000, -88.000000)">
-                                                                <g id="osa-high-High"
-                                                                   transform="translate(47.000000, 88.000000)">
-                                                                    <g id="osa-high-Vonerability">
-                                                                        <mask id="osa-high-mask-1" fill="white">
-                                                                            <use xlink:href="#osa-high-path-1"/>
-                                                                        </mask>
-                                                                        <g id="osa-high-Rectangle-1">
-                                                                            <use fill="#D82D49" fill-rule="evenodd"
-                                                                                 xlink:href="#osa-high-path-1"/>
-                                                                            <path stroke="#BB1A34" stroke-width="1"
-                                                                                  d="M1.4041953,1.44733409 L8,0.505076272 L14.6160396,1.45022478 C14.6341112,1.51124347 14.6539641,1.5795116 14.6753578,1.65465958 C14.7899552,2.05719756 14.9047222,2.50600605 15.0118679,2.98897331 C15.3098751,4.33226343 15.4915175,5.67204692 15.4997158,6.91419406 C15.4999523,6.95710967 15.4999523,6.95710967 15.5,7 C15.5,9.52090451 14.5340777,12.111589 12.9179883,14.6199787 C12.3484584,15.5039663 11.7377754,16.313821 11.1275564,17.0311249 C10.9144997,17.2815702 10.7170402,17.5022391 10.5403911,17.6908777 C10.4358029,17.8025645 10.3623853,17.8778048 10.3253512,17.9143634 C10.0291161,18.2331673 9.41484636,18.5 8.9906311,18.5 L7.0093689,18.5 C6.59080843,18.5 5.98194778,18.2258269 5.71364227,17.9146561 C5.66213668,17.8588317 5.58703389,17.7761053 5.4807125,17.6555634 C5.30200204,17.4529504 5.10247221,17.2193106 4.88735491,16.9580823 C4.27213719,16.2109907 3.656779,15.394289 3.08320773,14.5359605 C2.09721248,13.0604546 1.34127053,11.6205479 0.906388115,10.2835472 C0.639104683,9.46181216 0.5,8.69692293 0.5,8 C0.5,7.56658708 0.519280284,7.10494686 0.556403808,6.61890492 C0.63408435,5.60186781 0.786470164,4.51217341 0.991682584,3.40118912 C1.09968656,2.81647439 1.21542088,2.26333889 1.3310756,1.7595034 C1.35796875,1.64234673 1.3824953,1.53794489 1.4041953,1.44733409 Z"/>
-                                                                        </g>
-                                                                        <rect id="osa-high-Rectangle-2" fill="#BB1A34"
-                                                                              mask="url(#osa-high-mask-1)"
-                                                                              x="8" y="0" width="8" height="20"/>
-                                                                        <mask id="osa-high-mask-2" fill="white">
-                                                                            <use xlink:href="#osa-high-path-2"/>
-                                                                        </mask>
-                                                                        <path stroke="#BB1A34"
-                                                                              d="M1.4041953,1.44733409 L8,0.505076272 L14.6160396,1.45022478 C14.6341112,1.51124347 14.6539641,1.5795116 14.6753578,1.65465958 C14.7899552,2.05719756 14.9047222,2.50600605 15.0118679,2.98897331 C15.3098751,4.33226343 15.4915175,5.67204692 15.4997158,6.91419406 C15.4999523,6.95710967 15.4999523,6.95710967 15.5,7 C15.5,9.52090451 14.5340777,12.111589 12.9179883,14.6199787 C12.3484584,15.5039663 11.7377754,16.313821 11.1275564,17.0311249 C10.9144997,17.2815702 10.7170402,17.5022391 10.5403911,17.6908777 C10.4358029,17.8025645 10.3623853,17.8778048 10.3253512,17.9143634 C10.0291161,18.2331673 9.41484636,18.5 8.9906311,18.5 L7.0093689,18.5 C6.59080843,18.5 5.98194778,18.2258269 5.71364227,17.9146561 C5.66213668,17.8588317 5.58703389,17.7761053 5.4807125,17.6555634 C5.30200204,17.4529504 5.10247221,17.2193106 4.88735491,16.9580823 C4.27213719,16.2109907 3.656779,15.394289 3.08320773,14.5359605 C2.09721248,13.0604546 1.34127053,11.6205479 0.906388115,10.2835472 C0.639104683,9.46181216 0.5,8.69692293 0.5,8 C0.5,7.56658708 0.519280284,7.10494686 0.556403808,6.61890492 C0.63408435,5.60186781 0.786470164,4.51217341 0.991682584,3.40118912 C1.09968656,2.81647439 1.21542088,2.26333889 1.3310756,1.7595034 C1.35796875,1.64234673 1.3824953,1.53794489 1.4041953,1.44733409 Z"/>
-                                                                        <polygon id="osa-high-H" fill="#FFFFFF"
-                                                                                 mask="url(#osa-high-Rectangle-2)"
-                                                                                 points="5 12 7 12 7 9.5 9 9.5 9 12 11 12 11 5 9 5 9 7.5 7 7.5 7 5 5 5"/>
-                                                                    </g>
-                                                                </g>
-                                                            </g>
-                                                        </g>
-                                                    </svg>
-                                                </div>
-                                                <div class="bar-title">High -</div>
-                                                <div class="bar-count"
-                                                     id="osa-bar-count-high">${osa.results.totalHighVulnerabilities}</div>
-                                            </div>
-                                        </div>
-                                    </li>
-
-                                    <!--osa-medium-->
-                                    <li>
-                                            <span class="bar-2" id="osa-bar-med"
-                                                  style="height: ${osaMediumTotalHeight}px">
-                                                <div id="osa-tooltip-med">
-                                                    <#if config.osaThresholdsEnabled && config.osaMediumThreshold??>
-                                                        <@thresholdTooltip threshold=config.osaMediumThreshold count=osa.results.totalMediumVulnerabilities/>
-                                                    </#if>
-                                                </div>
-                                            </span>
-                                        <div class="bar-title-wrapper">
-                                            <div class="bar-title-container">
-                                                <div class="bar-title-icon">
-                                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                                         xmlns:xlink="http://www.w3.org/1999/xlink" width="16"
-                                                         height="20"
-                                                         viewBox="0 0 16 20">
-                                                        <title>Med</title>
-                                                        <defs>
-                                                            <path d="M1 1.053L8 0l7 1.053s1 3.173 1 6.315c0 6.332-5.346 11.89-5.346 11.89-.36.41-1.097.742-1.663.742H7.01c-.558 0-1.3-.34-1.652-.77 0 0-5.358-6.056-5.358-10.81 0-3.338 1-7.367 1-7.367z"
-                                                                  id="osa-medium-path-1"/>
-                                                            <path d="M1 1.053L8 0l7 1.053s1 3.173 1 6.315c0 6.332-5.346 11.89-5.346 11.89-.36.41-1.097.742-1.663.742H7.01c-.558 0-1.3-.34-1.652-.77 0 0-5.358-6.056-5.358-10.81 0-3.338 1-7.367 1-7.367z"
-                                                                  id="osa-medium-path-2"/>
-                                                        </defs>
-                                                        <g fill="none" fill-rule="evenodd">
-                                                            <mask id="osa-medium-mask-1" fill="#fff">
-                                                                <use xlink:href="#osa-medium-path-1"/>
-                                                            </mask>
-                                                            <use fill="#FFAC00" xlink:href="#osa-medium-path-1"/>
-                                                            <path stroke="#E49B16"
-                                                                  d="M1.41 1.497L8 .507l6.61.993c.02.067.04.144.064.228.114.425.23.898.337 1.407.3 1.418.48 2.83.49 4.143v.09c0 2.665-.972 5.404-2.6 8.06-.57.934-1.185 1.79-1.8 2.55-.213.264-.412.498-.59.698-.105.118-.18.198-.216.237-.282.32-.882.587-1.302.587H7.01c-.414 0-1.01-.277-1.266-.587-.05-.06-.126-.146-.233-.274-.18-.216-.38-.464-.594-.74-.62-.79-1.237-1.654-1.814-2.56-.982-1.55-1.74-3.06-2.18-4.463C.645 9.994.5 9.17.5 8.42c0-.457.02-.944.057-1.457.077-1.072.23-2.22.435-3.392.11-.614.224-1.197.34-1.73L1.41 1.5z"/>
-                                                            <path fill="#D79201" mask="url(#osa-medium-mask-1)"
-                                                                  d="M8 0h8v20H8z"/>
-                                                            <mask id="osa-medium-mask-2" fill="#fff">
-                                                                <use xlink:href="#osa-medium-path-2"/>
-                                                            </mask>
-                                                            <path stroke="#D49100"
-                                                                  d="M1.41 1.497L8 .507l6.61.993c.02.067.04.144.064.228.114.425.23.898.337 1.407.3 1.418.48 2.83.49 4.143v.09c0 2.665-.972 5.404-2.6 8.06-.57.934-1.185 1.79-1.8 2.55-.213.264-.412.498-.59.698-.105.118-.18.198-.216.237-.282.32-.882.587-1.302.587H7.01c-.414 0-1.01-.277-1.266-.587-.05-.06-.126-.146-.233-.274-.18-.216-.38-.464-.594-.74-.62-.79-1.237-1.654-1.814-2.56-.982-1.55-1.74-3.06-2.18-4.463C.645 9.994.5 9.17.5 8.42c0-.457.02-.944.057-1.457.077-1.072.23-2.22.435-3.392.11-.614.224-1.197.34-1.73L1.41 1.5z"/>
-                                                            <path fill="#472F00" mask="url(#osa-medium-mask-2)"
-                                                                  d="M4.28 12.632h1.9v-4.21l1.78 2.862H8L9.79 8.4v4.232h1.93v-7.37H9.67L8 8.117 6.33 5.263H4.28"/>
-                                                        </g>
-                                                    </svg>
-                                                </div>
-                                                <div class="bar-title">Medium -</div>
-                                                <div class="bar-count"
-                                                     id="osa-bar-count-med">${osa.results.totalMediumVulnerabilities}</div>
-                                            </div>
-                                        </div>
-                                    </li>
-
-                                    <!--osa-low-->
-                                    <li>
-                                            <span class="bar-3" id="osa-bar-low" style="height: ${osaLowTotalHeight}px">
-                                                <div id="osa-tooltip-low">
-                                                    <#if config.osaThresholdsEnabled && config.osaLowThreshold??>
-                                                        <@thresholdTooltip threshold=config.osaLowThreshold count=osa.results.totalLowVulnerabilities/>
-                                                    </#if>
-                                                </div>
-                                            </span>
-                                        <div class="bar-title-wrapper">
-                                            <div class="bar-title-container">
-                                                <div class="bar-title-icon">
-                                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                                         xmlns:xlink="http://www.w3.org/1999/xlink" width="16"
-                                                         height="19"
-                                                         viewBox="0 0 16 19">
-                                                        <title>Low</title>
-                                                        <defs>
-                                                            <path d="M1 1l7-1 7 1s1 3.015 1 6c0 6.015-6 12-6 12H6S0 12.515 0 8c0-3.172 1-7 1-7z"
-                                                                  id="osa-low-path-1"/>
-                                                            <path d="M1 1l7-1 7 1s1 3.015 1 6c0 6.015-6 12-6 12H6S0 12.515 0 8c0-3.172 1-7 1-7z"
-                                                                  id="osa-low-path-2"/>
-                                                        </defs>
-                                                        <g fill="none" fill-rule="evenodd">
-                                                            <path d="M7.96 17.32L8 .015l-6.5 1s-.96 4.5-.96 8.75c1.272 4.602 5.968 9.25 5.968 9.25h.163l1.29-1.695z"
-                                                                  fill="#EDEFF5"/>
-                                                            <mask id="osa-low-mask-1" fill="#fff">
-                                                                <use xlink:href="#osa-low-path-1"/>
-                                                            </mask>
-                                                            <use fill="#FFEB3B" xlink:href="#osa-low-path-1"/>
-                                                            <path stroke="#E4D200"
-                                                                  d="M1.404 1.447L8 .505l6.616.945.06.205c.114.402.23.85.336 1.334.298 1.34.48 2.68.488 3.923V7c0 2.515-1.09 5.243-2.916 7.978-.644.966-1.335 1.863-2.026 2.667-.24.28-.465.53-.665.745-.04.04-.074.077-.105.11H6.222l-.105-.118c-.202-.23-.427-.492-.67-.785-.694-.837-1.388-1.744-2.035-2.687-.89-1.298-1.62-2.56-2.128-3.738C.772 9.982.5 8.912.5 8c0-.433.02-.895.056-1.38.078-1.02.23-2.11.436-3.22.108-.584.223-1.137.34-1.64.026-.118.05-.222.072-.313z"/>
-                                                            <path fill="#DDCE00" mask="url(#osa-low-mask-1)"
-                                                                  d="M8-8h10v32H8z"/>
-                                                            <mask id="osa-low-mask-2" fill="#fff">
-                                                                <use xlink:href="#osa-low-path-2"/>
-                                                            </mask>
-                                                            <path stroke="#E4D200"
-                                                                  d="M1.404 1.447L8 .505l6.616.945.06.205c.114.402.23.85.336 1.334.298 1.34.48 2.68.488 3.923V7c0 2.515-1.09 5.243-2.916 7.978-.644.966-1.335 1.863-2.026 2.667-.24.28-.465.53-.665.745-.04.04-.074.077-.105.11H6.222l-.105-.118c-.202-.23-.427-.492-.67-.785-.694-.837-1.388-1.744-2.035-2.687-.89-1.298-1.62-2.56-2.128-3.738C.772 9.982.5 8.912.5 8c0-.433.02-.895.056-1.38.078-1.02.23-2.11.436-3.22.108-.584.223-1.137.34-1.64.026-.118.05-.222.072-.313z"/>
-                                                            <path fill="#605900" mask="url(#osa-low-mask-2)"
-                                                                  d="M5.54 12h5.33v-1.7H7.48V5H5.54"/>
-                                                        </g>
-                                                    </svg>
-                                                </div>
-                                                <div class="bar-title">Low -</div>
-                                                <div class="bar-count"
-                                                     id="osa-bar-count-low">${osa.results.totalLowVulnerabilities}</div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
+                                <div class="no-scan-message-text">SCA scan failed</div>
                             </div>
                         </div>
                     </#if>
                 </div>
-            </#if>
+                <#if sca.scaResultReady>
+                    <div class="osa-results" id="osa-results">
+                        <!--osa-libraries-count&ndash;&gt;
+                        <div class="osa-libraries">
+                            <div class="osa-libraries-title">Libraries:</div>
+                            <!--osa-libs-vulnerable&ndash;&gt;
+                            <div class="libraries-vulnerable">
+                                <div class="libraries-icon-number">
+                                    <div class="libraries-vulnerable-number"
+                                         id="vulnerable-libraries">${sca.summary.totalOutdatedPackages}</div>
+                                </div>
+                                <div class="libraries-vulnerable-text">
+                                    Vulnerable and Outdated Libraries
+                                </div>
+                            </div>
+                            <!--osa-libs-ok&ndash;&gt;
+                            <div class="libraries-vulnerable">
+                                <div class="libraries-icon-number">
+                                    <div class="libraries-vulnerable-number"
+                                         id="vulnerable-libraries">${sca.summary.getTotalOkLibraries()}</div>
+                                </div>
+                                <div class="libraries-vulnerable-text">
+                                    No Known Vulnerability Libraries
+                                </div>
+                            </div>
+                        </div>
+                        <!--sca-chart&ndash;&gt;
+                        <div class="osa-chart">
+                            <ul class="osa-chart chart">
+                                <!--sca-high&ndash;&gt;
+                                <li>
+                                            <span class="bar-1" id="osa-bar-high"
+                                                  style="height: ${scaHighTotalHeight}px">
+                                                <div id="osa-tooltip-high">
+                                                    <#if config.osaThresholdsEnabled && config.osaHighThreshold??>
+                                                        <@thresholdTooltip threshold=config.osaHighThreshold count=sca.summary.highVulnerabilityCount/>
+                                                    </#if>
+                                                </div>
+                                            </span>
+
+                                    <div class="bar-title-wrapper">
+                                        <div class="bar-title-container">
+                                            <div class="bar-title-icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                     xmlns:xlink="http://www.w3.org/1999/xlink" width="16px"
+                                                     height="19px"
+                                                     viewBox="0 0 16 19"
+                                                     version="1.1">
+                                                    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch &ndash;&gt;
+                                                    <title>Med</title>
+                                                    <desc>Created with Sketch.</desc>
+                                                    <defs>
+                                                        <path d="M1,1 L8,0 L15,1 C15,1 16,4.01515152 16,7 C16,13.0151515 10.6766131,18.2701936 10.6766131,18.2701936 C10.30293,18.6732545 9.55664682,19 8.9906311,19 L7.0093689,19 C6.45190985,19 5.70245907,18.6673641 5.33497024,18.2411641 C5.33497024,18.2411641 3.70193273e-12,12.5151515 3.63797881e-12,8 C7.03437308e-13,4.82765152 1,1 1,1 Z"
+                                                              id="osa-high-path-1"/>
+                                                        <path d="M1,1 L8,0 L15,1 C15,1 16,4.01515152 16,7 C16,13.0151515 10.6766131,18.2701936 10.6766131,18.2701936 C10.30293,18.6732545 9.55664682,19 8.9906311,19 L7.0093689,19 C6.45190985,19 5.70245907,18.6673641 5.33497024,18.2411641 C5.33497024,18.2411641 3.70193273e-12,12.5151515 3.63797881e-12,8 C7.03437308e-13,4.82765152 1,1 1,1 Z"
+                                                              id="osa-high-path-2"/>
+                                                    </defs>
+                                                    <g id="osa-high-Page-1" stroke="none" stroke-width="1"
+                                                       fill="none"
+                                                       fill-rule="evenodd">
+                                                        <g id="osa-high-Icons"
+                                                           transform="translate(-47.000000, -88.000000)">
+                                                            <g id="osa-high-High"
+                                                               transform="translate(47.000000, 88.000000)">
+                                                                <g id="osa-high-Vonerability">
+                                                                    <mask id="osa-high-mask-1" fill="white">
+                                                                        <use xlink:href="#osa-high-path-1"/>
+                                                                    </mask>
+                                                                    <g id="osa-high-Rectangle-1">
+                                                                        <use fill="#D82D49" fill-rule="evenodd"
+                                                                             xlink:href="#osa-high-path-1"/>
+                                                                        <path stroke="#BB1A34" stroke-width="1"
+                                                                              d="M1.4041953,1.44733409 L8,0.505076272 L14.6160396,1.45022478 C14.6341112,1.51124347 14.6539641,1.5795116 14.6753578,1.65465958 C14.7899552,2.05719756 14.9047222,2.50600605 15.0118679,2.98897331 C15.3098751,4.33226343 15.4915175,5.67204692 15.4997158,6.91419406 C15.4999523,6.95710967 15.4999523,6.95710967 15.5,7 C15.5,9.52090451 14.5340777,12.111589 12.9179883,14.6199787 C12.3484584,15.5039663 11.7377754,16.313821 11.1275564,17.0311249 C10.9144997,17.2815702 10.7170402,17.5022391 10.5403911,17.6908777 C10.4358029,17.8025645 10.3623853,17.8778048 10.3253512,17.9143634 C10.0291161,18.2331673 9.41484636,18.5 8.9906311,18.5 L7.0093689,18.5 C6.59080843,18.5 5.98194778,18.2258269 5.71364227,17.9146561 C5.66213668,17.8588317 5.58703389,17.7761053 5.4807125,17.6555634 C5.30200204,17.4529504 5.10247221,17.2193106 4.88735491,16.9580823 C4.27213719,16.2109907 3.656779,15.394289 3.08320773,14.5359605 C2.09721248,13.0604546 1.34127053,11.6205479 0.906388115,10.2835472 C0.639104683,9.46181216 0.5,8.69692293 0.5,8 C0.5,7.56658708 0.519280284,7.10494686 0.556403808,6.61890492 C0.63408435,5.60186781 0.786470164,4.51217341 0.991682584,3.40118912 C1.09968656,2.81647439 1.21542088,2.26333889 1.3310756,1.7595034 C1.35796875,1.64234673 1.3824953,1.53794489 1.4041953,1.44733409 Z"/>
+                                                                    </g>
+                                                                    <rect id="osa-high-Rectangle-2" fill="#BB1A34"
+                                                                          mask="url(#osa-high-mask-1)"
+                                                                          x="8" y="0" width="8" height="20"/>
+                                                                    <mask id="osa-high-mask-2" fill="white">
+                                                                        <use xlink:href="#osa-high-path-2"/>
+                                                                    </mask>
+                                                                    <path stroke="#BB1A34"
+                                                                          d="M1.4041953,1.44733409 L8,0.505076272 L14.6160396,1.45022478 C14.6341112,1.51124347 14.6539641,1.5795116 14.6753578,1.65465958 C14.7899552,2.05719756 14.9047222,2.50600605 15.0118679,2.98897331 C15.3098751,4.33226343 15.4915175,5.67204692 15.4997158,6.91419406 C15.4999523,6.95710967 15.4999523,6.95710967 15.5,7 C15.5,9.52090451 14.5340777,12.111589 12.9179883,14.6199787 C12.3484584,15.5039663 11.7377754,16.313821 11.1275564,17.0311249 C10.9144997,17.2815702 10.7170402,17.5022391 10.5403911,17.6908777 C10.4358029,17.8025645 10.3623853,17.8778048 10.3253512,17.9143634 C10.0291161,18.2331673 9.41484636,18.5 8.9906311,18.5 L7.0093689,18.5 C6.59080843,18.5 5.98194778,18.2258269 5.71364227,17.9146561 C5.66213668,17.8588317 5.58703389,17.7761053 5.4807125,17.6555634 C5.30200204,17.4529504 5.10247221,17.2193106 4.88735491,16.9580823 C4.27213719,16.2109907 3.656779,15.394289 3.08320773,14.5359605 C2.09721248,13.0604546 1.34127053,11.6205479 0.906388115,10.2835472 C0.639104683,9.46181216 0.5,8.69692293 0.5,8 C0.5,7.56658708 0.519280284,7.10494686 0.556403808,6.61890492 C0.63408435,5.60186781 0.786470164,4.51217341 0.991682584,3.40118912 C1.09968656,2.81647439 1.21542088,2.26333889 1.3310756,1.7595034 C1.35796875,1.64234673 1.3824953,1.53794489 1.4041953,1.44733409 Z"/>
+                                                                    <polygon id="osa-high-H" fill="#FFFFFF"
+                                                                             mask="url(#osa-high-Rectangle-2)"
+                                                                             points="5 12 7 12 7 9.5 9 9.5 9 12 11 12 11 5 9 5 9 7.5 7 7.5 7 5 5 5"/>
+                                                                </g>
+                                                            </g>
+                                                        </g>
+                                                    </g>
+                                                </svg>
+                                            </div>
+                                            <div class="bar-title">High -</div>
+                                            <div class="bar-count"
+                                                 id="osa-bar-count-high">${sca.summary.highVulnerabilityCount}</div>
+                                        </div>
+                                    </div>
+                                </li>
+
+                                <!--sca-medium&ndash;&gt;
+                                <li>
+                                            <span class="bar-2" id="osa-bar-med"
+                                                  style="height: ${scaMediumTotalHeight}px">
+                                                <div id="osa-tooltip-med">
+                                                    <#if config.osaThresholdsEnabled && config.osaMediumThreshold??>
+                                                        <@thresholdTooltip threshold=config.osaMediumThreshold count=sca.summary.mediumVulnerabilityCount/>
+                                                    </#if>
+                                                </div>
+                                            </span>
+                                    <div class="bar-title-wrapper">
+                                        <div class="bar-title-container">
+                                            <div class="bar-title-icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                     xmlns:xlink="http://www.w3.org/1999/xlink" width="16"
+                                                     height="20"
+                                                     viewBox="0 0 16 20">
+                                                    <title>Med</title>
+                                                    <defs>
+                                                        <path d="M1 1.053L8 0l7 1.053s1 3.173 1 6.315c0 6.332-5.346 11.89-5.346 11.89-.36.41-1.097.742-1.663.742H7.01c-.558 0-1.3-.34-1.652-.77 0 0-5.358-6.056-5.358-10.81 0-3.338 1-7.367 1-7.367z"
+                                                              id="osa-medium-path-1"/>
+                                                        <path d="M1 1.053L8 0l7 1.053s1 3.173 1 6.315c0 6.332-5.346 11.89-5.346 11.89-.36.41-1.097.742-1.663.742H7.01c-.558 0-1.3-.34-1.652-.77 0 0-5.358-6.056-5.358-10.81 0-3.338 1-7.367 1-7.367z"
+                                                              id="osa-medium-path-2"/>
+                                                    </defs>
+                                                    <g fill="none" fill-rule="evenodd">
+                                                        <mask id="osa-medium-mask-1" fill="#fff">
+                                                            <use xlink:href="#osa-medium-path-1"/>
+                                                        </mask>
+                                                        <use fill="#FFAC00" xlink:href="#osa-medium-path-1"/>
+                                                        <path stroke="#E49B16"
+                                                              d="M1.41 1.497L8 .507l6.61.993c.02.067.04.144.064.228.114.425.23.898.337 1.407.3 1.418.48 2.83.49 4.143v.09c0 2.665-.972 5.404-2.6 8.06-.57.934-1.185 1.79-1.8 2.55-.213.264-.412.498-.59.698-.105.118-.18.198-.216.237-.282.32-.882.587-1.302.587H7.01c-.414 0-1.01-.277-1.266-.587-.05-.06-.126-.146-.233-.274-.18-.216-.38-.464-.594-.74-.62-.79-1.237-1.654-1.814-2.56-.982-1.55-1.74-3.06-2.18-4.463C.645 9.994.5 9.17.5 8.42c0-.457.02-.944.057-1.457.077-1.072.23-2.22.435-3.392.11-.614.224-1.197.34-1.73L1.41 1.5z"/>
+                                                        <path fill="#D79201" mask="url(#osa-medium-mask-1)"
+                                                              d="M8 0h8v20H8z"/>
+                                                        <mask id="osa-medium-mask-2" fill="#fff">
+                                                            <use xlink:href="#osa-medium-path-2"/>
+                                                        </mask>
+                                                        <path stroke="#D49100"
+                                                              d="M1.41 1.497L8 .507l6.61.993c.02.067.04.144.064.228.114.425.23.898.337 1.407.3 1.418.48 2.83.49 4.143v.09c0 2.665-.972 5.404-2.6 8.06-.57.934-1.185 1.79-1.8 2.55-.213.264-.412.498-.59.698-.105.118-.18.198-.216.237-.282.32-.882.587-1.302.587H7.01c-.414 0-1.01-.277-1.266-.587-.05-.06-.126-.146-.233-.274-.18-.216-.38-.464-.594-.74-.62-.79-1.237-1.654-1.814-2.56-.982-1.55-1.74-3.06-2.18-4.463C.645 9.994.5 9.17.5 8.42c0-.457.02-.944.057-1.457.077-1.072.23-2.22.435-3.392.11-.614.224-1.197.34-1.73L1.41 1.5z"/>
+                                                        <path fill="#472F00" mask="url(#osa-medium-mask-2)"
+                                                              d="M4.28 12.632h1.9v-4.21l1.78 2.862H8L9.79 8.4v4.232h1.93v-7.37H9.67L8 8.117 6.33 5.263H4.28"/>
+                                                    </g>
+                                                </svg>
+                                            </div>
+                                            <div class="bar-title">Medium -</div>
+                                            <div class="bar-count"
+                                                 id="osa-bar-count-med">${sca.summary.mediumVulnerabilityCount}</div>
+                                        </div>
+                                    </div>
+                                </li>
+
+                                <!--osa-low&ndash;&gt;
+                                <li>
+                                            <span class="bar-3" id="osa-bar-low" style="height: ${scaLowTotalHeight}px">
+                                                <div id="osa-tooltip-low">
+                                                    <#if config.osaThresholdsEnabled && config.osaLowThreshold??>
+                                                        <@thresholdTooltip threshold=config.osaLowThreshold count=sca.summary.lowVulnerabilityCount/>
+                                                    </#if>
+                                                </div>
+                                            </span>
+                                    <div class="bar-title-wrapper">
+                                        <div class="bar-title-container">
+                                            <div class="bar-title-icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                     xmlns:xlink="http://www.w3.org/1999/xlink" width="16"
+                                                     height="19"
+                                                     viewBox="0 0 16 19">
+                                                    <title>Low</title>
+                                                    <defs>
+                                                        <path d="M1 1l7-1 7 1s1 3.015 1 6c0 6.015-6 12-6 12H6S0 12.515 0 8c0-3.172 1-7 1-7z"
+                                                              id="osa-low-path-1"/>
+                                                        <path d="M1 1l7-1 7 1s1 3.015 1 6c0 6.015-6 12-6 12H6S0 12.515 0 8c0-3.172 1-7 1-7z"
+                                                              id="osa-low-path-2"/>
+                                                    </defs>
+                                                    <g fill="none" fill-rule="evenodd">
+                                                        <path d="M7.96 17.32L8 .015l-6.5 1s-.96 4.5-.96 8.75c1.272 4.602 5.968 9.25 5.968 9.25h.163l1.29-1.695z"
+                                                              fill="#EDEFF5"/>
+                                                        <mask id="osa-low-mask-1" fill="#fff">
+                                                            <use xlink:href="#osa-low-path-1"/>
+                                                        </mask>
+                                                        <use fill="#FFEB3B" xlink:href="#osa-low-path-1"/>
+                                                        <path stroke="#E4D200"
+                                                              d="M1.404 1.447L8 .505l6.616.945.06.205c.114.402.23.85.336 1.334.298 1.34.48 2.68.488 3.923V7c0 2.515-1.09 5.243-2.916 7.978-.644.966-1.335 1.863-2.026 2.667-.24.28-.465.53-.665.745-.04.04-.074.077-.105.11H6.222l-.105-.118c-.202-.23-.427-.492-.67-.785-.694-.837-1.388-1.744-2.035-2.687-.89-1.298-1.62-2.56-2.128-3.738C.772 9.982.5 8.912.5 8c0-.433.02-.895.056-1.38.078-1.02.23-2.11.436-3.22.108-.584.223-1.137.34-1.64.026-.118.05-.222.072-.313z"/>
+                                                        <path fill="#DDCE00" mask="url(#osa-low-mask-1)"
+                                                              d="M8-8h10v32H8z"/>
+                                                        <mask id="osa-low-mask-2" fill="#fff">
+                                                            <use xlink:href="#osa-low-path-2"/>
+                                                        </mask>
+                                                        <path stroke="#E4D200"
+                                                              d="M1.404 1.447L8 .505l6.616.945.06.205c.114.402.23.85.336 1.334.298 1.34.48 2.68.488 3.923V7c0 2.515-1.09 5.243-2.916 7.978-.644.966-1.335 1.863-2.026 2.667-.24.28-.465.53-.665.745-.04.04-.074.077-.105.11H6.222l-.105-.118c-.202-.23-.427-.492-.67-.785-.694-.837-1.388-1.744-2.035-2.687-.89-1.298-1.62-2.56-2.128-3.738C.772 9.982.5 8.912.5 8c0-.433.02-.895.056-1.38.078-1.02.23-2.11.436-3.22.108-.584.223-1.137.34-1.64.026-.118.05-.222.072-.313z"/>
+                                                        <path fill="#605900" mask="url(#osa-low-mask-2)"
+                                                              d="M5.54 12h5.33v-1.7H7.48V5H5.54"/>
+                                                    </g>
+                                                </svg>
+                                            </div>
+                                            <div class="bar-title">Low -</div>
+                                            <div class="bar-count"
+                                                 id="osa-bar-count-low">${sca.summary.mediumVulnerabilityCount}</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </#if>
             </div>
-        </div>
+        </#if>
+    </div>
+</div>-->
 
     <#if config.sastEnabled && config.generateXmlReport &&sast.sastResultsReady>
         <#if sast.high gt 0 || sast.medium gt 0 || sast.low gt 0>
@@ -1963,19 +2239,19 @@
         </#if>
     </#if>
 
-    <#if config.dependencyScannerType == "OSA" && osa.osaResultsReady>
-        <#if osa.osaHighCVEReportTable?size gt 0 || osa.osaMediumCVEReportTable?size gt 0 || osa.osaLowCVEReportTable?size gt 0>
+    <#if config.dependencyScannerType != "NONE" && dependencyResult.resultReady>
+        <#if dependencyResult.dependencyHighCVEReportTable?size gt 0 || dependencyResult.dependencyMediumCVEReportTable?size gt 0 || dependencyResult.dependencyLowCVEReportTable?size gt 0>
             <div id="osa-full" class="osa-full full-results-section">
                 <div class="summary-table-row cxosa-full">
                     <div class="title-column">
                         <div class="summary-title">
-                            <div class="sum1">CxOSA</div>
+                            <div class="sum1">Cx${config.dependencyScannerType}</div>
                             <div class="sum1">Full Report</div>
                         </div>
                         <div class="detailed-report">
                             <div class="full-downloads osa-downloads">
                                 <div class="report-link">
-                                    <a href="${osa.osaProjectSummaryLink}" class="html-report" id="osa-html-link">
+                                    <a href="${dependencyResult.summaryLink}" class="html-report" id="osa-html-link">
                                         <div class="link-to-result">
                                             <div class="results-link-icon link-icon">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="14"
@@ -2041,7 +2317,7 @@
                                     <div class="full-start-end-text">
                                         Start:
                                     </div>
-                                    <div class="full-start-end-date" id="osa-full-start-date">${osa.scanStartTime}</div>
+                                    <div class="full-start-end-date" id="osa-full-start-date">${dependencyResult.scanStartTime}</div>
                                 </div>
                             </div>
 
@@ -2089,7 +2365,7 @@
                                     <div class="full-start-end-text">
                                         End:
                                     </div>
-                                    <div class="full-start-end-date" id="osa-full-end-date">${osa.scanEndTime}</div>
+                                    <div class="full-start-end-date" id="osa-full-end-date">${dependencyResult.scanEndTime}</div>
                                 </div>
                             </div>
 
@@ -2124,11 +2400,11 @@
                                         Libraries:
                                     </div>
                                     <div class="full-start-end-date"
-                                         id="osa-full-files">${osa.results.totalLibraries}</div>
+                                         id="osa-full-files">${dependencyResult.totalLibraries}</div>
                                 </div>
                             </div>
                         </div>
-                        <#if osa.osaHighCVEReportTable?size gt 0>
+                        <#if dependencyResult.dependencyHighCVEReportTable?size gt 0>
                             <div id="osa-cve-table-high-container">
                                 <div class="full-severity-title">
                                     <div class="severity-icon">
@@ -2161,7 +2437,7 @@
                                         </svg>
                                     </div>
                                     <div class="severity-title-name">High</div>
-                                    <div class="severity-count">${osa.results.totalHighVulnerabilities}</div>
+                                    <div class="severity-count">${dependencyResult.highVulnerability}</div>
                                 </div>
                                 <table id="osa-cve-table-high" class="cve-table sast-cve-table osa-cve-table-high">
                                     <tr>
@@ -2169,7 +2445,7 @@
                                         <th>Publish Date</th>
                                         <th>Library</th>
                                     </tr>
-                                    <#list osa.osaHighCVEReportTable as cve>
+                                    <#list dependencyResult.dependencyHighCVEReportTable as cve>
                                         <#if cve.state =="NOT_EXPLOITABLE">
                                         <tr style="text-decoration: line-through">
                                         <#else>
@@ -2184,7 +2460,7 @@
                             </div>
                         </#if>
 
-                        <#if osa.osaMediumCVEReportTable?size gt 0>
+                        <#if dependencyResult.dependencyMediumCVEReportTable?size gt 0>
                             <div id="osa-cve-table-medium-container">
                                 <div class="full-severity-title">
                                     <div class="severity-icon">
@@ -2217,7 +2493,7 @@
                                         </svg>
                                     </div>
                                     <div class="severity-title-name">Medium</div>
-                                    <div class="severity-count">${osa.results.totalMediumVulnerabilities}</div>
+                                    <div class="severity-count">${dependencyResult.mediumVulnerability}</div>
                                 </div>
                                 <table id="osa-cve-table-medium" class="cve-table sast-cve-table osa-cve-table-medium">
                                     <tr>
@@ -2225,7 +2501,7 @@
                                         <th>Publish Date</th>
                                         <th>Library</th>
                                     </tr>
-                                    <#list osa.osaMediumCVEReportTable as cve>
+                                    <#list dependencyResult.dependencyMediumCVEReportTable as cve>
                                         <#if cve.state =="NOT_EXPLOITABLE">
                                         <tr style="text-decoration: line-through">
                                         <#else>
@@ -2240,7 +2516,7 @@
                             </div>
                         </#if>
 
-                        <#if osa.osaLowCVEReportTable?size gt 0>
+                        <#if dependencyResult.dependencyLowCVEReportTable?size gt 0>
                             <div id="osa-cve-table-low-container">
                                 <div class="full-severity-title">
                                     <div class="severity-icon">
@@ -2275,7 +2551,7 @@
                                         </svg>
                                     </div>
                                     <div class="severity-title-name">Low</div>
-                                    <div class="severity-count">${osa.results.totalLowVulnerabilities}</div>
+                                    <div class="severity-count">${dependencyResult.lowVulnerability}</div>
                                 </div>
                                 <table id="osa-cve-table-low" class="cve-table sast-cve-table osa-cve-table-low">
                                     <tr>
@@ -2283,7 +2559,7 @@
                                         <th>Publish Date</th>
                                         <th>Library</th>
                                     </tr>
-                                    <#list osa.osaLowCVEReportTable as cve>
+                                    <#list dependencyResult.dependencyLowCVEReportTable as cve>
                                         <#if cve.state =="NOT_EXPLOITABLE">
                                         <tr style="text-decoration: line-through">
                                         <#else>
@@ -2305,7 +2581,7 @@
         </#if>
     </#if>
 
-    <#if (config.dependencyScannerType == "OSA" || config.sastEnabled) &&  policyViolated>
+    <#if (config.dependencyScannerType == "OSA" || config.dependencyScannerType == "SCA"|| config.sastEnabled) &&  policyViolated>
 
         <#if policyViolatedCount gt 0>
         <div class="osa-full full-results-section">

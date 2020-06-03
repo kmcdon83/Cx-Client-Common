@@ -17,4 +17,8 @@ public class SCASummaryResults implements Serializable {
     private String createdOn;
     private double riskScore;
     private int totalOutdatedPackages;
+
+    public int getTotalOkLibraries(){
+        return (totalPackages-(highVulnerabilityCount+mediumVulnerabilityCount+lowVulnerabilityCount));
+    }
 }

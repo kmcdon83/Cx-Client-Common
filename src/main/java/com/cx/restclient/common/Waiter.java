@@ -34,7 +34,7 @@ public abstract class Waiter<T> {
             statusResponse = getStatus(taskId);
 
             while (isTaskInProgress(statusResponse) && (scanTimeoutSec <= 0 || elapsedTimeSec < scanTimeoutSec)) {
-                Thread.sleep(sleepIntervalSec * 1000);
+                Thread.sleep((long)sleepIntervalSec * 1000);
                 try {
                     statusResponse = getStatus(taskId);
                 } catch (Exception e) {

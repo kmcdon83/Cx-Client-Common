@@ -11,6 +11,8 @@ import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
+import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -26,7 +28,7 @@ public abstract class SummaryUtils {
 
     public static String generateSummary(SASTResults sastResults, DependencyScanResults dependencyScanResults, CxScanConfig config) throws IOException, TemplateException {
         OSAResults osaResults = dependencyScanResults.getOsaResults();
-
+        SCAResults scaResults = dependencyScanResults.getScaResults();
         Configuration cfg = new Configuration(new Version("2.3.23"));
         cfg.setClassForTemplateLoading(SummaryUtils.class, "/com/cx/report");
         Template template = cfg.getTemplate("report.ftl");
@@ -37,6 +39,11 @@ public abstract class SummaryUtils {
 
         // TODO: null value for "osa" should be handled inside the template.
         templateData.put("osa", osaResults != null ? osaResults : new OSAResults());
+        templateData.put("sca", scaResults != null ? scaResults : new SCAResults());
+
+        DependencyResult dependencyResult = resolveDependencyResult(osaResults,scaResults);
+
+        templateData.put("dependencyResult", dependencyResult !=null ? dependencyResult : new DependencyResult());
 
         ScanResults scanResults = new ScanResults();
         scanResults.setSastResults(sastResults);
@@ -53,7 +60,7 @@ public abstract class SummaryUtils {
             if (sastResults.isSastResultsReady()) {
                 boolean sastThresholdExceeded = scanSummary.isSastThresholdExceeded();
                 boolean sastNewResultsExceeded = scanSummary.isSastThresholdForNewResultsExceeded();
-                templateData.put("sastThresholdExceeded", sastNewResultsExceeded);
+                templateData.put("sastThresholdExceeded", sastThresholdExceeded);
                 templateData.put("sastNewResultsExceeded", sastNewResultsExceeded);
                 buildFailed = sastThresholdExceeded || sastNewResultsExceeded;
                 //calculate sast bars:
@@ -88,6 +95,7 @@ public abstract class SummaryUtils {
             }
         }
 
+/*
         //osa:
         if (config.getDependencyScannerType() == DependencyScannerType.OSA) {
             if (osaResults!=null && osaResults.isOsaResultsReady()) {
@@ -110,7 +118,62 @@ public abstract class SummaryUtils {
                 templateData.put("osaHighTotalHeight", osaHighTotalHeight);
                 templateData.put("osaMediumTotalHeight", osaMediumTotalHeight);
                 templateData.put("osaLowTotalHeight", osaLowTotalHeight);
-            } else {
+                } else {
+                buildFailed = true;
+            }
+            } else if (config.getDependencyScannerType() == DependencyScannerType.SCA){
+                boolean thresholdExceeded = scanSummary.isOsaThresholdExceeded();
+                templateData.put("scaThresholdExceeded", thresholdExceeded);
+                buildFailed |= thresholdExceeded;
+
+                //calculate sca bars:
+                SCASummaryResults scaSummaryResults = scaResults.getSummary();
+                int scaHigh = scaSummaryResults.getHighVulnerabilityCount();
+                int scaMedium = scaSummaryResults.getMediumVulnerabilityCount();
+                int scaLow = scaSummaryResults.getLowVulnerabilityCount();
+                float scaMaxCount = Math.max(scaHigh, Math.max(scaMedium, scaLow));
+                float scaBarNorm = scaMaxCount * 10f / 9f;
+
+                float scaHighTotalHeight = (float) scaHigh / scaBarNorm * 238f;
+                float scaMediumTotalHeight = (float) scaMedium / scaBarNorm * 238f;
+                float scaLowTotalHeight = (float) scaLow / scaBarNorm * 238f;
+
+                templateData.put("scaHighTotalHeight", scaHighTotalHeight);
+                templateData.put("scaMediumTotalHeight", scaMediumTotalHeight);
+                templateData.put("scaLowTotalHeight", scaLowTotalHeight);
+            }else{
+                buildFailed = true;
+            }
+*/
+
+        if (config.getDependencyScannerType() == DependencyScannerType.OSA || config.getDependencyScannerType() == DependencyScannerType
+        .SCA) {
+            if (dependencyResult!=null && dependencyResult.isResultReady()) {
+                boolean thresholdExceeded = scanSummary.isOsaThresholdExceeded();
+                templateData.put("dependencyThresholdExceeded", thresholdExceeded);
+                if(config.getSastEnabled()){
+                    buildFailed |= thresholdExceeded || buildFailed;
+                }else{
+                    buildFailed |= thresholdExceeded;
+                }
+
+                //calculate dependency results bars:
+                //DependencyResult dependencyResult1 = dependencyResult;
+                int dependencyHigh = dependencyResult.getHighVulnerability();
+                int dependencyMedium = dependencyResult.getMediumVulnerability();
+                int dependencyLow = dependencyResult.getLowVulnerability();
+                float dependencyMaxCount = Math.max(dependencyHigh, Math.max(dependencyMedium,dependencyLow));
+                float dependencyBarNorm = dependencyMaxCount * 10f / 9f;
+
+
+                float dependencyHighTotalHeight = (float) dependencyHigh / dependencyBarNorm * 238f;
+                float dependencyMediumTotalHeight = (float) dependencyMedium / dependencyBarNorm * 238f;
+                float dependencyLowTotalHeight = (float) dependencyLow / dependencyBarNorm * 238f;
+
+                templateData.put("dependencyHighTotalHeight",   dependencyHighTotalHeight);
+                templateData.put("dependencyMediumTotalHeight", dependencyMediumTotalHeight);
+                templateData.put("dependencyLowTotalHeight",    dependencyLowTotalHeight);
+            }else{
                 buildFailed = true;
             }
         }
@@ -155,6 +218,18 @@ public abstract class SummaryUtils {
         StringWriter writer = new StringWriter();
         template.process(templateData, writer);
         return writer.toString();
+    }
+
+    private static DependencyResult resolveDependencyResult(OSAResults osaResults, SCAResults scaResults){
+        DependencyResult dependencyResult;
+        if(osaResults!=null){
+            dependencyResult = new  DependencyResult(osaResults);
+        }else if(scaResults!=null){
+            dependencyResult = new DependencyResult(scaResults);
+        }else{
+            dependencyResult = null;
+        }
+        return dependencyResult;
     }
 
     private static float calculateNewBarHeight(int newCount, int count, float totalHeight) {

@@ -126,6 +126,7 @@ public class SCAClient implements DependencyScanner {
         log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
 
         SCAResults scaResult = retrieveScanResults();
+        scaResult.setScaResultReady(true);
         target.setScaResults(scaResult);
     }
 
@@ -360,6 +361,8 @@ public class SCAClient implements DependencyScanner {
             String reportLink = getWebReportLink(reportId);
             result.setWebReportLink(reportLink);
             printWebReportLink(result);
+            result.setScaResultReady(true);
+            log.info("Retrieved SCA results successfully.");
             return result;
         } catch (IOException e) {
             throw new CxClientException("Error retrieving CxSCA scan results.", e);
