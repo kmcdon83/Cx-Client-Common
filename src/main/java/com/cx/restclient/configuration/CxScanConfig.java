@@ -1,18 +1,13 @@
 package com.cx.restclient.configuration;
 
-import com.cx.restclient.dto.CxVersion;
-import com.cx.restclient.dto.DependencyScannerType;
-import com.cx.restclient.dto.ProxyConfig;
-import com.cx.restclient.dto.RemoteSourceTypes;
+import com.cx.restclient.dto.*;
 import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
 import org.apache.commons.lang3.StringUtils;
-
+import org.apache.http.cookie.Cookie;
 import java.io.File;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Created by galn on 21/12/2016.
@@ -59,7 +54,7 @@ public class CxScanConfig implements Serializable {
     private Integer sastLowThreshold;
     private Boolean sastNewResultsThresholdEnabled = false;
     private String sastNewResultsThresholdSeverity;
-
+    private TokenLoginResponse token;
     private Boolean generatePDFReport = false;
     private File zipFile;
     private Integer engineConfigurationId;
@@ -111,7 +106,7 @@ public class CxScanConfig implements Serializable {
 
     private SCAConfig scaConfig;
     private DependencyScannerType dependencyScannerType;
-
+    private List<Cookie> sessionCookies = new ArrayList<>();
     private ProxyConfig proxyConfig;
 
     public CxScanConfig() {
@@ -752,5 +747,20 @@ public class CxScanConfig implements Serializable {
 
     public void setProxyConfig(ProxyConfig proxyConfig) {
         this.proxyConfig = proxyConfig;
+    }
+
+    public void addCookie(Cookie cookie){
+        this.sessionCookies.add(cookie);
+    }
+    public List<Cookie> getSessionCookie() {
+        return this.sessionCookies;
+    }
+
+    public TokenLoginResponse getToken() {
+        return token;
+    }
+
+    public void setToken(TokenLoginResponse token) {
+        this.token = token;
     }
 }

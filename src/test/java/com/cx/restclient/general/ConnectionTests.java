@@ -3,6 +3,7 @@ package com.cx.restclient.general;
 import com.cx.restclient.CxShragaClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
@@ -30,7 +31,8 @@ public class ConnectionTests extends CommonClientTest {
     public void scaConnectionTest() {
         CxScanConfig config = new CxScanConfig();
         config.setCxOrigin("common");
-        config.setScaConfig(TestingUtils.getScaConfig(props));
+        SCAConfig scaConfig = TestingUtils.getScaConfig(props, false);
+        config.setScaConfig(scaConfig);
         try {
             CxShragaClient.testScaConnection(config, log);
         } catch (CxClientException e) {
