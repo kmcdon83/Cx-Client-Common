@@ -7,12 +7,12 @@
     <version>2020.2.18.SCA-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
-    <description>Web client for interaction with Checkmarx SAST, SCA and OSA products</description>
+    <description>Enables web services access Checkmarx SAST and OSA scan.</description>
     <url>https://www.checkmarx.com</url>
     <scm>
-        <connection>scm:git:git://github.com/checkmarx-ltd/Cx-Client-Common.git</connection>
-        <developerConnection>scm:git:ssh://github.com/checkmarx-ltd/Cx-Client-Common.git</developerConnection>
-        <url>https://github.com/checkmarx-ltd/Cx-Client-Common/tree/master</url>
+        <connection>scm:git:git://github.com/CxRepositories/Cx-Client-Common.git</connection>
+        <developerConnection>scm:git:ssh://github.com/CxRepositories/Cx-Client-Common.git</developerConnection>
+        <url>https://github.com/CxRepositories/Cx-Client-Common/tree/master</url>
     </scm>
     <licenses>
         <license>
@@ -69,27 +69,6 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-
-            <!-- Build a fat JAR -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
         <resources>
             <resource>
@@ -123,7 +102,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.5.12</version>
+            <version>4.5.4</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -292,7 +271,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
+                    <!--<plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
                         <version>1.6.7</version>
@@ -320,17 +299,9 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>
+                    </plugin>-->
                 </plugins>
             </build>
         </profile>
     </profiles>
-    <developers>
-        <developer>
-            <name>Alexey Kononov</name>
-            <email>alexey.kononov@checkmarx.com</email>
-            <organization>Checkmarx Ltd</organization>
-            <organizationUrl>https://www.checkmarx.com/</organizationUrl>
-        </developer>
-    </developers>
 </project>

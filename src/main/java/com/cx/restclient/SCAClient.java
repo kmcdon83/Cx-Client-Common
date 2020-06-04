@@ -17,7 +17,11 @@ import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -30,8 +34,10 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -40,6 +46,17 @@ import java.util.List;
 public class SCAClient implements DependencyScanner {
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
+
+    private static final String TENANT_HEADER_NAME = "Account-Name";
+
+    private static final ObjectMapper caseInsensitiveObjectMapper = new ObjectMapper()
+            // Ignore any fields that can be added to SCA API in the future.
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            // We need this feature to properly deserialize finding severity,
+            // e.g. "High" (in JSON) -> Severity.HIGH (in Java).
+            .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
+
+    private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
 
     public static class UrlPaths {
         private UrlPaths() {
@@ -76,6 +93,10 @@ public class SCAClient implements DependencyScanner {
         SCAConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
+
+        // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
+        // and then use this token for SCA authentication in cloud.
+        httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
     }
 
     @Override
@@ -105,6 +126,7 @@ public class SCAClient implements DependencyScanner {
         log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
 
         SCAResults scaResult = retrieveScanResults();
+        scaResult.setScaResultReady(true);
         target.setScaResults(scaResult);
     }
 
@@ -130,7 +152,7 @@ public class SCAClient implements DependencyScanner {
         return scanId;
     }
 
-    private String extractScanIdFrom(HttpResponse response) {
+    private static String extractScanIdFrom(HttpResponse response) {
         if (response != null && response.getLastHeader("Location") != null) {
             // Expecting a value like "/api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293"
             String urlPathWithScanId = response.getLastHeader("Location").getValue();
@@ -147,10 +169,18 @@ public class SCAClient implements DependencyScanner {
         RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
         validateRemoteRepoConfig(repoInfo);
 
-        String repoUrl = repoInfo.getUrl().toString();
-        log.info(String.format("Repository URL: %s", repoUrl));
+        URL sanitizedUrl = sanitize(repoInfo.getUrl());
+        log.info(String.format("Repository URL: %s", sanitizedUrl));
 
-        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoUrl);
+        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString());
+    }
+
+    /**
+     * Removes the userinfo part of the input URL (if present), so that the URL may be logged safely.
+     * The URL may contain userinfo when a private repo is scanned.
+     */
+    private URL sanitize(URL url) throws MalformedURLException {
+        return new URL(url.getProtocol(), url.getHost(), url.getFile());
     }
 
     private HttpResponse submitSourcesFromLocalDir() throws IOException {
@@ -217,11 +247,11 @@ public class SCAClient implements DependencyScanner {
 
         HttpEntity request = new FileEntity(source);
 
-        CxHttpClient client = createHttpClient(uploadUrl);
+        CxHttpClient uploader = createHttpClient(uploadUrl);
 
         // Relative path is empty, because we use the whole upload URL as the base URL for the HTTP client.
         // Content type is empty, because the server at uploadUrl throws an error if Content-Type is non-empty.
-        client.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
+        uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
     }
 
     private void printWebReportLink(SCAResults scaResult) {
@@ -247,11 +277,18 @@ public class SCAClient implements DependencyScanner {
         SCAConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
-        settings.setAccessControlBaseUrl(scaConfig.getAccessControlUrl());
+
+        String acUrl = scaConfig.getAccessControlUrl();
+        boolean isAccessControlInCloud = (acUrl != null && acUrl.startsWith(CLOUD_ACCESS_CONTROL_BASE_URL));
+        log.info(isAccessControlInCloud ? "Using cloud authentication." : "Using on-premise authentication.");
+
+        settings.setAccessControlBaseUrl(acUrl);
         settings.setUsername(scaConfig.getUsername());
         settings.setPassword(scaConfig.getPassword());
         settings.setTenant(scaConfig.getTenant());
-        settings.setClientTypeForPasswordAuth(ClientType.SCA_CLI);
+
+        ClientType clientType = isAccessControlInCloud ? ClientType.SCA_CLI : ClientType.RESOURCE_OWNER;
+        settings.setClientTypeForPasswordAuth(clientType);
 
         httpClient.login(settings);
     }
@@ -313,7 +350,7 @@ public class SCAClient implements DependencyScanner {
 
             SCASummaryResults scanSummary = getSummaryReport(reportId);
             result.setSummary(scanSummary);
-            printSummary(scanSummary);
+            printSummary(scanSummary, scanId);
 
             List<Finding> findings = getFindings(reportId);
             result.setFindings(findings);
@@ -324,6 +361,8 @@ public class SCAClient implements DependencyScanner {
             String reportLink = getWebReportLink(reportId);
             result.setWebReportLink(reportLink);
             printWebReportLink(result);
+            result.setScaResultReady(true);
+            log.info("Retrieved SCA results successfully.");
             return result;
         } catch (IOException e) {
             throw new CxClientException("Error retrieving CxSCA scan results.", e);
@@ -386,12 +425,16 @@ public class SCAClient implements DependencyScanner {
 
         String path = String.format(UrlPaths.FINDINGS, URLEncoder.encode(reportId, ENCODING));
 
-        return (List<Finding>) httpClient.getRequest(path,
+        ArrayNode responseJson = httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                Finding.class,
+                ArrayNode.class,
                 HttpStatus.SC_OK,
                 "CxSCA findings",
-                true);
+                false);
+
+        Finding[] findings = caseInsensitiveObjectMapper.treeToValue(responseJson, Finding[].class);
+
+        return Arrays.asList(findings);
     }
 
     private List<Package> getPackages(String reportId) throws IOException {
@@ -407,7 +450,7 @@ public class SCAClient implements DependencyScanner {
                 true);
     }
 
-    private void printSummary(SCASummaryResults summary) {
+    private void printSummary(SCASummaryResults summary, String scanId) {
         if (log.isInfoEnabled()) {
             log.info(String.format("%n----CxSCA risk report summary----"));
             log.info(String.format("Created on: %s", summary.getCreatedOn()));
@@ -416,6 +459,7 @@ public class SCAClient implements DependencyScanner {
             log.info(String.format("Medium vulnerabilities: %d", summary.getMediumVulnerabilityCount()));
             log.info(String.format("Low vulnerabilities: %d", summary.getLowVulnerabilityCount()));
             log.info(String.format("Risk report ID: %s", summary.getRiskReportId()));
+            log.info(String.format("Scan ID: %s", scanId));
             log.info(String.format("Risk score: %.2f", summary.getRiskScore()));
             log.info(String.format("Total packages: %d", summary.getTotalPackages()));
             log.info(String.format("Total outdated packages: %d%n", summary.getTotalOutdatedPackages()));
