@@ -1,6 +1,7 @@
 package com.cx.restclient.common.summary;
 
 import com.cx.restclient.dto.DependencyScannerType;
+import com.cx.restclient.dto.scansummary.Severity;
 import com.cx.restclient.osa.dto.CVEReportTableRow;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sca.dto.SCAResults;
@@ -81,11 +82,11 @@ public class DependencyResult {
         CVEReportTableRow row;
         for(Finding scaFinding :scaFindings ){
             row =new CVEReportTableRow(scaFinding);
-            if(scaFinding.getSeverity().equals("Low")){
+            if(scaFinding.getSeverity() == Severity.LOW){
                 this.dependencyLowCVEReportTable.add(row);
-            }else if(scaFinding.getSeverity().equals("Medium")){
+            }else if(scaFinding.getSeverity() == Severity.MEDIUM){
                 this.dependencyMediumCVEReportTable.add(row);
-            }else if(scaFinding.getSeverity().equals("High")){
+            }else if(scaFinding.getSeverity() == Severity.HIGH){
                 this.dependencyHighCVEReportTable.add(row);
             }
         }

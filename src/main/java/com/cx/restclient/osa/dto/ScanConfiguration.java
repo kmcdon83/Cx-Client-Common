@@ -13,7 +13,6 @@ import java.io.File;
 public class ScanConfiguration {
 
     private boolean SASTEnabled;
-    private String OSAEnabled;
     private String cxOrigin;
     private String sourceDir;
     private String tempDir;
@@ -60,14 +59,6 @@ public class ScanConfiguration {
 
     public void setSASTEnabled(boolean SASTEnabled) {
         this.SASTEnabled = SASTEnabled;
-    }
-
-    public String getOSAEnabled() {
-        return OSAEnabled;
-    }
-
-    public void setOSAEnabled(String OSAEnabled) {
-        this.OSAEnabled = OSAEnabled;
     }
 
     public String getCxOrigin() {
