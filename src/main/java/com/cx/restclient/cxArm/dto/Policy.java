@@ -15,7 +15,7 @@ public class Policy implements Serializable {
     String policyName;
     String ruleName;
     String firstDetectionDate;
-     List<Violation> violations = new ArrayList<Violation>();
+    private List<Violation> violations = new ArrayList<Violation>();
 
     public Policy() {
     }

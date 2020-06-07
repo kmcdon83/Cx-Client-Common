@@ -7,6 +7,8 @@ import com.sun.xml.bind.v2.JAXBContextFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
+
+import java.io.IOException;
 import java.util.Collections;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -24,8 +26,7 @@ public abstract class SASTUtils {
 
     public static CxXMLResults convertToXMLResult(byte[] cxReport) throws CxClientException {
         CxXMLResults reportObj = null;
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport);
-        try {
+        try(ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(cxReport)) {
 
             JAXBContextFactory jaxbContextFactory = new JAXBContextFactory();
             JAXBContext jaxbContext = jaxbContextFactory.createContext(CxXMLResults.class.getPackage().getName(),
@@ -34,10 +35,8 @@ public abstract class SASTUtils {
 
             reportObj = (CxXMLResults) unmarshaller.unmarshal(byteArrayInputStream);
 
-        } catch (JAXBException e) {
+        } catch (JAXBException | IOException e) {
             throw new CxClientException("Failed to parse xml report: " + e.getMessage(), e);
-        } finally {
-            IOUtils.closeQuietly(byteArrayInputStream);
         }
         return reportObj;
     }

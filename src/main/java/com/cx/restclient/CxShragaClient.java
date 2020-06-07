@@ -37,6 +37,7 @@ import static com.cx.restclient.sast.utils.SASTParam.*;
 //System Holistic Rest Api Generic Application
 public class CxShragaClient {
     private static final String DEFAULT_AUTH_API_PATH = "CxRestApi/auth/";
+    private static final String PRINT_LINE = "-----------------------------------------------------------------------------------------";
 
     private CxHttpClient httpClient;
     private Logger log;
@@ -187,7 +188,7 @@ public class CxShragaClient {
 
     public void printIsProjectViolated() {
         if (config.getEnablePolicyViolations()) {
-            log.info("-----------------------------------------------------------------------------------------");
+            log.info(PRINT_LINE);
             log.info("Policy Management: ");
             log.info("--------------------");
 
@@ -198,7 +199,7 @@ public class CxShragaClient {
 
             if (sastResults.getSastPolicies().isEmpty() && !hasOsaViolations) {
                 log.info(PROJECT_POLICY_COMPLIANT_STATUS);
-                log.info("-----------------------------------------------------------------------------------------");
+                log.info(PRINT_LINE);
             } else {
                 log.info(PROJECT_POLICY_VIOLATED_STATUS);
                 if (!sastResults.getSastPolicies().isEmpty()) {
@@ -207,7 +208,7 @@ public class CxShragaClient {
                 if (hasOsaViolations) {
                     log.info("OSA violated policies names: " + getPoliciesNames(dependencyScanResults.getOsaResults().getOsaPolicies()));
                 }
-                log.info("-----------------------------------------------------------------------------------------");
+                log.info(PRINT_LINE);
             }
         }
     }
@@ -247,7 +248,7 @@ public class CxShragaClient {
 
         try {
             httpClient.setTeamPathHeader(this.teamPath);
-            projects = (List<Project>) httpClient.getRequest(SAST_GET_All_PROJECTS, CONTENT_TYPE_APPLICATION_JSON_V1, Project.class, 200, "all projects", true);
+            projects = (List<Project>) httpClient.getRequest(SAST_GET_ALL_PROJECTS, CONTENT_TYPE_APPLICATION_JSON_V1, Project.class, 200, "all projects", true);
         } catch (HttpResponseException ex) {
             if (ex.getStatusCode() != 404) {
                 throw ex;
