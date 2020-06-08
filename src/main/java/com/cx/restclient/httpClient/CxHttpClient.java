@@ -85,6 +85,8 @@ public class CxHttpClient {
     private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
     private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
 
+    private static final String LOGIN_FAILED_MSG = "Fail to login with windows authentication: ";
+
     private static HttpClient apacheClient;
 
     private Logger log;
@@ -230,8 +232,8 @@ public class CxHttpClient {
             loginResponse = apacheClient.execute(request);
 
         } catch (IOException e) {
-            log.error("Fail to login with windows authentication: " + e.getMessage());
-            throw new CxClientException("Fail to login with windows authentication: " + e.getMessage());
+            log.error(LOGIN_FAILED_MSG + e.getMessage());
+            throw new CxClientException(LOGIN_FAILED_MSG + e.getMessage());
         } finally {
             HttpClientUtils.closeQuietly(loginResponse);
         }
@@ -306,8 +308,8 @@ public class CxHttpClient {
             response = apacheClient.execute(request);
             return extractToken(response);
         } catch (IOException e) {
-            log.error("Fail to login with windows authentication: " + e.getMessage());
-            throw new CxClientException("Fail to login with windows authentication: " + e.getMessage());
+            log.error(LOGIN_FAILED_MSG + e.getMessage());
+            throw new CxClientException(LOGIN_FAILED_MSG + e.getMessage());
         }
     }
 

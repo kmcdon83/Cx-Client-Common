@@ -13,7 +13,7 @@ public class SASTParam {
     public static final String SAST_QUEUE_SCAN_STATUS = "sast/scansQueue/{scanId}";
     public static final String SAST_GET_PROJECT_BY_ID = "projects/{projectId}";
     public static final String SAST_GET_PROJECT = "projects?projectname={name}&teamid={teamId}";// Get  project)
-    public static final String SAST_GET_All_PROJECTS = "projects";// Get  project)
+    public static final String SAST_GET_ALL_PROJECTS = "projects";// Get  project)
     public static final String SAST_ZIP_ATTACHMENTS = "projects/{projectId}/sourceCode/attachments";//Attach ZIP file
     public static final String SAST_GET_PROJECT_SCANS = "sast/scans?projectId={projectId}";
     public static final String SAST_GET_QUEUED_SCANS = "sast/scansQueue?projectId={projectId}";

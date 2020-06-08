@@ -51,6 +51,8 @@ class CxSASTClient {
     private int reportTimeoutSec = 5000;
     private int cxARMTimeoutSec = 1000;
     private Waiter<ResponseQueueScanStatus> sastWaiter;
+    private static final String SCAN_ID_PATH_PARAM = "{scanId}";
+    private static final String PROJECT_ID_PATH_PARAM = "{projectId}";
 
     private Waiter<ReportStatus> reportWaiter = new Waiter<ReportStatus>("Scan report", 10, 3) {
         @Override
@@ -299,7 +301,7 @@ class CxSASTClient {
         UpdateScanStatusRequest request = new UpdateScanStatusRequest(CurrentStatus.CANCELED);
         String json = convertToJson(request);
         StringEntity entity = new StringEntity(json, StandardCharsets.UTF_8);
-        httpClient.patchRequest(SAST_QUEUE_SCAN_STATUS.replace("{scanId}", Long.toString(scanId)), CONTENT_TYPE_APPLICATION_JSON_V1, entity, 200, "cancel SAST scan");
+        httpClient.patchRequest(SAST_QUEUE_SCAN_STATUS.replace(SCAN_ID_PATH_PARAM, Long.toString(scanId)), CONTENT_TYPE_APPLICATION_JSON_V1, entity, 200, "cancel SAST scan");
         log.info("SAST Scan canceled. (scanId: " + scanId + ")");
     }
 
@@ -325,12 +327,13 @@ class CxSASTClient {
             case Scanning:
             case PostScan:
                 return true;
+            default:
+                return false;
         }
-        return false;
     }
 
     public ScanSettingResponse getScanSetting(long projectId) throws IOException, CxClientException {
-        return httpClient.getRequest(SAST_GET_SCAN_SETTINGS.replace("{projectId}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, ScanSettingResponse.class, 200, "Scan setting", false);
+        return httpClient.getRequest(SAST_GET_SCAN_SETTINGS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, ScanSettingResponse.class, 200, "Scan setting", false);
     }
 
     private void defineScanSetting(ScanSettingRequest scanSetting) throws IOException, CxClientException {
@@ -356,7 +359,7 @@ class CxSASTClient {
         builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
         builder.addPart("zippedSource", streamBody);
         HttpEntity entity = builder.build();
-        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace("{projectId}", Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
+        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
     }
 
     private long createScan(long projectId) throws CxClientException, IOException {
@@ -378,15 +381,15 @@ class CxSASTClient {
     }
 
     private SASTStatisticsResponse getScanStatistics(long scanId) throws CxClientException, IOException {
-        return httpClient.getRequest(SAST_SCAN_RESULTS_STATISTICS.replace("{scanId}", Long.toString(scanId)), CONTENT_TYPE_APPLICATION_JSON_V1, SASTStatisticsResponse.class, 200, "SAST scan statistics", false);
+        return httpClient.getRequest(SAST_SCAN_RESULTS_STATISTICS.replace(SCAN_ID_PATH_PARAM, Long.toString(scanId)), CONTENT_TYPE_APPLICATION_JSON_V1, SASTStatisticsResponse.class, 200, "SAST scan statistics", false);
     }
 
     public List<LastScanResponse> getLatestSASTStatus(long projectId) throws CxClientException, IOException {
-        return (List<LastScanResponse>) httpClient.getRequest(SAST_GET_PROJECT_SCANS.replace("{projectId}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, LastScanResponse.class, 200, "last SAST scan ID", true);
+        return (List<LastScanResponse>) httpClient.getRequest(SAST_GET_PROJECT_SCANS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, LastScanResponse.class, 200, "last SAST scan ID", true);
     }
 
     private List<ResponseQueueScanStatus> getQueueScans(long projectId) throws IOException, CxClientException {
-        return (List<ResponseQueueScanStatus>) httpClient.getRequest(SAST_GET_QUEUED_SCANS.replace("{projectId}", Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseQueueScanStatus.class, 200, "scans in the queue. (projectId: )" + projectId, true);
+        return (List<ResponseQueueScanStatus>) httpClient.getRequest(SAST_GET_QUEUED_SCANS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseQueueScanStatus.class, 200, "scans in the queue. (projectId: )" + projectId, true);
     }
 
     private CreateReportResponse createScanReport(CreateReportRequest reportRequest) throws CxClientException, IOException {
@@ -409,7 +412,7 @@ class CxSASTClient {
 
     //SCAN Waiter - overload methods
     public ResponseQueueScanStatus getSASTScanStatus(String scanId) throws CxClientException, IOException {
-        ResponseQueueScanStatus scanStatus = httpClient.getRequest(SAST_QUEUE_SCAN_STATUS.replace("{scanId}", scanId), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseQueueScanStatus.class, 200, "SAST scan status", false);
+        ResponseQueueScanStatus scanStatus = httpClient.getRequest(SAST_QUEUE_SCAN_STATUS.replace(SCAN_ID_PATH_PARAM, scanId), CONTENT_TYPE_APPLICATION_JSON_V1, ResponseQueueScanStatus.class, 200, "SAST scan status", false);
         String currentStatus = scanStatus.getStage().getValue();
 
         if (CurrentStatus.FAILED.value().equals(currentStatus) || CurrentStatus.CANCELED.value().equals(currentStatus) ||
@@ -481,7 +484,7 @@ class CxSASTClient {
 
     //CxARM Waiter - overload methods
     private CxARMStatus getCxARMStatus(String projectId) throws CxClientException, IOException {
-        CxARMStatus cxARMStatus = httpClient.getRequest(SAST_GET_CXARM_STATUS.replace("{projectId}", projectId), CONTENT_TYPE_APPLICATION_JSON_V1, CxARMStatus.class, 200, " cxARM status", false);
+        CxARMStatus cxARMStatus = httpClient.getRequest(SAST_GET_CXARM_STATUS.replace(PROJECT_ID_PATH_PARAM, projectId), CONTENT_TYPE_APPLICATION_JSON_V1, CxARMStatus.class, 200, " cxARM status", false);
         cxARMStatus.setBaseId(projectId);
 
         String currentStatus = cxARMStatus.getStatus();
