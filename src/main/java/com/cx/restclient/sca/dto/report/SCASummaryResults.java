@@ -19,6 +19,8 @@ public class SCASummaryResults implements Serializable {
     private int totalOutdatedPackages;
 
     public int getTotalOkLibraries(){
-        return (totalPackages-(highVulnerabilityCount+mediumVulnerabilityCount+lowVulnerabilityCount));
+        int totalOk = (totalPackages-(highVulnerabilityCount+mediumVulnerabilityCount+lowVulnerabilityCount));
+        totalOk = Math.max(totalOk,0);
+        return totalOk;
     }
 }
