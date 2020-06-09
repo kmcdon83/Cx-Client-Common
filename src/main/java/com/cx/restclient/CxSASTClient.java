@@ -203,7 +203,7 @@ class CxSASTClient {
     private void configureScanSettings(long projectId) throws IOException {
         ScanSettingResponse scanSettingResponse = getScanSetting(projectId);
         ScanSettingRequest scanSettingRequest = new ScanSettingRequest();
-        scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());//todo check for null
+        scanSettingRequest.setEngineConfigurationId(scanSettingResponse.getEngineConfiguration().getId());
         scanSettingRequest.setProjectId(projectId);
         scanSettingRequest.setPresetId(config.getPresetId());
         if (config.getEngineConfigurationId() != null) {
