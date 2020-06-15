@@ -34,6 +34,7 @@ public class CxScanConfig implements Serializable {
     private String password;
     private String refreshToken;
     private String url;
+    private boolean isProxy = true;
     private String projectName;
     private String teamPath;
     private String teamId;
@@ -99,12 +100,14 @@ public class CxScanConfig implements Serializable {
     public CxScanConfig() {
     }
 
-    public CxScanConfig(String url, String username, String password, String cxOrigin, boolean disableCertificateValidation) {
+    public CxScanConfig(String url, String username, String password, String cxOrigin,
+                        boolean disableCertificateValidation, boolean isProxy) {
         this.url = url;
         this.username = username;
         this.password = password;
         this.cxOrigin = cxOrigin;
         this.disableCertificateValidation = disableCertificateValidation;
+        this.isProxy = isProxy;
     }
 
     public CxScanConfig(String url, String refreshToken, String cxOrigin, boolean disableCertificateValidation) {
@@ -212,6 +215,14 @@ public class CxScanConfig implements Serializable {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public boolean isProxy() {
+        return isProxy;
+    }
+
+    public void setProxy(boolean proxy) {
+        isProxy = proxy;
     }
 
     public String getProjectName() {
