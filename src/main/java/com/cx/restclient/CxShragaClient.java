@@ -84,11 +84,11 @@ public class CxShragaClient {
 
     public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation,
                           Logger log, String proxyHost, int proxyPort, String proxyUser, String proxyPassword) throws MalformedURLException, CxClientException {
-        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log, proxyHost, proxyPort, proxyUser, proxyPassword);
+        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation, true), log, proxyHost, proxyPort, proxyUser, proxyPassword);
     }
 
     public CxShragaClient(String serverUrl, String username, String password, String origin, boolean disableCertificateValidation, Logger log) throws MalformedURLException, CxClientException {
-        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation), log);
+        this(new CxScanConfig(serverUrl, username, password, origin, disableCertificateValidation, false), log);
     }
 
     //API Scans methods
