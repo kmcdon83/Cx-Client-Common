@@ -263,7 +263,7 @@ public class SCAClient implements DependencyScanner {
     @Override
     public DependencyScanResults getLatestScanResults() {
         // TODO: implement when someone actually needs this.
-        return null;
+        return new DependencyScanResults();
     }
 
     void testConnection() throws IOException {
