@@ -10,11 +10,11 @@ pipeline {
     options {
         timestamps()
         timeout(time: 1, unit: 'HOURS')
-        skipDefaultCheckout(true)
+        skipDefaultCheckout()
     }
     stages {
         stage('Deploy Build Container') {
-            options { skipDefaultCheckout(false) }
+            options { skipDefaultCheckout false }
             steps {
                 script {
                     sh 'printenv'
