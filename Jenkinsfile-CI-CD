@@ -13,11 +13,15 @@ pipeline {
         //skipDefaultCheckout()
     }
     stages {
-        stage('Deploy Build Container') {
+        stage('Build CxCommon') {
             steps {
                 script {
                     sh 'printenv'
-                    sh "docker run maven:3.6.1-jdk-8-alpine"
+                    //sh "docker run maven:3.6.1-jdk-8-alpine"
+                    sh "docker run --rm --name build-${BUILD_TAG} -v ${pwd}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install"
+                    /*BUILD_TAG=jenkins-CxSDLC-Cx-Client-Common-eitanas1-new-jenkinsfile-3
+                    GIT_BRANCH=eitanas1-new-jenkinsfile
+                    BUILD_ID=3*/
                     sh "docker ps -a"
                 }
             }
@@ -35,7 +39,6 @@ pipeline {
     post {
         cleanup {
             script{
-                sh "ls"
                 cleanWs()
             }
         }
