@@ -16,6 +16,7 @@ pipeline {
         stage('Deploy Build Container') {
             steps {
                 script {
+                    sh 'printenv'
                     sh "cat k8s/namespace.yaml"
                     sh "sed -e \"s/<sha1>/sha1/\" -i k8s/namespace.yaml"
                     sh "cat k8s/namespace.yaml"
