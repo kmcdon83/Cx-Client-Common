@@ -1,5 +1,7 @@
 #!/groovy
-@Library('cx-jenkins-pipeline-kit') _
+//@Library('cx-jenkins-pipeline-kit') _
+
+def workingDirectory
 
 pipeline {
 /*    parameters {
@@ -13,26 +15,28 @@ pipeline {
         //skipDefaultCheckout()
     }
     stages {
-        stage('Build CxCommon') {
-            steps {
-                script {
-                    sh 'printenv'
-                    //sh "docker run maven:3.6.1-jdk-8-alpine"
-                    def testsWorkingFolder = pwd()
-                    echo "testsWorkingFolder: ${testsWorkingFolder}"
-                    sh "docker run --rm --name build-${BUILD_TAG} -v ${testsWorkingFolder}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install"
-                    /*BUILD_TAG=jenkins-CxSDLC-Cx-Client-Common-eitanas1-new-jenkinsfile-3
-                    GIT_BRANCH=eitanas1-new-jenkinsfile
-                    BUILD_ID=3*/
-                    sh "docker ps -a"
-                }
-            }
-        }
 
         stage('Pipeline Info') {
             steps {
                 script {
                     sh 'printenv'
+                    workingDirectory = pwd()
+                }
+            }
+        }
+
+        stage('Build CxCommon') {
+            steps {
+                script {
+                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install"
+                }
+            }
+        }
+
+        stage('Run Sonar') {
+            steps {
+                script {
+                    sh "docker run --rm --name sonar-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn sonar:sonar"
                 }
             }
         }
