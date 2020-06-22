@@ -1,27 +1,44 @@
+#!/groovy
+@Library('cx-jenkins-pipeline-kit') _
+
 pipeline {
-  /*parameters {        
-        booleanParam(name: 'IsReleaseBuild', description: 'Check the box if you want to create a release build!') 
+/*    parameters {
+        string(name: 'buildDef', defaultValue: 'CxSAST.Main.Release.Setup', description: 'Tfs build definition name')
+        string(name: "TriggeredArtifactoryPath", defaultValue: '', description: "full atrifactory repository path to the new artifacts that triggerd the pipeline")
     }*/
-  agent {
-    node {
-      label 'CxSDLC-Slave'
+    agent { node { label 'CxSDLC-Slave' } }
+    options {
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+        skipDefaultCheckout()
     }
-  }
-  /*tools {
-        jdk 'JDK_WINDOWS_1.8.0_92'
-  }*/
-	
-  stages {
-     stage('Build') {
+    stages {
+        stage('Deploy Build Container') {
             steps {
-		    echo "Build"
-		    sh "kubectl get ns"
+                script {
+                    sh "cat k8s/namespace.yaml"
+                    sh "sed -e \"s/<sha1>/sha1/\" -i k8s/namespace.yaml"
+                    sh "cat k8s/namespace.yaml"
+                }
             }
         }
-	stage('Archive Artifacts') {
-			steps {
-				echo "Archive Artifacts"
-			}
-		}
-  }
+
+        stage('Pipeline Info') {
+            steps {
+                script {
+                    sh 'printenv'
+                }
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            script{
+                sh "ls"
+                sh "cat k8s/namespace.yaml"
+                cleanWs()
+            }
+        }
+    }
 }
