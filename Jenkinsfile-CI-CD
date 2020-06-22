@@ -28,7 +28,15 @@ pipeline {
         stage('Build CxCommon') {
             steps {
                 script {
-                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install"
+                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install -DskipTests"
+                }
+            }
+        }
+
+        stage('Run Unit & Integration Tests') {
+            steps {
+                script {
+                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn test"
                 }
             }
         }
