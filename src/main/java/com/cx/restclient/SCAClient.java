@@ -263,7 +263,9 @@ public class SCAClient implements DependencyScanner {
     @Override
     public DependencyScanResults getLatestScanResults() {
         // TODO: implement when someone actually needs this.
-        return null;
+        //return null;
+        //WA for SCA async mode - do not fail in NullPointerException. New feature is opened for next release to support SCA async mode.
+        return new DependencyScanResults();
     }
 
     void testConnection() throws IOException {
