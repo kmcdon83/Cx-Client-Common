@@ -17,6 +17,7 @@ pipeline {
             steps {
                 script {
                     sh 'printenv'
+                    sh "git branch"
                     sh "cat k8s/namespace.yaml"
                     sh "sed -e \"s/<sha1>/sha1/\" -i k8s/namespace.yaml"
                     sh "cat k8s/namespace.yaml"
@@ -37,6 +38,7 @@ pipeline {
         cleanup {
             script{
                 sh "ls"
+                sh "git branch"
                 sh "cat k8s/namespace.yaml"
                 cleanWs()
             }
