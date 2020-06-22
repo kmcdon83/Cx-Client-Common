@@ -10,17 +10,19 @@ pipeline {
     options {
         timestamps()
         timeout(time: 1, unit: 'HOURS')
-        //skipDefaultCheckout()
+        skipDefaultCheckout(true)
     }
     stages {
         stage('Deploy Build Container') {
+            options { skipDefaultCheckout(false) }
             steps {
                 script {
                     sh 'printenv'
-                    sh "git branch"
                     sh "cat k8s/namespace.yaml"
                     sh "sed -e \"s/<sha1>/sha1/\" -i k8s/namespace.yaml"
                     sh "cat k8s/namespace.yaml"
+                    sh "docker run maven:3-openjdk-8-alpine"
+                    sh "docker ps -a"
                 }
             }
         }
