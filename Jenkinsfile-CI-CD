@@ -8,11 +8,11 @@ def ipAddressUpgrade
 
 pipeline {
     parameters {
-        string(name: "cxCommonVersion",defaultValue: "2020.2.20.SCA", description: "Version of CxCommon")
+        //string(name: "cxCommonVersion",defaultValue: "2020.2.20.SCA", description: "Version of CxCommon")
         string(name: "ram",defaultValue: "12000", description: "Server memory")
         string(name: "cpu",defaultValue: "4", description: "")
         string(name: "provider",defaultValue: "VMWARE", description: "IAAS platform to be used")
-        string(name: "decommissionPeriod",defaultValue: "3 hour", description: "Decommission period")
+        string(name: "decommissionPeriod",defaultValue: "1 hour", description: "Decommission period")
         string(name: "vmwareNetwork",defaultValue: "Lab", description: "vmware network for new VMs")
         choice(name: 'automationBranch', choices: ['9.0.0', 'master', '9.2.0i','9.3.0-QM', '9.3-WO-NQM', '9.0.0-QM', '8.9.0'], description: ' master ->For CX 8.8.X 8.7.0 -> For CX 8.7.X 8.6.0 -> For CX 8.6.X')
     }
@@ -48,7 +48,7 @@ pipeline {
             steps {
                 script {
                     //todo: change version to parameter in pom.xml and use mvn -D parameter
-                    sh "sed -e 's/2020\\.2\\.20\\.SCA/${cxCommonVersion}/g' -i ./pom.xml"
+                    sh "sed -e 's/2020\\.2\\.20\\.SCA/${BUILD_TAG}/g' -i ./pom.xml"
                     sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install -DskipTests"
                 }
             }
@@ -83,8 +83,10 @@ pipeline {
                             /*if (isLDAP == 'true') {
                                 kit.Cx_Join_To_Domain(vmNameUpgrade, ipAddressUpgrade)
                             }*/
-                            kit.Create_Jenkins_Slave_On_Master(vmNameUpgrade)
-                            kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddressUpgrade, vmNameUpgrade)
+                            node('install01') {
+                                kit.Create_Jenkins_Slave_On_Master(vmNameUpgrade)
+                                kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddressUpgrade, vmNameUpgrade)
+                            }
                         }
                     }
                 }
@@ -94,7 +96,7 @@ pipeline {
                         dir("${workspace}/Checkmarx-System-Test") {
                             git branch: automationBranch, credentialsId: '15f8e7b7-6ce7-44c0-b151-84f99ffa7aed', poll: false, url: 'http://tfs2013:8080/tfs/DefaultCollection/Automation/_git/Checkmarx-System-Test'
                             //todo: change version to parameter in pom.xml and use mvn -D parameter
-                            sh "sed -e 's/2020\\.2\\.20\\.SCA/${cxCommonVersion}/g' -i ./PluginsCommonClient/pom.xml"
+                            sh "sed -e 's/2020\\.2\\.20\\.SCA/${BUILD_TAG}/g' -i ./PluginsCommonClient/pom.xml"
                             sh "cat ./PluginsCommonClient/pom.xml"
                         }
                     }
