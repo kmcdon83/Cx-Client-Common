@@ -25,6 +25,18 @@ pipeline {
             }
         }
 
+        stage('Remove SNAPSHOT from POM') {
+            when {
+                expression { BRANCH_NAME == 'eitanas1-new-jenkinsfile' }
+            }
+            steps {
+                script {
+                    sh "sed -e \"s/2020\\.2\\.20\\.SCA/myNewVersion/\" -i ./pom.xml"
+                    sh "cat ./pom.xml"
+                }
+            }
+        }
+
         stage('Build CxCommon') {
             steps {
                 script {
@@ -53,6 +65,7 @@ pipeline {
     post {
         cleanup {
             script{
+                sh "ls target"
                 cleanWs()
             }
         }
