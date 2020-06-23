@@ -1,18 +1,26 @@
 #!/groovy
 //@Library('cx-jenkins-pipeline-kit') _
 
-def workingDirectory
+def workspace
+def upgradeTemplate = "dynamicSmoke2016_without_MO"
+def vmNameUpgrade = "CxSAST-8.9-${BUILD_TAG}"
+def ipAddressUpgrade
 
 pipeline {
-/*    parameters {
-        string(name: 'buildDef', defaultValue: 'CxSAST.Main.Release.Setup', description: 'Tfs build definition name')
-        string(name: "TriggeredArtifactoryPath", defaultValue: '', description: "full atrifactory repository path to the new artifacts that triggerd the pipeline")
-    }*/
+    parameters {
+        string(name: "cxCommonVersion",defaultValue: "2020.2.20.SCA", description: "Version of CxCommon")
+        string(name: "ram",defaultValue: "12000", description: "Server memory")
+        string(name: "cpu",defaultValue: "4", description: "")
+        string(name: "provider",defaultValue: "VMWARE", description: "IAAS platform to be used")
+        string(name: "decommissionPeriod",defaultValue: "3 hour", description: "Decommission period")
+        string(name: "vmwareNetwork",defaultValue: "Lab", description: "vmware network for new VMs")
+        choice(name: 'automationBranch', choices: ['9.0.0', 'master', '9.2.0i','9.3.0-QM', '9.3-WO-NQM', '9.0.0-QM', '8.9.0'], description: ' master ->For CX 8.8.X 8.7.0 -> For CX 8.7.X 8.6.0 -> For CX 8.6.X')
+    }
     agent { node { label 'CxSDLC-Slave' } }
     options {
         timestamps()
         timeout(time: 1, unit: 'HOURS')
-        //skipDefaultCheckout()
+        skipDefaultCheckout()
     }
     stages {
 
@@ -20,7 +28,7 @@ pipeline {
             steps {
                 script {
                     sh 'printenv'
-                    workingDirectory = pwd()
+                    workspace = pwd()
                 }
             }
         }
@@ -39,7 +47,9 @@ pipeline {
         stage('Build CxCommon') {
             steps {
                 script {
-                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install -DskipTests"
+                    //todo: change version to parameter in pom.xml and use mvn -D parameter
+                    sh "sed -e 's/2020\\.2\\.20\\.SCA/${cxCommonVersion}/g' -i ./pom.xml"
+                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn clean install -DskipTests"
                 }
             }
         }
@@ -47,7 +57,7 @@ pipeline {
         stage('Run Unit & Integration Tests') {
             steps {
                 script {
-                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn test"
+                    sh "docker run --rm --name build-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn test"
                 }
             }
         }
@@ -55,8 +65,102 @@ pipeline {
         stage('Run Sonar') {
             steps {
                 script {
-                    sh "docker run --rm --name sonar-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workingDirectory}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn sonar:sonar"
+                    sh "docker run --rm --name sonar-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn sonar:sonar"
                 }
+            }
+        }
+
+        stage('8.9') {
+            when {
+                expression { BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'}
+            }
+            stages {
+                stage('Create VM') {
+                    steps {
+                        script {
+                            kit.Create_Vm_Terraform(vmNameUpgrade, upgradeTemplate, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
+                            ipAddressUpgrade = kit.getIpAddress(vmNameUpgrade, provider)
+                            /*if (isLDAP == 'true') {
+                                kit.Cx_Join_To_Domain(vmNameUpgrade, ipAddressUpgrade)
+                            }*/
+                            kit.Create_Jenkins_Slave_On_Master(vmNameUpgrade)
+                            kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddressUpgrade, vmNameUpgrade)
+                        }
+                    }
+                }
+
+                stage('Pull Automation Code') {
+                    steps {
+                        dir("${workspace}/Checkmarx-System-Test") {
+                            git branch: automationBranch, credentialsId: '15f8e7b7-6ce7-44c0-b151-84f99ffa7aed', poll: false, url: 'http://tfs2013:8080/tfs/DefaultCollection/Automation/_git/Checkmarx-System-Test'
+                            //todo: change version to parameter in pom.xml and use mvn -D parameter
+                            sh "sed -e 's/2020\\.2\\.20\\.SCA/${cxCommonVersion}/g' -i ./PluginsCommonClient/pom.xml"
+                            sh "cat ./PluginsCommonClient/pom.xml"
+                        }
+                    }
+                }
+
+                stage('Plugins API Sanity Test') {
+                    steps {
+                        dir("${workspace}/Checkmarx-System-Test") {
+                            sh "docker run --rm --name plugins-api-sanity-test-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
+                            mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Denv=hardening_env -DfailIfNoTests=true -Dmaven.test.failure.ignore=false -DskipTests=false"
+                        }
+                    }
+                    post {
+                        always {
+                            script {
+                                dir("${workspace}/Checkmarx-System-Test") {
+                                    junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
+                                }
+                            }
+                        }
+                    }
+                }
+
+//            stage('Plugins API Smoke Tests') {
+//                steps {
+//                    dir("${workspace}/Checkmarx-System-Test") {
+//                        bat 'mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false'
+//                    }
+//                }
+//                post {
+//                    always {
+//                        script {
+//                            dir('C:\\CI-Slave2\\workspace\\CxClientCommon-Automation') {
+//                                junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
+//                            }
+//                        }
+//                    }
+//                    success {
+//                        script {
+//                            kit.Info_Msg('SUCCESS: Plugins API Smoke Tests')
+//                        }
+//                    }
+//                }
+//            }
+//
+//            stage('Plugins CxCommonClient All Tests') {
+//                steps {
+//                    dir("${workspace}/Checkmarx-System-Test") {
+//                        bat 'mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false'
+//                    }
+//                }
+//                post {
+//                    always {
+//                        script {
+//                            dir('C:\\CI-Slave2\\workspace\\CxClientCommon-Automation') {
+//                                junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
+//                            }
+//                        }
+//                    }
+//                    success {
+//                        script {
+//                            kit.Info_Msg('SUCCESS: Plugins CxCommonClient All Tests')
+//                        }
+//                    }
+//                }
+//            }
             }
         }
     }
