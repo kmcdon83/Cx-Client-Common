@@ -220,6 +220,14 @@ public class CxShragaClient {
         httpClient.login(version);
     }
 
+        public void login() throws IOException {
+            String version = getCxVersion();
+            login(version);
+        }
+
+
+
+
     public String getToken() throws IOException, CxClientException {
         final TokenLoginResponse tokenLoginResponse = httpClient.generateToken(ClientType.CLI);
         return tokenLoginResponse.getRefresh_token();
