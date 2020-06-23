@@ -27,12 +27,11 @@ pipeline {
 
         stage('Remove SNAPSHOT from POM') {
             when {
-                expression { BRANCH_NAME == 'eitanas1-new-jenkinsfile' }
+                expression { BRANCH_NAME == 'master' }
             }
             steps {
                 script {
-                    sh "sed -e \"s/2020\\.2\\.20\\.SCA/myNewVersion/\" -i ./pom.xml"
-                    sh "cat ./pom.xml"
+                    sh "sed -e 's/-SNAPSHOT//g' -i ./pom.xml"
                 }
             }
         }
@@ -65,7 +64,6 @@ pipeline {
     post {
         cleanup {
             script{
-                sh "ls target"
                 cleanWs()
             }
         }
