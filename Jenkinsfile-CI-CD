@@ -1,5 +1,5 @@
 #!/groovy
-//@Library('cx-jenkins-pipeline-kit') _
+@Library('cx-jenkins-pipeline-kit') _
 
 def workspace
 def upgradeTemplate = "dynamicSmoke2016_without_MO"
