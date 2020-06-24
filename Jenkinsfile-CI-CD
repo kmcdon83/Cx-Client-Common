@@ -3,7 +3,7 @@
 
 def workspace
 def upgradeTemplate = "dynamicSmoke2016_without_MO"
-def vmNameUpgrade = "CxSAST-8.9-${BUILD_TAG}"
+def vmNameUpgrade = "CxSAST-9.0-${BUILD_TAG}"
 def ipAddressUpgrade
 
 pipeline {
@@ -70,7 +70,7 @@ pipeline {
             }
         }
 
-        stage('8.9') {
+        stage('9.0') {
             when {
                 expression { BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'}
             }
@@ -99,7 +99,6 @@ pipeline {
                             sh "sed -e 's/2020\\.2\\.20\\.SCA/${BUILD_TAG}/g' -i ./PluginsCommonClient/pom.xml"
                             sh "cp -r ../../env ."
                             sh "sed -e 's/<CxSastIpAddress>/${ipAddressUpgrade}/g' -i ./env/topology.xml"
-                            sh "cat ./env/topology.xml"
                         }
                     }
                 }
@@ -170,6 +169,13 @@ pipeline {
     }
 
     post {
+        always {
+            script {
+                if (ipAddressUpgrade != null) {
+                    deleteVm(provider, ipAddressUpgrade, vmNameUpgrade)
+                }
+            }
+        }
         cleanup {
             script{
                 cleanWs()
