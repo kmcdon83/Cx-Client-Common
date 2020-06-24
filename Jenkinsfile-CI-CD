@@ -104,8 +104,8 @@ pipeline {
                 stage('Plugins API Sanity Test') {
                     steps {
                         dir("${workspace}/Checkmarx-System-Test") {
-                            def MAVEN_CMD = "mvn -q -X clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
-                            sh "docker run --rm --name plugins-api-sanity-test-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine ${MAVEN_CMD}"
+                            sh "docker run --rm --name plugins-api-sanity-test-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
+                            mvn -q -X clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
                             //mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Denv=hardening_env -DfailIfNoTests=true -Dmaven.test.failure.ignore=false -DskipTests=false"
                         }
                     }
