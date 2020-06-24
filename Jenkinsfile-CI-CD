@@ -75,21 +75,21 @@ pipeline {
                 expression { BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'}
             }
             stages {
-                stage('Create VM') {
+                /*stage('Create VM') {
                     steps {
                         script {
                             kit.Create_Vm_Terraform(vmNameUpgrade, upgradeTemplate, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
                             ipAddressUpgrade = kit.getIpAddress(vmNameUpgrade, provider)
-                            /*if (isLDAP == 'true') {
-                                kit.Cx_Join_To_Domain(vmNameUpgrade, ipAddressUpgrade)
-                            }*/
+                            //if (isLDAP == 'true') {
+                            //    kit.Cx_Join_To_Domain(vmNameUpgrade, ipAddressUpgrade)
+                            //}
                             node('install01') {
                                 kit.Create_Jenkins_Slave_On_Master(vmNameUpgrade)
                                 kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddressUpgrade, vmNameUpgrade)
                             }
                         }
                     }
-                }
+                }*/
 
                 stage('Pull Automation Code') {
                     steps {
