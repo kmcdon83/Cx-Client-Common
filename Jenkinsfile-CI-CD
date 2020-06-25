@@ -74,9 +74,9 @@ pipeline {
         }
 
         stage('System Tests') {
-            when {
+            /*when {
                 expression { BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'}
-            }
+            }*/
             matrix {
                 axes {
                     axis {
