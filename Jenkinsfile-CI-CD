@@ -3,8 +3,10 @@
 
 def workspace
 def upgradeTemplate = "dynamicSmoke2016_without_MO"
-def vmNameUpgrade = "CxSAST-9.0-${BUILD_TAG}"
-def ipAddressUpgrade
+def vmName = "${BUILD_TAG}-CxSAST"
+def ipAddress89
+def ipAddress90
+def ipAddress92
 
 pipeline {
     parameters {
@@ -14,7 +16,7 @@ pipeline {
         string(name: "provider",defaultValue: "VMWARE", description: "IAAS platform to be used")
         string(name: "decommissionPeriod",defaultValue: "1 hour", description: "Decommission period")
         string(name: "vmwareNetwork",defaultValue: "Lab", description: "vmware network for new VMs")
-        choice(name: 'automationBranch', choices: ['9.0.0', 'master', '9.2.0i','9.3.0-QM', '9.3-WO-NQM', '9.0.0-QM', '8.9.0'], description: ' master ->For CX 8.8.X 8.7.0 -> For CX 8.7.X 8.6.0 -> For CX 8.6.X')
+        //choice(name: 'automationBranch', choices: ['9.0.0', 'master', '9.2.0i','9.3.0-QM', '9.3-WO-NQM', '9.0.0-QM', '8.9.0'], description: ' master ->For CX 8.8.X 8.7.0 -> For CX 8.7.X 8.6.0 -> For CX 8.6.X')
     }
     agent { node { label 'CxSDLC-Slave' } }
     options {
@@ -74,81 +76,90 @@ pipeline {
             }
         }
 
-        stage('9.0') {
+        stage('System Tests') {
             when {
-                expression { BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'}
+                expression {
+                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'
+                }
             }
-            stages {
+            parallel {
 
-                stage('Create VM') {
-                    steps {
-                        script {
-                            kit.Create_Vm_Terraform(vmNameUpgrade, upgradeTemplate, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
-                            ipAddressUpgrade = kit.getIpAddress(vmNameUpgrade, provider)
-                            //if (isLDAP == 'true') {
-                            //    kit.Cx_Join_To_Domain(vmNameUpgrade, ipAddressUpgrade)
-                            //}
-                            node('install01') {
-                                kit.Create_Jenkins_Slave_On_Master(vmNameUpgrade)
-                                kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddressUpgrade, vmNameUpgrade)
+                stage('8.9') {
+                    stages {
+                        stage('Create VM') {
+                            echo "TEST"
+                        }
+                    }
+                }
+
+                stage('9.0') {
+                    stages {
+                        stage('Create VM') {
+                            steps {
+                                script {
+                                    kit.Create_Vm_Terraform(vmName + "-9.0", upgradeTemplate, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
+                                    ipAddress90 = kit.getIpAddress(vmName + "-9.0", provider)
+                                    //if (isLDAP == 'true') {
+                                    //    kit.Cx_Join_To_Domain(vmName + "-9.0"Upgrade, ipAddress90)
+                                    //}
+                                    node('install01') {
+                                        kit.Create_Jenkins_Slave_On_Master(vmName + "-9.0")
+                                        kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddress90, vmName + "-9.0")
+                                    }
+                                }
+                            }
+                        }
+                        stage('Pull Automation Code') {
+                            steps {
+                                dir("${workspace}/9.0/Checkmarx-System-Test") {
+                                    git branch: '9.0.0', credentialsId: '15f8e7b7-6ce7-44c0-b151-84f99ffa7aed', poll: false, url: 'http://tfs2013:8080/tfs/DefaultCollection/Automation/_git/Checkmarx-System-Test'
+                                    //todo: change version to parameter in pom.xml and use mvn -D parameter
+                                    sh "sed -e 's/2020\\.2\\.20\\.SCA/${BUILD_TAG}/g' -i ./PluginsCommonClient/pom.xml"
+                                    sh "cp -r ../../../env ."
+                                    sh "sed -e 's/<CxSastIpAddress>/${ipAddress90}/g' -i ./env/topology.xml"
+                                }
+                            }
+                        }
+                        stage('Plugins API Sanity Test') {
+                            steps {
+                                dir("${workspace}/9.0/Checkmarx-System-Test") {
+                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
+                                    sh "docker run --rm --name plugins-api-sanity-test-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
+                                        mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                }
+                            }
+                        }
+                        stage('Plugins API Smoke Tests') {
+                            steps {
+                                dir("${workspace}/9.0/Checkmarx-System-Test") {
+                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
+                                    sh "docker run --rm --name plugins-api-smoke-tests-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
+                                        mvn -q test -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
+                                        -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                }
+                            }
+                        }
+                        stage('Plugins CxCommonClient All Tests') {
+                            steps {
+                                dir("${workspace}/9.0/Checkmarx-System-Test") {
+                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
+                                    sh "docker run --rm --name plugins-cxcommonclient-all-tests-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
+                                        mvn -q test -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
+                                        -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                }
                             }
                         }
                     }
-                }
-
-                stage('Pull Automation Code') {
-                    steps {
-                        dir("${workspace}/Checkmarx-System-Test") {
-                            git branch: automationBranch, credentialsId: '15f8e7b7-6ce7-44c0-b151-84f99ffa7aed', poll: false, url: 'http://tfs2013:8080/tfs/DefaultCollection/Automation/_git/Checkmarx-System-Test'
-                            //todo: change version to parameter in pom.xml and use mvn -D parameter
-                            sh "sed -e 's/2020\\.2\\.20\\.SCA/${BUILD_TAG}/g' -i ./PluginsCommonClient/pom.xml"
-                            sh "cp -r ../../env ."
-                            sh "sed -e 's/<CxSastIpAddress>/${ipAddressUpgrade}/g' -i ./env/topology.xml"
-                        }
-                    }
-                }
-
-                stage('Plugins API Sanity Test') {
-                    steps {
-                        dir("${workspace}/Checkmarx-System-Test") {
-                            //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                            sh "docker run --rm --name plugins-api-sanity-test-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                            mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
-                        }
-                    }
-                }
-
-                stage('Plugins API Smoke Tests') {
-                    steps {
-                        dir("${workspace}/Checkmarx-System-Test") {
-                            //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                            sh "docker run --rm --name plugins-api-smoke-tests-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                            mvn -q test -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
-                                -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
-                        }
-                    }
-                }
-
-                stage('Plugins CxCommonClient All Tests') {
-                    steps {
-                        dir("${workspace}/Checkmarx-System-Test") {
-                            //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                            sh "docker run --rm --name plugins-api-smoke-tests-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                            mvn -q test -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
-                                -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
-                        }
-                    }
-                }
-            }
-
-            post {
-                always {
-                    script {
-                        dir("${workspace}/Checkmarx-System-Test") {
-                            junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
-                        }
-                        if (ipAddressUpgrade != null) {
-                            deleteVm(provider, ipAddressUpgrade, vmNameUpgrade)
+                    post {
+                        always {
+                            script {
+                                dir("${workspace}/9.0/Checkmarx-System-Test") {
+                                    junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
+                                }
+                                if (ipAddress90 != null) {
+                                    deleteVm(provider, ipAddress90, vmName + "-9.0")
+                                }
+                            }
                         }
                     }
                 }
@@ -159,8 +170,8 @@ pipeline {
     post {
         /*always {
             script {
-                if (ipAddressUpgrade != null) {
-                    deleteVm(provider, ipAddressUpgrade, vmNameUpgrade)
+                if (ipAddress90 != null) {
+                    deleteVm(provider, ipAddress90, vmName + "-9.0"Upgrade)
                 }
             }
         }*/
