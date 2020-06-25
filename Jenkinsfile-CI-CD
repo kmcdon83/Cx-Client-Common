@@ -123,7 +123,7 @@ pipeline {
                         dir("${workspace}/Checkmarx-System-Test") {
                             //todo: cancel ignore tests failures (maven.test.failure.ignore)
                             sh "docker run --rm --name plugins-api-smoke-tests-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                            mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
+                            mvn -q test -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
                                 -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
                         }
                     }
@@ -134,7 +134,7 @@ pipeline {
                         dir("${workspace}/Checkmarx-System-Test") {
                             //todo: cancel ignore tests failures (maven.test.failure.ignore)
                             sh "docker run --rm --name plugins-api-smoke-tests-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                            mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
+                            mvn -q test -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
                                 -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
                         }
                     }
@@ -147,6 +147,9 @@ pipeline {
                         dir("${workspace}/Checkmarx-System-Test") {
                             junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                         }
+                        if (ipAddressUpgrade != null) {
+                            deleteVm(provider, ipAddressUpgrade, vmNameUpgrade)
+                        }
                     }
                 }
             }
@@ -154,13 +157,13 @@ pipeline {
     }
 
     post {
-        always {
+        /*always {
             script {
                 if (ipAddressUpgrade != null) {
                     deleteVm(provider, ipAddressUpgrade, vmNameUpgrade)
                 }
             }
-        }
+        }*/
         cleanup {
             script{
                 cleanWs()
