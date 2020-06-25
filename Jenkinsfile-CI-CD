@@ -79,6 +79,7 @@ pipeline {
                 expression { BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") || BRANCH_NAME == 'eitanas1-new-jenkinsfile'}
             }
             stages {
+
                 stage('Create VM') {
                     steps {
                         script {
@@ -115,15 +116,6 @@ pipeline {
                             mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
                         }
                     }
-                    post {
-                        always {
-                            script {
-                                dir("${workspace}/Checkmarx-System-Test") {
-                                    junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
-                                }
-                            }
-                        }
-                    }
                 }
 
                 stage('Plugins API Smoke Tests') {
@@ -133,15 +125,6 @@ pipeline {
                             sh "docker run --rm --name plugins-api-smoke-tests-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
                             mvn -q clean test -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
                                 -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
-                        }
-                    }
-                    post {
-                        always {
-                            script {
-                                dir("${workspace}/Checkmarx-System-Test") {
-                                    junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
-                                }
-                            }
                         }
                     }
                 }
@@ -155,13 +138,14 @@ pipeline {
                                 -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
                         }
                     }
-                    post {
-                        always {
-                            script {
-                                dir("${workspace}/Checkmarx-System-Test") {
-                                    junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
-                                }
-                            }
+                }
+            }
+
+            post {
+                always {
+                    script {
+                        dir("${workspace}/Checkmarx-System-Test") {
+                            junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                         }
                     }
                 }
