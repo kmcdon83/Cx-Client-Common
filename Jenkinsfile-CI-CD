@@ -47,7 +47,7 @@ pipeline {
                         // remove -SNAPSHOT
                         sh "sed -e 's/-SNAPSHOT//g' -i ./pom.xml"
                     } else {
-                        cxCommonVersion = ${BUILD_TAG}
+                        cxCommonVersion = "${BUILD_TAG}"
                         //todo: change version to parameter in pom.xml and use mvn -D parameter
                         sh "sed -e 's/2020\\.2\\.20\\.SCA/${cxCommonVersion}/g' -i ./pom.xml"
                     }
