@@ -3,7 +3,7 @@
 
 def workspace
 def upgradeTemplate = "dynamicSmoke2016_without_MO"
-def vmName = "${BUILD_TAG}-CxSAST-"
+def vmName = "${BUILD_TAG}-CxSAST"
 
 pipeline {
     parameters {
@@ -92,14 +92,14 @@ pipeline {
                     stage('Create VM') {
                         steps {
                             script {
-                                kit.Create_Vm_Terraform(vmName + SAST_VERSION, upgradeTemplate, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
-                                def ipAddress = kit.getIpAddress(vmName + SAST_VERSION, provider)
+                                kit.Create_Vm_Terraform("${vmName}-${SAST_VERSION}", upgradeTemplate, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
+                                def ipAddress = kit.getIpAddress("${vmName}-${SAST_VERSION}", provider)
                                 //if (isLDAP == 'true') {
-                                //    kit.Cx_Join_To_Domain(vmName + SAST_VERSION, ipAddress)
+                                //    kit.Cx_Join_To_Domain("${vmName}-${SAST_VERSION}", ipAddress)
                                 //}
                                 node('install01') {
-                                    kit.Create_Jenkins_Slave_On_Master(vmName + SAST_VERSION)
-                                    kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddress, vmName + SAST_VERSION)
+                                    kit.Create_Jenkins_Slave_On_Master("${vmName}-${SAST_VERSION}")
+                                    kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddress, "${vmName}-${SAST_VERSION}")
                                 }
                             }
                         }
@@ -111,7 +111,7 @@ pipeline {
                                 git branch: automationBranch, credentialsId: '15f8e7b7-6ce7-44c0-b151-84f99ffa7aed', poll: false, url: 'http://tfs2013:8080/tfs/DefaultCollection/Automation/_git/Checkmarx-System-Test'
                                 //todo: change version to parameter in pom.xml and use mvn -D parameter
                                 sh "sed -e 's/2020\\.2\\.20\\.SCA/${BUILD_TAG}/g' -i ./PluginsCommonClient/pom.xml"
-                                def ipAddress = kit.getIpAddress(vmName + SAST_VERSION, provider)
+                                def ipAddress = kit.getIpAddress("${vmName}-${SAST_VERSION}", provider)
                                 sh "cp -r ../../env ."
                                 sh "sed -e 's/<CxSastIpAddress>/${ipAddress}/g' -i ./env/topology.xml"
                             }
