@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.checkmarx</groupId>
     <artifactId>cx-client-common</artifactId>
-    <version>9.00.20.bamboo</version>
+    <version>9.00.21.bamboo</version>
     <packaging>jar</packaging>
     <name>Checkmarx Client</name>
     <description>Enables web services access Checkmarx SAST and OSA scan.</description>
@@ -107,7 +107,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.9.10.4</version>
+            <version>2.9.10.5</version>
         </dependency>
 		<dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
