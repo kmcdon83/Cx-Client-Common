@@ -3,6 +3,7 @@ package com.cx.restclient.dto;
 
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
+import com.cx.restclient.sca.dto.ASTResults;
 import com.cx.restclient.sca.dto.SCAResults;
 
 import java.io.Serializable;
@@ -11,6 +12,7 @@ public class ScanResults implements Serializable, IResults {
     private SASTResults sastResults;
     private OSAResults osaResults;
     private SCAResults scaResults;
+    private ASTResults astResults;
 
     private Exception sastCreateException = null;
     private Exception sastWaitException = null;
@@ -28,6 +30,9 @@ public class ScanResults implements Serializable, IResults {
     public ScanResults merge(ScanResults scanResults) {
         if (sastResults == null) {
             this.sastResults = scanResults.getSastResults();
+        }
+        if (sastResults == null) {
+            this.astResults = scanResults.getAstResults();
         }
         if (osaResults == null) {
             this.osaResults = scanResults.getOsaResults();
@@ -50,8 +55,12 @@ public class ScanResults implements Serializable, IResults {
         this.scaResults = scaResults;
     }
 
-    public ScanResults build(ScannerType type) {
-        if (ScannerType.SAST.equals(type)) {
+    public ScanResults(ASTResults astResults) {
+        this.astResults = astResults;
+    }
+
+    public ScanResults build(ScannerType type){
+        if(ScannerType.SAST.equals(type)){
             sastResults = new SASTResults();
         }
         if (ScannerType.OSA.equals(type)) {
@@ -60,11 +69,22 @@ public class ScanResults implements Serializable, IResults {
         if (ScannerType.SCA.equals(type)) {
             scaResults = new SCAResults();
         }
+        if(ScannerType.AST.equals(type)){
+            astResults = new ASTResults();
+        }
         return this;
     }
 
     public OSAResults getOsaResults() {
         return osaResults;
+    }
+
+    public ASTResults getAstResults() {
+        return astResults;
+    }
+
+    public void setAstResults(ASTResults astResults) {
+        this.astResults = astResults;
     }
 
     public void setOsaResults(OSAResults osaResults) {

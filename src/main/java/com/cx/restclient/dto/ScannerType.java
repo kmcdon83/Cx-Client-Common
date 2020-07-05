@@ -2,9 +2,9 @@ package com.cx.restclient.dto;
 
 public enum ScannerType {
     SAST("CxSAST"),
-
     OSA("CxOSA"),
-    SCA("CxSCA");
+    SCA("CxSCA"),
+    AST("CxAST");
 
     private final String displayName;
 
