@@ -1,7 +1,6 @@
 package com.cx.restclient.dto;
 
 
-import com.cx.restclient.SCAClient;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
 import com.cx.restclient.sca.dto.SCAResults;
@@ -9,10 +8,10 @@ import com.cx.restclient.sca.dto.SCAResults;
 import java.io.Serializable;
 
 public class ScanResults implements Serializable, IResults {
-    private SASTResults sastResults ;
-    private OSAResults osaResults ;
-    private SCAResults scaResults ; 
-    
+    private SASTResults sastResults;
+    private OSAResults osaResults;
+    private SCAResults scaResults;
+
     private Exception sastCreateException = null;
     private Exception sastWaitException = null;
     private Exception osaCreateException = null;
@@ -22,23 +21,27 @@ public class ScanResults implements Serializable, IResults {
     public ScanResults(ScannerType type) {
         build(type);
     }
+
     public ScanResults() {
- 
     }
 
-    public ScanResults(ScanResults scanResults) {
-        build(scanResults);
-    }
-
-    public void build(ScanResults scanResults) {
-        this.sastResults = scanResults.getSastResults();
-        this.osaResults = scanResults.getOsaResults();
-        this.scaResults = scanResults.getScaResults();
+    public ScanResults merge(ScanResults scanResults) {
+        if (sastResults == null) {
+            this.sastResults = scanResults.getSastResults();
+        }
+        if (osaResults == null) {
+            this.osaResults = scanResults.getOsaResults();
+        }
+        if (scaResults == null) {
+            this.scaResults = scanResults.getScaResults();
+        }
+        return this;
     }
 
     public ScanResults(SASTResults sastResults) {
         this.sastResults = sastResults;
     }
+
     public ScanResults(OSAResults osaResults) {
         this.osaResults = osaResults;
     }
@@ -46,24 +49,20 @@ public class ScanResults implements Serializable, IResults {
     public ScanResults(SCAResults scaResults) {
         this.scaResults = scaResults;
     }
-    public ScanResults build(ScannerType type){
-        if(ScannerType.SAST.equals(type)){
+
+    public ScanResults build(ScannerType type) {
+        if (ScannerType.SAST.equals(type)) {
             sastResults = new SASTResults();
         }
-        if(ScannerType.OSA.equals(type)){
+        if (ScannerType.OSA.equals(type)) {
             osaResults = new OSAResults();
         }
-        if(ScannerType.SCA.equals(type)){
-            scaResults = new SCAResults();
-        }
-        if(ScannerType.ALL.equals(type)){
-            sastResults = new SASTResults();
-            osaResults = new OSAResults();
+        if (ScannerType.SCA.equals(type)) {
             scaResults = new SCAResults();
         }
         return this;
     }
-    
+
     public OSAResults getOsaResults() {
         return osaResults;
     }
