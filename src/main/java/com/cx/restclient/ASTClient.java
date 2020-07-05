@@ -1,35 +1,27 @@
 package com.cx.restclient;
 
 import com.cx.restclient.common.IScanner;
-import com.cx.restclient.dto.IResults;
-import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.dto.ScanResults;
 
-import java.io.IOException;
-
-public class ASTClient implements IScanner {
+public class ASTClient implements IScanner{
     @Override
-    public void init() throws CxClientException {
+    public void init() {
 
     }
 
     @Override
-    public IResults createScan() throws CxClientException {
+    public ScanResults createScan() {
         return null;
     }
 
     @Override
-    public IResults waitForScanResults() throws CxClientException, InterruptedException {
+    public ScanResults waitForScanResults() {
         return null;
     }
 
     @Override
-    public IResults getLatestScanResults() throws CxClientException, InterruptedException {
+    public ScanResults getLatestScanResults() {
         return null;
-    }
-
-    @Override
-    public void login() throws IOException {
-
     }
 
     @Override
