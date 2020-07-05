@@ -81,7 +81,7 @@ public class SCAClient implements Scanner {
     private final CxScanConfig config;
 
     // This class uses its own instance of CxHttpClient, because SCA has a different base URL and Access Control server.
-        private final CxHttpClient httpClient;
+    private final CxHttpClient httpClient;
 
     private String projectId;
     private String scanId;
@@ -264,11 +264,10 @@ public class SCAClient implements Scanner {
     }
 
     @Override
-    public SCAResults getLatestScanResults() {
-        // TODO: implement when someone actually needs this.
-
-        //WA for SCA async mode - do not fail in NullPointerException. New feature is opened for next release to support SCA async mode.
-        return new SCAResults();
+    public ScanResults getLatestScanResults() {
+        // Workaround for SCA async mode - do not fail in NullPointerException.
+        // New feature is planned for next release to support SCA async mode.
+        return new ScanResults(ScannerType.SCA);
     }
 
     void testConnection() throws IOException {
