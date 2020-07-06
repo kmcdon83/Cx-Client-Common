@@ -1,6 +1,7 @@
 package com.cx.restclient.sca;
 
-import com.cx.restclient.SCAClient;
+import com.cx.restclient.AstScaClient;
+import com.cx.restclient.ast.UrlPaths;
 import com.cx.restclient.common.ShragaUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.exception.CxClientException;
@@ -37,8 +38,8 @@ public class SCAWaiter {
         AtomicInteger errorCounter = new AtomicInteger();
 
         try {
-            String urlPath = String.format(SCAClient.UrlPaths.GET_SCAN,
-                    URLEncoder.encode(scanId, SCAClient.ENCODING));
+            String urlPath = String.format(UrlPaths.GET_SCAN,
+                    URLEncoder.encode(scanId, AstScaClient.ENCODING));
 
             Awaitility.await()
                     .atMost(timeout)

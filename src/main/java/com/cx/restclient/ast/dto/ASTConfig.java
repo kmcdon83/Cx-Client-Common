@@ -8,7 +8,7 @@ import java.io.Serializable;
 
 @Getter
 @Setter
-public class ASTConfig implements Serializable {
+public abstract class ASTConfig implements Serializable {
     private String apiBaseUrl;
     private SourceLocationType sourceLocationType;
 }

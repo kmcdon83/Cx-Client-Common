@@ -50,7 +50,7 @@ public class CxClientDelegator implements Scanner {
             scannersMap.put(ScannerType.OSA, new CxOSAClient(config, log));
         } 
         else if (config.isScaEnabled()) {
-            scannersMap.put(ScannerType.SCA, new SCAClient(config, log));
+            scannersMap.put(ScannerType.SCA, new AstScaClient(config, log));
         }
     }
 
@@ -87,15 +87,12 @@ public class CxClientDelegator implements Scanner {
 
         ScanResults scanResultsCombined = new ScanResults();
 
-        scannersMap.entrySet().forEach(scannerEntry -> {
-                    Scanner scanner = scannerEntry.getValue();
-                    Results scanResults = scanner.initiateScan();
-                    scanResultsCombined.put(scannerEntry.getKey(), scanResults);
-                }
-        );
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.initiateScan();
+            scanResultsCombined.put(key, scanResults);
+        });
 
         return scanResultsCombined;
-
     }
 
 
@@ -104,12 +101,10 @@ public class CxClientDelegator implements Scanner {
 
         ScanResults scanResultsCombined = new ScanResults();
 
-        scannersMap.entrySet().forEach(scannerEntry -> {
-                    Scanner scanner = scannerEntry.getValue();
-                    Results scanResults = scanner.waitForScanResults();
-                    scanResultsCombined.put(scannerEntry.getKey(), scanResults);
-                }
-        );
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.waitForScanResults();
+            scanResultsCombined.put(key, scanResults);
+        });
 
         return scanResultsCombined;
     }
@@ -119,12 +114,10 @@ public class CxClientDelegator implements Scanner {
 
         ScanResults scanResultsCombined = new ScanResults();
 
-        scannersMap.entrySet().forEach(scannerEntry -> {
-                    Scanner scanner = scannerEntry.getValue();
-                    Results scanResults = scanner.getLatestScanResults();
-                    scanResultsCombined.put(scannerEntry.getKey(), scanResults);
-                }
-        );
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.getLatestScanResults();
+            scanResultsCombined.put(key, scanResults);
+        });
 
         return scanResultsCombined;
 
@@ -188,8 +181,8 @@ public class CxClientDelegator implements Scanner {
         return (CxOSAClient) scannersMap.get(ScannerType.OSA);
     }
 
-    public SCAClient getScaClient() {
-        return (SCAClient) scannersMap.get(ScannerType.SCA);
+    public AstScaClient getScaClient() {
+        return (AstScaClient) scannersMap.get(ScannerType.SCA);
     }
 
     public void close() {

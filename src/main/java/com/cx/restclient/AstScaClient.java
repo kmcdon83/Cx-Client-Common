@@ -1,6 +1,8 @@
 package com.cx.restclient;
 
 import com.cx.restclient.common.Scanner;
+import com.cx.restclient.ast.AstClient;
+import com.cx.restclient.ast.UrlPaths;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 
@@ -43,7 +45,7 @@ import java.util.List;
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
-public class SCAClient implements Scanner {
+public class AstScaClient extends AstClient implements Scanner {
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
 
@@ -58,43 +60,18 @@ public class SCAClient implements Scanner {
 
     private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
 
-    public static class UrlPaths {
-        private UrlPaths() {
-        }
-
-        private static final String RISK_MANAGEMENT_API = "/risk-management/";
-        private static final String PROJECTS = RISK_MANAGEMENT_API + "projects";
-        private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + "riskReports/%s/summary";
-        public static final String FINDINGS = RISK_MANAGEMENT_API + "riskReports/%s/vulnerabilities";
-        public static final String PACKAGES = RISK_MANAGEMENT_API + "riskReports/%s/packages";
-
-        private static final String REPORT_ID = RISK_MANAGEMENT_API + "scans/%s/riskReportId";
-
-        public static final String GET_UPLOAD_URL = "/api/uploads";
-        public static final String CREATE_SCAN = "/api/scans";
-        public static final String GET_SCAN = "/api/scans/%s";
-
-        private static final String WEB_REPORT = "/#/projects/%s/reports/%s";
-    }
-
-    private final Logger log;
-    private final CxScanConfig config;
-
-    // This class uses its own instance of CxHttpClient, because SCA has a different base URL and Access Control server.
-    private final CxHttpClient httpClient;
 
     private String projectId;
     private String scanId;
 
-    SCAClient(CxScanConfig config, Logger log) {
-        this.log = log;
-        this.config = config;
+    AstScaClient(CxScanConfig config, Logger log) {
+        super(config, log);
 
         SCAConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
 
-        // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
+        // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
         // and then use this token for SCA authentication in cloud.
         httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
     }
@@ -125,7 +102,7 @@ public class SCAClient implements Scanner {
 
         SCAResults scaResult = retrieveScanResults();
         scaResult.setScaResultReady(true);
-        return scaResult; 
+        return scaResult;
     }
 
     @Override
@@ -146,7 +123,6 @@ public class SCAClient implements Scanner {
 
             scaResults.setScanId(scanId);
             return scaResults;
-            
         } catch (IOException e) {
             throw new CxClientException("Error creating CxSCA scan.", e);
         }
@@ -172,7 +148,7 @@ public class SCAClient implements Scanner {
         URL sanitizedUrl = sanitize(repoInfo.getUrl());
         log.info(String.format("Repository URL: %s", sanitizedUrl));
 
-        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString());
+        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString(), projectId);
     }
 
     /**
@@ -194,30 +170,7 @@ public class SCAClient implements Scanner {
         uploadArchive(zipFile, uploadedArchiveUrl);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
-        return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
-    }
-
-    private HttpResponse sendStartScanRequest(SourceLocationType sourceLocation, String sourceUrl) throws IOException {
-        log.info("Sending a request to start scan.");
-
-        ScanStartHandler handler = ScanStartHandler.builder()
-                .url(sourceUrl)
-                .build();
-
-        ProjectToScan project = ProjectToScan.builder()
-                .id(projectId)
-                .type(sourceLocation.getApiValue())
-                .handler(handler)
-                .build();
-
-        StartScanRequest request = StartScanRequest.builder()
-                .project(project)
-                .build();
-
-        StringEntity entity = HttpClientHelper.convertToStringEntity(request);
-
-        return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
-                HttpResponse.class, HttpStatus.SC_CREATED, "start CxSCA scan");
+        return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl, projectId);
     }
 
     private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
@@ -267,12 +220,6 @@ public class SCAClient implements Scanner {
         return new ScanResults();
     }
 
-    void testConnection() throws IOException {
-        // The calls below allow to check both access control and API connectivity.
-        login();
-        getProjects();
-    }
-
     public void login() throws IOException {
         log.info("Logging into CxSCA.");
         SCAConfig scaConfig = getScaConfig();
@@ -299,22 +246,22 @@ public class SCAClient implements Scanner {
             httpClient.close();
         }
     }
-    
+
     /**
-     *  The following config properties are used:
-     *               scaConfig
-     *               proxyConfig
-     *               cxOrigin
-     *               disableCertificateValidation
+     * The following config properties are used:
+     * scaConfig
+     * proxyConfig
+     * cxOrigin
+     * disableCertificateValidation
      */
-    public void testScaConnection()  {
+    public void testScaConnection() {
         try {
             testConnection();
         } catch (IOException e) {
             throw new CxClientException(e);
         }
     }
-    
+
     private void resolveProject() throws IOException {
         String projectName = config.getProjectName();
         log.info(String.format("Getting project by name: '%s'", projectName));
@@ -495,15 +442,5 @@ public class SCAClient implements Scanner {
             throw new CxClientException("CxSCA scan configuration is missing.");
         }
         return result;
-    }
-
-    private CxHttpClient createHttpClient(String baseUrl) {
-        return new CxHttpClient(baseUrl,
-                config.getCxOrigin(),
-                config.isDisableCertificateValidation(),
-                config.isUseSSOLogin(),
-                null,
-                config.getProxyConfig(),
-                log);
     }
 }
