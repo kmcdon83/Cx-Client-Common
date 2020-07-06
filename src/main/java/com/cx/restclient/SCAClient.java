@@ -264,7 +264,7 @@ public class SCAClient implements Scanner {
     public ScanResults getLatestScanResults() {
         // Workaround for SCA async mode - do not fail in NullPointerException.
         // New feature is planned for next release to support SCA async mode.
-        return new ScanResults(ScannerType.SCA);
+        return new ScanResults();
     }
 
     void testConnection() throws IOException {

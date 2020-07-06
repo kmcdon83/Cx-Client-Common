@@ -1,7 +1,7 @@
 package com.cx.restclient;
 
 import com.cx.restclient.ast.dto.ASTConfig;
-import com.cx.restclient.common.IScanner;
+import com.cx.restclient.common.Scanner;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.httpClient.CxHttpClient;
@@ -9,7 +9,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
-public class ASTClient implements IScanner {
+public class ASTClient implements Scanner {
     private final CxScanConfig config;
     private final Logger log;
     private final CxHttpClient httpClient;
