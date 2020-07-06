@@ -1,5 +1,6 @@
 package com.cx.restclient.sca.dto;
 
+import com.cx.restclient.dto.SourceLocationType;
 import lombok.Getter;
 import lombok.Setter;
 

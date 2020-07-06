@@ -6,6 +6,13 @@ import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
 import com.cx.restclient.sca.dto.SourceLocationType;
+import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.dto.SourceLocationType;
+import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.sca.dto.report.Package;
+import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -31,7 +38,7 @@ import static org.junit.Assert.*;
 
 @Slf4j
 public class ScaScanTests extends AbstractScaScanTests {
-    
+
 
     @Test
     public void scan_localDirUpload() throws IOException, CxClientException {
@@ -50,7 +57,7 @@ public class ScaScanTests extends AbstractScaScanTests {
             deleteDir(sourcesDir);
         }
     }
-    
+
 
     @Test
     @Ignore()

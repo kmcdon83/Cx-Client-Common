@@ -99,8 +99,6 @@ public class SCAClient implements Scanner {
         httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
     }
 
-
-    
     @Override
     public void init() {
         try {
@@ -147,12 +145,11 @@ public class SCAClient implements Scanner {
             log.info(String.format("Scan started successfully. Scan ID: %s", scanId));
 
             scaResults.setScanId(scanId);
-            return  scaResults;
+            return scaResults;
             
         } catch (IOException e) {
             throw new CxClientException("Error creating CxSCA scan.", e);
         }
-        
     }
 
     private static String extractScanIdFrom(HttpResponse response) {
@@ -388,7 +385,7 @@ public class SCAClient implements Scanner {
             printWebReportLink(scaResults);
             scaResults.setScaResultReady(true);
             log.info("Retrieved SCA results successfully.");
-            
+
             return scaResults;
         } catch (IOException e) {
             throw new CxClientException("Error retrieving CxSCA scan results.", e);

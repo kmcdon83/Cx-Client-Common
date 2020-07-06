@@ -15,8 +15,6 @@ import java.util.*;
  */
 public class CxScanConfig implements Serializable {
 
-   // private Boolean sastEnabled = false;
-
     private String cxOrigin;
     private CxVersion cxVersion;
 
@@ -111,7 +109,7 @@ public class CxScanConfig implements Serializable {
     private ProxyConfig proxyConfig;
 
     private ASTConfig astConfig;
-        
+
     public CxScanConfig() {
     }
 
@@ -145,8 +143,8 @@ public class CxScanConfig implements Serializable {
     public Boolean isAstEnabled() {
         return scannerTypes.contains(ScannerType.AST) ;
     }
-    
-  
+
+
     public void setSastEnabled(Boolean sastEnabled) {
         if(sastEnabled){
             scannerTypes.add(ScannerType.SAST);
@@ -156,7 +154,6 @@ public class CxScanConfig implements Serializable {
         }
     }
 
-    
     public String getCxOrigin() {
         return cxOrigin;
     }
@@ -746,6 +743,14 @@ public class CxScanConfig implements Serializable {
         this.scaConfig = scaConfig;
     }
 
+    public ASTConfig getAstConfig() {
+        return astConfig;
+    }
+
+    public void setAstConfig(ASTConfig astConfig) {
+        this.astConfig = astConfig;
+    }
+
     public Set<ScannerType> getScannerTypes() {
         return scannerTypes;
     }
@@ -774,6 +779,7 @@ public class CxScanConfig implements Serializable {
     public void addCookie(Cookie cookie){
         this.sessionCookies.add(cookie);
     }
+
     public List<Cookie> getSessionCookie() {
         return this.sessionCookies;
     }
@@ -784,13 +790,5 @@ public class CxScanConfig implements Serializable {
 
     public void setToken(TokenLoginResponse token) {
         this.token = token;
-    }
-
-    public ASTConfig getAstConfig() {
-        return astConfig;
-    }
-
-    public void setAstConfig(ASTConfig astConfig) {
-        this.astConfig = astConfig;
     }
 }
