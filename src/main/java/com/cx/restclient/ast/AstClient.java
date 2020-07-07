@@ -18,12 +18,14 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
 
 public abstract class AstClient {
+    private static final String LOCATION_HEADER = "Location";
+
     protected final CxScanConfig config;
     protected final Logger log;
 
-    // This class uses its own instance of CxHttpClient, because SCA has a different base URL and Access Control server.
     protected CxHttpClient httpClient;
 
     public AstClient(CxScanConfig config, Logger log) {
@@ -41,7 +43,9 @@ public abstract class AstClient {
                 log);
     }
 
-    protected HttpResponse sendStartScanRequest(SourceLocationType sourceLocation, String sourceUrl, String projectId) throws IOException {
+    protected HttpResponse sendStartScanRequest(SourceLocationType sourceLocation,
+                                                String sourceUrl,
+                                                String projectId) throws IOException {
         log.info("Sending a request to start scan.");
 
         HandlerRef ref = HandlerRef.builder().type("branch").value("").build();
@@ -62,13 +66,15 @@ public abstract class AstClient {
 
         StartScanRequest request = StartScanRequest.builder()
                 .project(project)
-//                .config
+                .config(Collections.singletonList(createScanConfig()))
                 .build();
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
+        String failedMessage = String.format("start %s scan", getScannerDisplayName());
+
         return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
-                HttpResponse.class, HttpStatus.SC_CREATED, "start CxSCA scan");
+                HttpResponse.class, HttpStatus.SC_CREATED, failedMessage);
     }
 
     protected HttpResponse submitSourcesFromRemoteRepo(ASTConfig config, String projectId) throws IOException {
@@ -82,6 +88,10 @@ public abstract class AstClient {
         return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString(), projectId);
     }
 
+    protected abstract String getScannerDisplayName();
+
+    protected abstract ScanConfig createScanConfig();
+
     /**
      * Removes the userinfo part of the input URL (if present), so that the URL may be logged safely.
      * The URL may contain userinfo when a private repo is scanned.
@@ -93,8 +103,9 @@ public abstract class AstClient {
     private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
         if (repoInfo == null) {
             String message = String.format(
-                    "%s must be provided in CxSCA configuration when using source location of type %s.",
+                    "%s must be provided in %s configuration when using source location of type %s.",
                     RemoteRepositoryInfo.class.getName(),
+                    getScannerDisplayName(),
                     SourceLocationType.REMOTE_REPOSITORY.name());
 
             throw new CxClientException(message);
@@ -102,11 +113,11 @@ public abstract class AstClient {
     }
 
     protected static String extractScanIdFrom(HttpResponse response) {
-        if (response != null && response.getLastHeader("Location") != null) {
+        if (response != null && response.getLastHeader(LOCATION_HEADER) != null) {
             // Expecting values like
             //      /api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293
             //      /07e5b4b0-184a-458e-9d82-7f3da407f940
-            String urlPathWithScanId = response.getLastHeader("Location").getValue();
+            String urlPathWithScanId = response.getLastHeader(LOCATION_HEADER).getValue();
             String lastPathSegment = FilenameUtils.getName(urlPathWithScanId);
             if (StringUtils.isNotEmpty(lastPathSegment)) {
                 return lastPathSegment;

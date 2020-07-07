@@ -1,11 +1,15 @@
 package com.cx.restclient.ast;
 
+import com.cx.restclient.ast.dto.common.ScanConfig;
+import com.cx.restclient.ast.dto.common.ScanConfigValue;
 import com.cx.restclient.ast.dto.sast.ASTConfig;
 import com.cx.restclient.ast.dto.sast.AstSastConfig;
+import com.cx.restclient.ast.dto.sast.SastScanConfigValue;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.Results;
 import com.cx.restclient.dto.ScanResults;
+import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.ast.dto.sast.ASTResults;
@@ -18,6 +22,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 
 public class AstSastClient extends AstClient implements Scanner {
+    private static final String API_ENGINE_TYPE = "sast";
 
     public AstSastClient(CxScanConfig config, Logger log) {
         super(config, log);
@@ -29,10 +34,29 @@ public class AstSastClient extends AstClient implements Scanner {
     }
 
     @Override
+    protected String getScannerDisplayName() {
+        return ScannerType.AST.getDisplayName();
+    }
+
+    @Override
+    protected ScanConfig createScanConfig() {
+        boolean isIncremental = Boolean.TRUE.equals(config.getIncremental());
+
+        ScanConfigValue configValue = SastScanConfigValue.builder()
+                .incremental(Boolean.toString(isIncremental))
+                .presetName(StringUtils.defaultIfEmpty(config.getPresetName(), ""))
+                .build();
+
+        return ScanConfig.builder()
+                .type(API_ENGINE_TYPE)
+                .value(configValue)
+                .build();
+    }
+
+    @Override
     public void init() {
         AstSastConfig astConfig = config.getAstConfig();
         httpClient.addCustomHeader(AUTH.WWW_AUTH_RESP, String.format("Bearer %s", astConfig.getAccessToken()));
-
     }
 
     @Override

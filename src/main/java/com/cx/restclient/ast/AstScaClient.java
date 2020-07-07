@@ -1,5 +1,13 @@
 package com.cx.restclient.ast;
 
+import com.cx.restclient.ast.dto.common.ScanConfig;
+import com.cx.restclient.ast.dto.sca.CreateProjectRequest;
+import com.cx.restclient.ast.dto.sca.Project;
+import com.cx.restclient.ast.dto.sca.SCAConfig;
+import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.sca.report.Finding;
+import com.cx.restclient.ast.dto.sca.report.Package;
+import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
@@ -10,13 +18,6 @@ import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
-import com.cx.restclient.ast.dto.sca.CreateProjectRequest;
-import com.cx.restclient.ast.dto.sca.Project;
-import com.cx.restclient.ast.dto.sca.SCAConfig;
-import com.cx.restclient.ast.dto.sca.SCAResults;
-import com.cx.restclient.ast.dto.sca.report.Finding;
-import com.cx.restclient.ast.dto.sca.report.Package;
-import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -42,6 +43,7 @@ import java.util.List;
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 public class AstScaClient extends AstClient implements Scanner {
+    private static final String API_ENGINE_TYPE = "sca";
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
 
@@ -70,6 +72,18 @@ public class AstScaClient extends AstClient implements Scanner {
         // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
         // and then use this token for SCA authentication in cloud.
         httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
+    }
+
+    @Override
+    protected String getScannerDisplayName() {
+        return ScannerType.SCA.getDisplayName();
+    }
+
+    @Override
+    protected ScanConfig createScanConfig() {
+        return ScanConfig.builder()
+                .type(API_ENGINE_TYPE)
+                .build();
     }
 
     @Override
@@ -202,8 +216,8 @@ public class AstScaClient extends AstClient implements Scanner {
         httpClient.login(settings);
     }
 
-    public void close(){
-        if(httpClient != null) {
+    public void close() {
+        if (httpClient != null) {
             httpClient.close();
         }
     }
