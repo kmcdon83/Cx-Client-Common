@@ -35,6 +35,10 @@ public abstract class CommonClientTest {
         loadOverrides(props);
     }
 
+    protected static String prop(String key) {
+        return props.getProperty(key);
+    }
+
     private static void loadOverrides(Properties targetProps) {
         try {
             Properties overridingProps = TestingUtils.getProps(OVERRIDE_FILE, CommonClientTest.class);

@@ -1,11 +1,12 @@
 package com.cx.restclient.configuration;
 
+import com.cx.restclient.ast.dto.AstSastConfig;
 import com.cx.restclient.dto.*;
-import com.cx.restclient.ast.dto.ASTConfig;
-import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
+import com.cx.restclient.sca.dto.SCAConfig;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.cookie.Cookie;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.*;
@@ -108,7 +109,7 @@ public class CxScanConfig implements Serializable {
     private List<Cookie> sessionCookies = new ArrayList<>();
     private ProxyConfig proxyConfig;
 
-    private ASTConfig astConfig;
+    private AstSastConfig astConfig;
 
     public CxScanConfig() {
     }
@@ -743,11 +744,11 @@ public class CxScanConfig implements Serializable {
         this.scaConfig = scaConfig;
     }
 
-    public ASTConfig getAstConfig() {
+    public AstSastConfig getAstConfig() {
         return astConfig;
     }
 
-    public void setAstConfig(ASTConfig astConfig) {
+    public void setAstConfig(AstSastConfig astConfig) {
         this.astConfig = astConfig;
     }
 

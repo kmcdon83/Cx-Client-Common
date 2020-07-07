@@ -1,21 +1,22 @@
 package com.cx.restclient;
 
-import com.cx.restclient.common.Scanner;
 import com.cx.restclient.ast.AstClient;
 import com.cx.restclient.ast.UrlPaths;
+import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-
 import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
-
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sca.SCAWaiter;
-import com.cx.restclient.sca.dto.*;
+import com.cx.restclient.sca.dto.CreateProjectRequest;
+import com.cx.restclient.sca.dto.Project;
+import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.sca.dto.SCAResults;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
@@ -24,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -114,7 +113,7 @@ public class AstScaClient extends AstClient implements Scanner {
             SourceLocationType locationType = getScaConfig().getSourceLocationType();
             HttpResponse response;
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
-                response = submitSourcesFromRemoteRepo();
+                response = submitSourcesFromRemoteRepo(getScaConfig(), projectId);
             } else {
                 response = submitSourcesFromLocalDir();
             }
@@ -128,36 +127,6 @@ public class AstScaClient extends AstClient implements Scanner {
         }
     }
 
-    private static String extractScanIdFrom(HttpResponse response) {
-        if (response != null && response.getLastHeader("Location") != null) {
-            // Expecting a value like "/api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293"
-            String urlPathWithScanId = response.getLastHeader("Location").getValue();
-            String lastPathSegment = FilenameUtils.getName(urlPathWithScanId);
-            if (StringUtils.isNotEmpty(lastPathSegment)) {
-                return lastPathSegment;
-            }
-        }
-        throw new CxClientException("Unable to get scan ID.");
-    }
-
-    private HttpResponse submitSourcesFromRemoteRepo() throws IOException {
-        log.info("Using remote repository flow.");
-        RemoteRepositoryInfo repoInfo = getScaConfig().getRemoteRepositoryInfo();
-        validateRemoteRepoConfig(repoInfo);
-
-        URL sanitizedUrl = sanitize(repoInfo.getUrl());
-        log.info(String.format("Repository URL: %s", sanitizedUrl));
-
-        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString(), projectId);
-    }
-
-    /**
-     * Removes the userinfo part of the input URL (if present), so that the URL may be logged safely.
-     * The URL may contain userinfo when a private repo is scanned.
-     */
-    private URL sanitize(URL url) throws MalformedURLException {
-        return new URL(url.getProtocol(), url.getHost(), url.getFile());
-    }
 
     private HttpResponse submitSourcesFromLocalDir() throws IOException {
         log.info("Using local directory flow.");
@@ -171,17 +140,6 @@ public class AstScaClient extends AstClient implements Scanner {
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl, projectId);
-    }
-
-    private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
-        if (repoInfo == null) {
-            String message = String.format(
-                    "%s must be provided in CxSCA configuration when using source location of type %s.",
-                    RemoteRepositoryInfo.class.getName(),
-                    SourceLocationType.REMOTE_REPOSITORY.name());
-
-            throw new CxClientException(message);
-        }
     }
 
     private String getSourcesUploadUrl() throws IOException {

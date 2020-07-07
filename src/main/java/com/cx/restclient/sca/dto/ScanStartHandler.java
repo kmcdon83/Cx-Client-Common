@@ -11,4 +11,8 @@ public class ScanStartHandler {
      * For remote repo scan - a URL for which 'git clone' is possible.
      */
     private String url;
+
+    private HandlerRef ref;
+
+    private GitCredentials credentials;
 }

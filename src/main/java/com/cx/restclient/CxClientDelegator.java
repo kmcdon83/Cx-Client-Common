@@ -40,16 +40,17 @@ public class CxClientDelegator implements Scanner {
 
         this.config = config;
         this.log = log;
-
+        if (config.isAstEnabled()) {
+            scannersMap.put(ScannerType.AST, new AstSastClient(config, log));
+        }
 
         if (config.isSastEnabled()) {
             scannersMap.put(ScannerType.SAST, new CxSASTClient(config, log));
         }
-        
+
         if (config.isOsaEnabled()) {
             scannersMap.put(ScannerType.OSA, new CxOSAClient(config, log));
-        } 
-        else if (config.isScaEnabled()) {
+        } else if (config.isScaEnabled()) {
             scannersMap.put(ScannerType.SCA, new AstScaClient(config, log));
         }
     }
@@ -129,9 +130,9 @@ public class CxClientDelegator implements Scanner {
             log.info("Policy Management: ");
             log.info("--------------------");
 
-            OSAResults osaResults = (OSAResults)scanResults.get(ScannerType.OSA);
-            SASTResults sastResults = (SASTResults)scanResults.get(ScannerType.SAST);
-            
+            OSAResults osaResults = (OSAResults) scanResults.get(ScannerType.OSA);
+            SASTResults sastResults = (SASTResults) scanResults.get(ScannerType.SAST);
+
             boolean hasOsaViolations =
                     osaResults != null &&
                             osaResults.getOsaPolicies() != null &&
@@ -162,10 +163,10 @@ public class CxClientDelegator implements Scanner {
 
 
     public String generateHTMLSummary(ScanResults combinedResults) throws Exception {
-        
+
         return SummaryUtils.generateSummary(
-                (SASTResults) combinedResults.get(ScannerType.SAST), 
-                (OSAResults) combinedResults.get(ScannerType.OSA), 
+                (SASTResults) combinedResults.get(ScannerType.SAST),
+                (OSAResults) combinedResults.get(ScannerType.OSA),
                 (SCAResults) combinedResults.get(ScannerType.SCA), config);
     }
 
