@@ -5,8 +5,8 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.scansummary.Severity;
 import com.cx.restclient.osa.dto.CVEReportTableRow;
 import com.cx.restclient.osa.dto.OSAResults;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.sca.report.Finding;
 
 import java.util.ArrayList;
 import java.util.List;

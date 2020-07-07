@@ -1,5 +1,7 @@
 package com.cx.restclient;
 
+import com.cx.restclient.ast.AstSastClient;
+import com.cx.restclient.ast.AstScaClient;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
@@ -10,7 +12,7 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.ast.dto.sca.SCAResults;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 

@@ -4,8 +4,8 @@ package com.cx.restclient.dto;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.ASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.ast.dto.sast.ASTResults;
+import com.cx.restclient.ast.dto.sca.SCAResults;
 
 import java.io.Serializable;
 import java.util.HashMap;

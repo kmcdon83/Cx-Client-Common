@@ -6,7 +6,7 @@ import com.cx.restclient.cxArm.dto.Policy;
 import com.cx.restclient.dto.scansummary.ScanSummary;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.ast.dto.sca.SCAResults;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;

@@ -7,8 +7,8 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,9 +1,9 @@
 package com.cx.restclient.configuration;
 
-import com.cx.restclient.ast.dto.AstSastConfig;
+import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.dto.*;
 import com.cx.restclient.sast.dto.ReportType;
-import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.ast.dto.sca.SCAConfig;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.cookie.Cookie;
 

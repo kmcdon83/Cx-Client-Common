@@ -4,7 +4,7 @@ import com.cx.restclient.CxClientDelegator;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.ast.dto.sca.SCAConfig;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;

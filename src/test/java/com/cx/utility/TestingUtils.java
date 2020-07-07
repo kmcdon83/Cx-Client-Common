@@ -1,6 +1,6 @@
 package com.cx.utility;
 
-import com.cx.restclient.sca.dto.SCAConfig;
+import com.cx.restclient.ast.dto.sca.SCAConfig;
 
 import java.io.FileReader;
 import java.io.IOException;

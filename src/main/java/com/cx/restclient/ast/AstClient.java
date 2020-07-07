@@ -1,13 +1,13 @@
 package com.cx.restclient.ast;
 
-import com.cx.restclient.ast.dto.ASTConfig;
+import com.cx.restclient.ast.dto.common.*;
+import com.cx.restclient.ast.dto.sast.ASTConfig;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
-import com.cx.restclient.sca.dto.*;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
@@ -62,6 +62,7 @@ public abstract class AstClient {
 
         StartScanRequest request = StartScanRequest.builder()
                 .project(project)
+//                .config
                 .build();
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);

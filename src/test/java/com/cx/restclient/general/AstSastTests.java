@@ -1,12 +1,12 @@
 package com.cx.restclient.general;
 
 import com.cx.restclient.CxClientDelegator;
-import com.cx.restclient.ast.dto.AstSastConfig;
+import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.SourceLocationType;
-import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
+import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
