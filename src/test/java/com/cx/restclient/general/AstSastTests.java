@@ -18,7 +18,7 @@ import java.net.URL;
 @Slf4j
 public class AstSastTests extends CommonClientTest {
     @Test
-    public void createScan() throws MalformedURLException {
+    public void initiateScan_remotePublicRepo() throws MalformedURLException {
         AstSastConfig astConfig = AstSastConfig.builder()
                 .apiUrl(prop("astSast.apiUrl"))
                 .sourceLocationType(SourceLocationType.REMOTE_REPOSITORY)
@@ -39,7 +39,7 @@ public class AstSastTests extends CommonClientTest {
         CxClientDelegator client = new CxClientDelegator(config, log);
         try {
             client.init();
-            ScanResults scanResults = client.createScan();
+            ScanResults scanResults = client.initiateScan();
             Assert.assertNotNull("Scan results are null.", scanResults);
             Assert.assertNotNull("AST-SAST results are null.", scanResults.getAstResults());
             Assert.assertTrue("Scan ID is missing", StringUtils.isNotEmpty(scanResults.getAstResults().getScanId()));

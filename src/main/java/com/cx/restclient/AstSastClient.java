@@ -37,7 +37,7 @@ public class AstSastClient extends AstClient implements Scanner {
     }
 
     @Override
-    public Results createScan() {
+    public Results initiateScan() {
         ASTResults astResults = new ASTResults();
         ASTConfig astConfig = config.getAstConfig();
         try {

@@ -178,6 +178,12 @@ public class AstScaClient extends AstClient implements Scanner {
         return new ScanResults();
     }
 
+    void testConnection() throws IOException {
+        // The calls below allow to check both access control and API connectivity.
+        login();
+        getProjects();
+    }
+
     public void login() throws IOException {
         log.info("Logging into CxSCA.");
         SCAConfig scaConfig = getScaConfig();
