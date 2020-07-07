@@ -26,7 +26,7 @@ public abstract class SummaryUtils {
         cfg.setClassForTemplateLoading(SummaryUtils.class, "/com/cx/report");
         Template template = cfg.getTemplate("report.ftl");
 
-        Map<String, Object> templateData = new HashMap<String, Object>();
+        Map<String, Object> templateData = new HashMap<>();
         templateData.put("config", config);
         templateData.put("sast", sastResults);
 
@@ -169,27 +169,23 @@ public abstract class SummaryUtils {
 
 
         if (config.getEnablePolicyViolations()) {
-            Map<String, String> policies = new HashMap<String, String>();
+            Map<String, String> policies = new HashMap<>();
 
-            if (config.isSastEnabled() && sastResults.getSastPolicies().size() > 0) {
+            if (config.isSastEnabled() && !sastResults.getSastPolicies().isEmpty()) {
                 policyViolated = true;
                 policies = sastResults.getSastPolicies().stream().collect(
                         Collectors.toMap(Policy::getPolicyName,
                                 Policy::getRuleName,
-                                (left, right) -> {
-                                    return left;
-                                }
+                                (left, right) -> left
                         ));
             }
 
             if (config.isOsaEnabled() &&
-                    osaResults.getOsaPolicies().size() > 0) {
+                    !osaResults.getOsaPolicies().isEmpty()) {
                 policyViolated = true;
                 policies.putAll(osaResults.getOsaPolicies().stream().collect(
                         Collectors.toMap(Policy::getPolicyName, Policy::getRuleName,
-                                (left, right) -> {
-                                    return left;
-                                })));
+                                (left, right) -> left)));
             }
 
             policyViolatedCount = policies.size();

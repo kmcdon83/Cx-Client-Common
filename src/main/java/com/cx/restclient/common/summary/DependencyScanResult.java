@@ -24,9 +24,9 @@ public class DependencyScanResult implements Results {
     private int nonVulnerableLibraries;
     private String scanStartTime;
     private String scanEndTime;
-    private List<CVEReportTableRow> dependencyHighCVEReportTable = new ArrayList<CVEReportTableRow>();
-    private List<CVEReportTableRow> dependencyMediumCVEReportTable = new ArrayList<CVEReportTableRow>();
-    private List<CVEReportTableRow> dependencyLowCVEReportTable = new ArrayList<CVEReportTableRow>();
+    private List<CVEReportTableRow> dependencyHighCVEReportTable = new ArrayList<>();
+    private List<CVEReportTableRow> dependencyMediumCVEReportTable = new ArrayList<>();
+    private List<CVEReportTableRow> dependencyLowCVEReportTable = new ArrayList<>();
     private int totalLibraries;
 
     DependencyScanResult(){}

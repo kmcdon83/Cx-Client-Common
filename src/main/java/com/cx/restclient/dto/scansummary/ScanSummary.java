@@ -40,14 +40,14 @@ public class ScanSummary {
 
         for (ThresholdError error : thresholdErrors) {
             // TODO: Include dependency scanner type into the message.
-            result.append(String.format("%s severity results are above threshold. Results: %d. Threshold: %d.\n",
+            result.append(String.format("%s severity results are above threshold. Results: %d. Threshold: %d.%n",
                     error.getSeverity().toString().toLowerCase(),
                     error.getValue(),
                     error.getThreshold()));
         }
 
         for (Severity severity : newResultThresholdErrors) {
-            result.append(String.format("One or more new results of %s severity\n", severity.toString().toLowerCase()));
+            result.append(String.format("One or more new results of %s severity%n", severity.toString().toLowerCase()));
         }
 
         if (policyViolated) {
@@ -94,7 +94,9 @@ public class ScanSummary {
     private void addDependencyScanThresholdErrors(CxScanConfig config, OSAResults osaResults, SCAResults scaResults ) {
         if (config.isOSAThresholdEffectivelyEnabled() && (scaResults != null) || osaResults!= null) {
 
-            int totalHigh = 0, totalMedium = 0, totalLow = 0;
+            int totalHigh = 0;
+            int totalMedium = 0;
+            int totalLow = 0;
             boolean hasSummary = false;
 
             if (scaResults != null) {
@@ -105,7 +107,7 @@ public class ScanSummary {
                     totalMedium = summary.getMediumVulnerabilityCount();
                     totalLow = summary.getLowVulnerabilityCount();
                 }
-            } else if (osaResults != null && osaResults.isOsaResultsReady()) {
+            } else if (osaResults.isOsaResultsReady()) {
                 OSASummaryResults summary = osaResults.getResults();
                 if (summary != null) {
                     hasSummary = true;
@@ -141,10 +143,8 @@ public class ScanSummary {
                 severity = "HIGH";
             }
 
-            if ("HIGH".equals(severity)) {
-                if (sastResults.getNewHigh() > 0) {
-                    newResultThresholdErrors.add(Severity.HIGH);
-                }
+            if ("HIGH".equals(severity) && sastResults.getNewHigh() > 0) {
+                newResultThresholdErrors.add(Severity.HIGH);
             }
         }
     }

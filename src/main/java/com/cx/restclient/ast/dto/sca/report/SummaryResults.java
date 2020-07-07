@@ -6,8 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SummaryResults {
-
-    int highVulnerabilityCount =0;
+    int highVulnerabilityCount = 0;
     int mediumVulnerabilityCount = 0;
-    int lowVulnerabilityCount =0;
+    int lowVulnerabilityCount = 0;
 }

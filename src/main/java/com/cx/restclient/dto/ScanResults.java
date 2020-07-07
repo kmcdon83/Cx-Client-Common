@@ -21,10 +21,6 @@ public class ScanResults implements Serializable, Results {
     private Exception osaWaitException = null;
     private Exception generalException = null;
 
- 
-    public ScanResults() {
-    }
-    
     public Map<ScannerType, Results> getResults(){
         return resultsMap;
     }
