@@ -3,16 +3,16 @@ package com.cx.restclient.ast.dto.sca;
 import com.cx.restclient.dto.Results;
 import com.cx.restclient.ast.dto.sca.report.Finding;
 import com.cx.restclient.ast.dto.sca.report.Package;
-import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
+import com.cx.restclient.ast.dto.sca.report.AstScaSummaryResults;
 
 
 import java.io.Serializable;
 import java.util.List;
 
 
-public class SCAResults implements Serializable, Results {
+public class AstScaResults implements Serializable, Results {
     private String scanId;
-    private SCASummaryResults summary;
+    private AstScaSummaryResults summary;
     private String webReportLink;
     private List<Finding> findings;
     private List<Package> packages;
@@ -26,11 +26,11 @@ public class SCAResults implements Serializable, Results {
         this.scanId = scanId;
     }
 
-    public SCASummaryResults getSummary() {
+    public AstScaSummaryResults getSummary() {
         return summary;
     }
 
-    public void setSummary(SCASummaryResults summary) {
+    public void setSummary(AstScaSummaryResults summary) {
         this.summary = summary;
     }
 

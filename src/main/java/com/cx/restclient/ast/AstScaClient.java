@@ -3,11 +3,11 @@ package com.cx.restclient.ast;
 import com.cx.restclient.ast.dto.common.ScanConfig;
 import com.cx.restclient.ast.dto.sca.CreateProjectRequest;
 import com.cx.restclient.ast.dto.sca.Project;
-import com.cx.restclient.ast.dto.sca.SCAConfig;
-import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.sca.AstScaConfig;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
 import com.cx.restclient.ast.dto.sca.report.Finding;
 import com.cx.restclient.ast.dto.sca.report.Package;
-import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
+import com.cx.restclient.ast.dto.sca.report.AstScaSummaryResults;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
@@ -65,7 +65,7 @@ public class AstScaClient extends AstClient implements Scanner {
     public AstScaClient(CxScanConfig config, Logger log) {
         super(config, log);
 
-        SCAConfig scaConfig = getScaConfig();
+        AstScaConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
 
@@ -110,7 +110,7 @@ public class AstScaClient extends AstClient implements Scanner {
         waiter.waitForScanToFinish(scanId);
         log.info("CxSCA scan finished successfully. Retrieving CxSCA scan results.");
 
-        SCAResults scaResult = retrieveScanResults();
+        AstScaResults scaResult = retrieveScanResults();
         scaResult.setScaResultReady(true);
         return scaResult;
     }
@@ -118,7 +118,7 @@ public class AstScaClient extends AstClient implements Scanner {
     @Override
     public Results initiateScan() {
         log.info("----------------------------------- Creating CxSCA Scan:------------------------------------");
-        SCAResults scaResults = new SCAResults();
+        AstScaResults scaResults = new AstScaResults();
         scanId = null;
         try {
             SourceLocationType locationType = getScaConfig().getSourceLocationType();
@@ -176,7 +176,7 @@ public class AstScaClient extends AstClient implements Scanner {
         uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
     }
 
-    private void printWebReportLink(SCAResults scaResult) {
+    private void printWebReportLink(AstScaResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
             log.info(String.format("CxSCA scan results location: %s", scaResult.getWebReportLink()));
         }
@@ -197,7 +197,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
     public void login() throws IOException {
         log.info("Logging into CxSCA.");
-        SCAConfig scaConfig = getScaConfig();
+        AstScaConfig scaConfig = getScaConfig();
 
         LoginSettings settings = new LoginSettings();
 
@@ -285,14 +285,14 @@ public class AstScaClient extends AstClient implements Scanner {
         return newProject.getId();
     }
 
-    private SCAResults retrieveScanResults() {
+    private AstScaResults retrieveScanResults() {
         try {
             String reportId = getReportId();
 
-            SCAResults scaResults = new SCAResults();
+            AstScaResults scaResults = new AstScaResults();
             scaResults.setScanId(scanId);
 
-            SCASummaryResults scanSummary = getSummaryReport(reportId);
+            AstScaSummaryResults scanSummary = getSummaryReport(reportId);
             scaResults.setSummary(scanSummary);
             printSummary(scanSummary, scanId);
 
@@ -351,7 +351,7 @@ public class AstScaClient extends AstClient implements Scanner {
         return reportId;
     }
 
-    private SCASummaryResults getSummaryReport(String reportId) throws IOException {
+    private AstScaSummaryResults getSummaryReport(String reportId) throws IOException {
         log.debug("Getting summary report.");
 
         String path = String.format(UrlPaths.SUMMARY_REPORT,
@@ -359,7 +359,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
         return httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                SCASummaryResults.class,
+                AstScaSummaryResults.class,
                 HttpStatus.SC_OK,
                 "CxSCA report summary",
                 false);
@@ -395,7 +395,7 @@ public class AstScaClient extends AstClient implements Scanner {
                 true);
     }
 
-    private void printSummary(SCASummaryResults summary, String scanId) {
+    private void printSummary(AstScaSummaryResults summary, String scanId) {
         if (log.isInfoEnabled()) {
             log.info(String.format("%n----CxSCA risk report summary----"));
             log.info(String.format("Created on: %s", summary.getCreatedOn()));
@@ -411,8 +411,8 @@ public class AstScaClient extends AstClient implements Scanner {
         }
     }
 
-    private SCAConfig getScaConfig() {
-        SCAConfig result = config.getScaConfig();
+    private AstScaConfig getScaConfig() {
+        AstScaConfig result = config.getAstScaConfig();
         if (result == null) {
             throw new CxClientException("CxSCA scan configuration is missing.");
         }

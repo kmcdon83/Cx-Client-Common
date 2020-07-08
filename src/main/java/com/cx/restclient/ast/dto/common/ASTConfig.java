@@ -1,7 +1,6 @@
-package com.cx.restclient.ast.dto.sast;
+package com.cx.restclient.ast.dto.common;
 
 import com.cx.restclient.dto.SourceLocationType;
-import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

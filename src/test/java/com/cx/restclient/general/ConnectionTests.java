@@ -4,7 +4,7 @@ import com.cx.restclient.CxClientDelegator;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.ast.dto.sca.SCAConfig;
+import com.cx.restclient.ast.dto.sca.AstScaConfig;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
@@ -33,8 +33,8 @@ public class ConnectionTests extends CommonClientTest {
     public void scaConnectionTest() {
         CxScanConfig config = new CxScanConfig();
         config.setCxOrigin("common");
-        SCAConfig scaConfig = TestingUtils.getScaConfig(props, false);
-        config.setScaConfig(scaConfig);
+        AstScaConfig scaConfig = TestingUtils.getScaConfig(props, false);
+        config.setAstScaConfig(scaConfig);
         config.addScannerType(ScannerType.SCA);
         try {
             CxClientDelegator delegator = new CxClientDelegator(config, log);

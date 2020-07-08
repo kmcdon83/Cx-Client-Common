@@ -12,6 +12,9 @@ public class ScanStartHandler {
      */
     private String url;
 
+    /**
+     * For remote repo scan, contains a reference to a specific commit.
+     */
     private HandlerRef ref;
 
     private GitCredentials credentials;

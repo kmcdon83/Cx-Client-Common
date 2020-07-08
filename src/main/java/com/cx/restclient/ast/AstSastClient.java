@@ -2,7 +2,7 @@ package com.cx.restclient.ast;
 
 import com.cx.restclient.ast.dto.common.ScanConfig;
 import com.cx.restclient.ast.dto.common.ScanConfigValue;
-import com.cx.restclient.ast.dto.sast.ASTConfig;
+import com.cx.restclient.ast.dto.common.ASTConfig;
 import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.ast.dto.sast.SastScanConfigValue;
 import com.cx.restclient.common.Scanner;
@@ -12,7 +12,7 @@ import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.ast.dto.sast.ASTResults;
+import com.cx.restclient.ast.dto.common.ASTResults;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;

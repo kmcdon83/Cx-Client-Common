@@ -1,30 +1,25 @@
 package com.cx.restclient.dto.scansummary;
 
+import com.cx.restclient.ast.dto.sca.AstScaResults;
+import com.cx.restclient.ast.dto.sca.report.AstScaSummaryResults;
 import com.cx.restclient.common.CxPARAM;
 import com.cx.restclient.configuration.CxScanConfig;
-
-import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.osa.dto.OSASummaryResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.ast.dto.sca.SCAResults;
-import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
- * Collects errors from a provided ScanResults object, based on scan config.
+ * Collects errors from provided scan results, based on scan config.
  */
 public class ScanSummary {
-    private final Set<ScannerType> scannerTypes;
     private final List<ThresholdError> thresholdErrors = new ArrayList<>();
     private final List<Severity> newResultThresholdErrors = new ArrayList<>();
     private final boolean policyViolated;
 
-    public ScanSummary(CxScanConfig config, SASTResults sastResults, OSAResults osaResults, SCAResults scaResults) {
-        scannerTypes = config.getScannerTypes();
+    public ScanSummary(CxScanConfig config, SASTResults sastResults, OSAResults osaResults, AstScaResults scaResults) {
 
         addSastThresholdErrors(config, sastResults);
         addDependencyScanThresholdErrors(config, osaResults, scaResults);
@@ -91,7 +86,7 @@ public class ScanSummary {
         }
     }
 
-    private void addDependencyScanThresholdErrors(CxScanConfig config, OSAResults osaResults, SCAResults scaResults ) {
+    private void addDependencyScanThresholdErrors(CxScanConfig config, OSAResults osaResults, AstScaResults scaResults ) {
         if (config.isOSAThresholdEffectivelyEnabled() && (scaResults != null) || osaResults!= null) {
 
             int totalHigh = 0;
@@ -100,7 +95,7 @@ public class ScanSummary {
             boolean hasSummary = false;
 
             if (scaResults != null) {
-                SCASummaryResults summary = scaResults.getSummary();
+                AstScaSummaryResults summary = scaResults.getSummary();
                 if (summary != null) {
                     hasSummary = true;
                     totalHigh = summary.getHighVulnerabilityCount();
@@ -155,8 +150,8 @@ public class ScanSummary {
 
         return config.getEnablePolicyViolations() &&
                 ((osaResults != null &&
-                     osaResults.getOsaPolicies().size() > 0) ||
-                        (sastResults != null && sastResults.getSastPolicies().size() > 0));
+                     !osaResults.getOsaPolicies().isEmpty()) ||
+                        (sastResults != null && !sastResults.getSastPolicies().isEmpty()));
     }
 
     private void checkForThresholdError(int value, Integer threshold, ErrorSource source, Severity severity) {

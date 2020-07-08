@@ -1,7 +1,7 @@
 package com.cx.restclient.ast;
 
 import com.cx.restclient.ast.dto.common.*;
-import com.cx.restclient.ast.dto.sast.ASTConfig;
+import com.cx.restclient.ast.dto.common.ASTConfig;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;

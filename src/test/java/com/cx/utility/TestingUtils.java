@@ -1,6 +1,6 @@
 package com.cx.utility;
 
-import com.cx.restclient.ast.dto.sca.SCAConfig;
+import com.cx.restclient.ast.dto.sca.AstScaConfig;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -21,7 +21,7 @@ public final class TestingUtils {
         return properties;
     }
 
-    public static SCAConfig getScaConfig(Properties props, boolean useOnPremiseAuthentication) {
+    public static AstScaConfig getScaConfig(Properties props, boolean useOnPremiseAuthentication) {
         String accessControlProp, usernameProp, passwordProp;
         if (useOnPremiseAuthentication) {
             accessControlProp = "sca.onPremise.accessControlUrl";
@@ -33,7 +33,7 @@ public final class TestingUtils {
             passwordProp = "sca.cloud.password";
         }
 
-        SCAConfig result = new SCAConfig();
+        AstScaConfig result = new AstScaConfig();
         result.setApiUrl(props.getProperty("sca.apiUrl"));
         result.setWebAppUrl(props.getProperty("sca.webAppUrl"));
         result.setTenant(props.getProperty("sca.tenant"));

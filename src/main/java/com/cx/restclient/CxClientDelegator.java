@@ -12,7 +12,7 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 
@@ -169,10 +169,10 @@ public class CxClientDelegator implements Scanner {
         return SummaryUtils.generateSummary(
                 (SASTResults) combinedResults.get(ScannerType.SAST),
                 (OSAResults) combinedResults.get(ScannerType.OSA),
-                (SCAResults) combinedResults.get(ScannerType.SCA), config);
+                (AstScaResults) combinedResults.get(ScannerType.SCA), config);
     }
 
-    public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults, SCAResults scaResults) throws Exception {
+    public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults, AstScaResults scaResults) throws Exception {
         return SummaryUtils.generateSummary(sastResults, osaResults, scaResults, config);
     }
 

@@ -1,5 +1,6 @@
 package com.cx.restclient.ast.dto.sast;
 
+import com.cx.restclient.ast.dto.common.ASTConfig;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

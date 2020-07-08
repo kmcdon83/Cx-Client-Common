@@ -5,7 +5,7 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.scansummary.Severity;
 import com.cx.restclient.osa.dto.CVEReportTableRow;
 import com.cx.restclient.osa.dto.OSAResults;
-import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
 import com.cx.restclient.ast.dto.sca.report.Finding;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class DependencyScanResult implements Results {
 
     DependencyScanResult(){}
 
-    DependencyScanResult(SCAResults scaResults){
+    DependencyScanResult(AstScaResults scaResults){
         this.scannerType = ScannerType.SCA;
         this.highVulnerability = scaResults.getSummary().getHighVulnerabilityCount();
         this.mediumVulnerability = scaResults.getSummary().getMediumVulnerabilityCount();

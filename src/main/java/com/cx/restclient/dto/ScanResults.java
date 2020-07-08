@@ -4,8 +4,8 @@ package com.cx.restclient.dto;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.ast.dto.sast.ASTResults;
-import com.cx.restclient.ast.dto.sca.SCAResults;
+import com.cx.restclient.ast.dto.common.ASTResults;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -49,8 +49,8 @@ public class ScanResults implements Serializable, Results {
         return (ASTResults)resultsMap.get(ScannerType.AST);
     }
 
-    public SCAResults getScaResults() {
-        return (SCAResults)resultsMap.get(ScannerType.SCA);
+    public AstScaResults getScaResults() {
+        return (AstScaResults)resultsMap.get(ScannerType.SCA);
     }
 
 

@@ -3,7 +3,7 @@ package com.cx.restclient.configuration;
 import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.dto.*;
 import com.cx.restclient.sast.dto.ReportType;
-import com.cx.restclient.ast.dto.sca.SCAConfig;
+import com.cx.restclient.ast.dto.sca.AstScaConfig;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.cookie.Cookie;
 
@@ -104,7 +104,7 @@ public class CxScanConfig implements Serializable {
     private Integer maxZipSize;
     private String defaultProjectName;
 
-    private SCAConfig scaConfig;
+    private AstScaConfig astScaConfig;
     private Set<ScannerType> scannerTypes = new HashSet<>();
     private List<Cookie> sessionCookies = new ArrayList<>();
     private ProxyConfig proxyConfig;
@@ -129,24 +129,24 @@ public class CxScanConfig implements Serializable {
         this.disableCertificateValidation = disableCertificateValidation;
     }
 
-    public Boolean isSastEnabled() {
+    public boolean isSastEnabled() {
         return scannerTypes.contains(ScannerType.SAST) ;
     }
 
-    public Boolean isOsaEnabled() {
+    public boolean isOsaEnabled() {
         return scannerTypes.contains(ScannerType.OSA) ;
     }
 
-    public Boolean isScaEnabled() {
+    public boolean isScaEnabled() {
         return scannerTypes.contains(ScannerType.SCA) ;
     }
 
-    public Boolean isAstEnabled() {
+    public boolean isAstEnabled() {
         return scannerTypes.contains(ScannerType.AST) ;
     }
 
 
-    public void setSastEnabled(Boolean sastEnabled) {
+    public void setSastEnabled(boolean sastEnabled) {
         if(sastEnabled){
             scannerTypes.add(ScannerType.SAST);
         }
@@ -736,12 +736,12 @@ public class CxScanConfig implements Serializable {
         reports.put(ReportType.RTF, rtfReportPath);
     }
 
-    public SCAConfig getScaConfig() {
-        return scaConfig;
+    public AstScaConfig getAstScaConfig() {
+        return astScaConfig;
     }
 
-    public void setScaConfig(SCAConfig scaConfig) {
-        this.scaConfig = scaConfig;
+    public void setAstScaConfig(AstScaConfig astScaConfig) {
+        this.astScaConfig = astScaConfig;
     }
 
     public AstSastConfig getAstConfig() {

@@ -1,21 +1,9 @@
 package com.cx.restclient.general;
 
 import com.cx.restclient.configuration.CxScanConfig;
-
 import com.cx.restclient.dto.ScanResults;
-import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
-import com.cx.restclient.sca.dto.SourceLocationType;
-import com.cx.restclient.sca.dto.SCAConfig;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
-import com.cx.restclient.ast.dto.sca.SCAConfig;
-import com.cx.restclient.ast.dto.sca.SCAResults;
 import com.cx.restclient.dto.SourceLocationType;
-import com.cx.restclient.ast.dto.sca.report.Finding;
-import com.cx.restclient.ast.dto.sca.report.Package;
-import com.cx.restclient.ast.dto.sca.report.SCASummaryResults;
-import com.cx.utility.TestingUtils;
+import com.cx.restclient.exception.CxClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -31,23 +19,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 @Slf4j
-public class ScaScanTests extends AbstractScaScanTests {
-
-
+public class AstScaTests extends AbstractScaScanTests {
     @Test
     public void scan_localDirUpload() throws IOException, CxClientException {
         CxScanConfig config = initScaConfig(false);
         config.setOsaThresholdsEnabled(true);
-        config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
+        config.getAstScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
 
         Path sourcesDir = null;
         try {
@@ -63,7 +48,7 @@ public class ScaScanTests extends AbstractScaScanTests {
 
 
     @Test
-    @Ignore()
+    @Ignore("There is no stable on-prem environment.")
     public void scan_onPremiseAuthentication() throws MalformedURLException {
         scanRemoteRepo(PUBLIC_REPO_PROP, true);
     }
@@ -156,12 +141,10 @@ public class ScaScanTests extends AbstractScaScanTests {
     }
 
     private static InputStream getTestProjectStream() {
-        String srcResourceName = ScaScanTests.PACKED_SOURCES_TO_SCAN;
+        String srcResourceName = AstScaTests.PACKED_SOURCES_TO_SCAN;
         log.info("Getting resource stream from '{}'", srcResourceName);
         return Thread.currentThread()
                 .getContextClassLoader()
                 .getResourceAsStream(srcResourceName);
     }
-
-
 }
