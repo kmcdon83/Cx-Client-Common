@@ -105,11 +105,12 @@ public class CxScanConfig implements Serializable {
     private String defaultProjectName;
 
     private AstScaConfig astScaConfig;
-    private Set<ScannerType> scannerTypes = new HashSet<>();
-    private List<Cookie> sessionCookies = new ArrayList<>();
+    private AstSastConfig astSastConfig;
+
+    private final Set<ScannerType> scannerTypes = new HashSet<>();
+    private final List<Cookie> sessionCookies = new ArrayList<>();
     private ProxyConfig proxyConfig;
 
-    private AstSastConfig astConfig;
 
     public CxScanConfig() {
     }
@@ -137,19 +138,18 @@ public class CxScanConfig implements Serializable {
         return scannerTypes.contains(ScannerType.OSA) ;
     }
 
-    public boolean isScaEnabled() {
+    public boolean isAstScaEnabled() {
         return scannerTypes.contains(ScannerType.AST_SCA) ;
     }
 
-    public boolean isAstEnabled() {
+    public boolean isAstSastEnabled() {
         return scannerTypes.contains(ScannerType.AST_SAST) ;
     }
 
     public void setSastEnabled(boolean sastEnabled) {
-        if(sastEnabled){
+        if (sastEnabled) {
             scannerTypes.add(ScannerType.SAST);
-        }
-        else {
+        } else {
             scannerTypes.remove(ScannerType.SAST);
         }
     }
@@ -518,7 +518,7 @@ public class CxScanConfig implements Serializable {
     }
 
     public boolean isOSAThresholdEffectivelyEnabled() {
-        return (isOsaEnabled() || isScaEnabled()) &&
+        return (isOsaEnabled() || isAstScaEnabled()) &&
                 getOsaThresholdsEnabled() &&
                 (getOsaHighThreshold() != null || getOsaMediumThreshold() != null || getOsaLowThreshold() != null);
     }
@@ -743,12 +743,12 @@ public class CxScanConfig implements Serializable {
         this.astScaConfig = astScaConfig;
     }
 
-    public AstSastConfig getAstConfig() {
-        return astConfig;
+    public AstSastConfig getAstSastConfig() {
+        return astSastConfig;
     }
 
-    public void setAstConfig(AstSastConfig astConfig) {
-        this.astConfig = astConfig;
+    public void setAstSastConfig(AstSastConfig astConfig) {
+        this.astSastConfig = astConfig;
     }
 
     public Set<ScannerType> getScannerTypes() {

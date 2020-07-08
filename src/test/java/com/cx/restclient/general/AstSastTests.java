@@ -32,7 +32,7 @@ public class AstSastTests extends CommonClientTest {
 
 
         CxScanConfig config = new CxScanConfig();
-        config.setAstConfig(astConfig);
+        config.setAstSastConfig(astConfig);
         config.setProjectName(prop("astSast.projectName"));
         config.addScannerType(ScannerType.AST_SAST);
 

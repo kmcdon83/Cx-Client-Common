@@ -27,7 +27,7 @@ public class AstSastClient extends AstClient implements Scanner {
     public AstSastClient(CxScanConfig config, Logger log) {
         super(config, log);
 
-        ASTConfig astConfig = this.config.getAstConfig();
+        ASTConfig astConfig = this.config.getAstSastConfig();
         String normalizedUrl = StringUtils.stripEnd(astConfig.getApiUrl(), "/");
 
         httpClient = createHttpClient(normalizedUrl);
@@ -55,14 +55,14 @@ public class AstSastClient extends AstClient implements Scanner {
 
     @Override
     public void init() {
-        AstSastConfig astConfig = config.getAstConfig();
+        AstSastConfig astConfig = config.getAstSastConfig();
         httpClient.addCustomHeader(AUTH.WWW_AUTH_RESP, String.format("Bearer %s", astConfig.getAccessToken()));
     }
 
     @Override
     public Results initiateScan() {
         ASTResults astResults = new ASTResults();
-        ASTConfig astConfig = config.getAstConfig();
+        ASTConfig astConfig = config.getAstSastConfig();
         try {
             SourceLocationType locationType = astConfig.getSourceLocationType();
             HttpResponse response;
