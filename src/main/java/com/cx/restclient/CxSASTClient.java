@@ -422,7 +422,12 @@ class CxSASTClient {
 
     private void printReportProgress(ReportStatus reportStatus, long startTime) {
         String reportType = reportStatus.getContentType().replace("application/", "");
-        log.info("Waiting for server to generate " + reportType + " report. " + (startTime + reportTimeoutSec - (System.currentTimeMillis() / 1000)) + " seconds left to timeout");
+        if (reportType.equalsIgnoreCase("xml")) {
+            log.info("Waiting for server to generate report. " + (startTime + reportTimeoutSec - (System.currentTimeMillis() / 1000)) + " seconds left to timeout");
+        } else {
+            log.info("Waiting for server to generate " + reportType + " report. " + (startTime + reportTimeoutSec - (System.currentTimeMillis() / 1000)) + " seconds left to timeout");
+
+        }
     }
 
     private ReportStatus resolveReportStatus(ReportStatus reportStatus) throws CxClientException {
