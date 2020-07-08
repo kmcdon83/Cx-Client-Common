@@ -17,5 +17,7 @@ public class ScanStartHandler {
      */
     private HandlerRef ref;
 
+    private String username;
+
     private GitCredentials credentials;
 }

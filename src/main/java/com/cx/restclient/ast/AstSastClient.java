@@ -1,5 +1,6 @@
 package com.cx.restclient.ast;
 
+import com.cx.restclient.ast.dto.common.ASTConfig;
 import com.cx.restclient.ast.dto.common.ASTResults;
 import com.cx.restclient.ast.dto.common.ScanConfig;
 import com.cx.restclient.ast.dto.common.ScanConfigValue;
@@ -100,7 +101,7 @@ public class AstSastClient extends AstClient implements Scanner {
         Optional.ofNullable(httpClient).ifPresent(CxHttpClient::close);
     }
 
-    private void validate(AstSastConfig astSastConfig) {
+    private void validate(ASTConfig astSastConfig) {
         String error = null;
         if (astSastConfig == null) {
             error = "%s config must be provided.";

@@ -17,4 +17,10 @@ public class RemoteRepositoryInfo implements Serializable {
      * A URL for which 'git clone' is possible.
      */
     private URL url;
+
+    private String branch;
+
+    private String username;
+
+    private String password;
 }

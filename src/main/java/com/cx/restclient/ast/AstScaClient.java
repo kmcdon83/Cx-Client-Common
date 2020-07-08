@@ -1,13 +1,14 @@
 package com.cx.restclient.ast;
 
+import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
 import com.cx.restclient.ast.dto.common.ScanConfig;
-import com.cx.restclient.ast.dto.sca.CreateProjectRequest;
-import com.cx.restclient.ast.dto.sca.Project;
 import com.cx.restclient.ast.dto.sca.AstScaConfig;
 import com.cx.restclient.ast.dto.sca.AstScaResults;
+import com.cx.restclient.ast.dto.sca.CreateProjectRequest;
+import com.cx.restclient.ast.dto.sca.Project;
+import com.cx.restclient.ast.dto.sca.report.AstScaSummaryResults;
 import com.cx.restclient.ast.dto.sca.report.Finding;
 import com.cx.restclient.ast.dto.sca.report.Package;
-import com.cx.restclient.ast.dto.sca.report.AstScaSummaryResults;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
@@ -27,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
@@ -34,6 +36,7 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -64,13 +67,14 @@ public class AstScaClient extends AstClient implements Scanner {
     public AstScaClient(CxScanConfig config, Logger log) {
         super(config, log);
 
-        AstScaConfig scaConfig = getScaConfig();
+        AstScaConfig astScaConfig = config.getAstScaConfig();
+        validate(astScaConfig);
 
-        httpClient = createHttpClient(scaConfig.getApiUrl());
+        httpClient = createHttpClient(astScaConfig.getApiUrl());
 
         // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
         // and then use this token for SCA authentication in cloud.
-        httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
+        httpClient.addCustomHeader(TENANT_HEADER_NAME, config.getAstScaConfig().getTenant());
     }
 
     @Override
@@ -83,6 +87,34 @@ public class AstScaClient extends AstClient implements Scanner {
         return ScanConfig.builder()
                 .type(ENGINE_TYPE_FOR_API)
                 .build();
+    }
+
+    /**
+     * Transforms the URL from repoInfo if credentials are specified.
+     */
+    @Override
+    protected URL getEffectiveRepoUrl(RemoteRepositoryInfo repoInfo) {
+        URL initialUrl = repoInfo.getUrl();
+        String username = StringUtils.defaultString(repoInfo.getUsername());
+        String password = StringUtils.defaultString(repoInfo.getPassword());
+        URL result;
+        try {
+            if (StringUtils.isNotEmpty(username) || StringUtils.isNotEmpty(password)) {
+                log.info(String.format(
+                        "Adding credentials as the userinfo part of the URL, because %s only supports this kind of authentication.",
+                        getScannerDisplayName()));
+
+                result = new URIBuilder(initialUrl.toURI())
+                        .setUserInfo(username, password)
+                        .build()
+                        .toURL();
+            } else {
+                result = repoInfo.getUrl();
+            }
+        } catch (Exception e) {
+            throw new CxClientException("Error getting effective repo URL.");
+        }
+        return result;
     }
 
     @Override
@@ -120,10 +152,11 @@ public class AstScaClient extends AstClient implements Scanner {
         AstScaResults scaResults = new AstScaResults();
         scanId = null;
         try {
-            SourceLocationType locationType = getScaConfig().getSourceLocationType();
+            AstScaConfig scaConfig = config.getAstScaConfig();
+            SourceLocationType locationType = scaConfig.getSourceLocationType();
             HttpResponse response;
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
-                response = submitSourcesFromRemoteRepo(getScaConfig(), projectId);
+                response = submitSourcesFromRemoteRepo(scaConfig, projectId);
             } else {
                 response = submitSourcesFromLocalDir();
             }
@@ -137,7 +170,6 @@ public class AstScaClient extends AstClient implements Scanner {
         }
     }
 
-
     private HttpResponse submitSourcesFromLocalDir() throws IOException {
         log.info("Using local directory flow.");
 
@@ -149,7 +181,9 @@ public class AstScaClient extends AstClient implements Scanner {
         uploadArchive(zipFile, uploadedArchiveUrl);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
-        return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl, projectId);
+        RemoteRepositoryInfo uploadedFileInfo = new RemoteRepositoryInfo();
+        uploadedFileInfo.setUrl(new URL(uploadedArchiveUrl));
+        return sendStartScanRequest(uploadedFileInfo, SourceLocationType.LOCAL_DIRECTORY, projectId);
     }
 
     private String getSourcesUploadUrl() throws IOException {
@@ -196,7 +230,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
     public void login() throws IOException {
         log.info("Logging into CxSCA.");
-        AstScaConfig scaConfig = getScaConfig();
+        AstScaConfig scaConfig = config.getAstScaConfig();
 
         LoginSettings settings = new LoginSettings();
 
@@ -317,7 +351,7 @@ public class AstScaClient extends AstClient implements Scanner {
         final String MESSAGE = "Unable to generate web report link.";
         String result = null;
         try {
-            String webAppUrl = getScaConfig().getWebAppUrl();
+            String webAppUrl = config.getAstScaConfig().getWebAppUrl();
             if (StringUtils.isEmpty(webAppUrl)) {
                 log.warn(String.format("%s Web app URL is not specified.", MESSAGE));
             } else {
@@ -410,11 +444,25 @@ public class AstScaClient extends AstClient implements Scanner {
         }
     }
 
-    private AstScaConfig getScaConfig() {
-        AstScaConfig result = config.getAstScaConfig();
-        if (result == null) {
-            throw new CxClientException("CxSCA scan configuration is missing.");
+    private void validate(AstScaConfig config) {
+        String error = null;
+        if (config == null) {
+            error = "%s config must be provided.";
+        } else if (StringUtils.isEmpty(config.getApiUrl())) {
+            error = "%s API URL must be provided.";
+        } else if (StringUtils.isEmpty(config.getAccessControlUrl())) {
+            error = "%s access control URL must be provided.";
+        } else {
+            RemoteRepositoryInfo repoInfo = config.getRemoteRepositoryInfo();
+            if (repoInfo == null && config.getSourceLocationType() == SourceLocationType.REMOTE_REPOSITORY) {
+                error = "%s remote repository info must be provided.";
+            } else if (repoInfo != null && StringUtils.isNotEmpty(repoInfo.getBranch())) {
+                error = "%s doesn't support specifying custom branches. It currently uses the default branch of a repo.";
+            }
         }
-        return result;
+
+        if (error != null) {
+            throw new IllegalArgumentException(String.format(error, getScannerDisplayName()));
+        }
     }
 }

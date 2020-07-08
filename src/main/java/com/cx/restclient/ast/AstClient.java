@@ -30,7 +30,7 @@ public abstract class AstClient {
     protected CxHttpClient httpClient;
 
     public AstClient(CxScanConfig config, Logger log) {
-        validateArgs(config, log);
+        validate(config, log);
         this.config = config;
         this.log = log;
     }
@@ -49,18 +49,25 @@ public abstract class AstClient {
                 log);
     }
 
-    private void validateArgs(CxScanConfig config, Logger log) {
+    private void validate(CxScanConfig config, Logger log) {
         if (config == null && log == null) {
             throw new CxClientException("Both scan config and log must be provided.");
         }
     }
 
-    protected HttpResponse sendStartScanRequest(SourceLocationType sourceLocation,
-                                                String sourceUrl,
+    protected HttpResponse sendStartScanRequest(RemoteRepositoryInfo repoInfo,
+                                                SourceLocationType sourceLocation,
                                                 String projectId) throws IOException {
         log.info("Sending a request to start scan.");
 
-        ProjectToScan project = getProjectToScan(sourceLocation, sourceUrl, projectId);
+        ScanStartHandler handler = getScanStartHandler(repoInfo);
+
+        ProjectToScan project = ProjectToScan.builder()
+                .id(projectId)
+                .type(sourceLocation.getApiValue())
+                .handler(handler)
+                .build();
+
         List<ScanConfig> apiScanConfig = Collections.singletonList(getScanConfig());
 
         StartScanRequest request = StartScanRequest.builder()
@@ -83,32 +90,38 @@ public abstract class AstClient {
 
         URL sanitizedUrl = sanitize(repoInfo.getUrl());
         log.info(String.format("Repository URL: %s", sanitizedUrl));
-
-        return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString(), projectId);
+        return sendStartScanRequest(repoInfo, SourceLocationType.REMOTE_REPOSITORY, projectId);
     }
 
-    private static ProjectToScan getProjectToScan(SourceLocationType sourceLocation, String sourceUrl, String projectId) {
+    /**
+     * @param repoInfo may represent an actual git repo or a presigned URL of an uploaded archive.
+     */
+    private ScanStartHandler getScanStartHandler(RemoteRepositoryInfo repoInfo) {
+        ScanStartHandler.ScanStartHandlerBuilder builder = ScanStartHandler.builder();
+
+        // The ref/username/credentials objects are mandatory even if not specified in repoInfo.
         HandlerRef ref = HandlerRef.builder()
                 .type("branch")
-                .value("")
+                .value(repoInfo.getBranch())
                 .build();
 
         GitCredentials credentials = GitCredentials.builder()
                 .type("password")
-                .value("")
+                .value(repoInfo.getPassword())
                 .build();
 
-        ScanStartHandler handler = ScanStartHandler.builder()
-                .url(sourceUrl)
+        URL effectiveRepoUrl = getEffectiveRepoUrl(repoInfo);
+
+        return builder
                 .ref(ref)
+                .username(repoInfo.getUsername())
                 .credentials(credentials)
+                .url(effectiveRepoUrl.toString())
                 .build();
+    }
 
-        return ProjectToScan.builder()
-                .id(projectId)
-                .type(sourceLocation.getApiValue())
-                .handler(handler)
-                .build();
+    protected URL getEffectiveRepoUrl(RemoteRepositoryInfo repoInfo) {
+        return repoInfo.getUrl();
     }
 
     /**

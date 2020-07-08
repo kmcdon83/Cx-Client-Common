@@ -38,10 +38,8 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
         scanRemoteRepo(PRIVATE_REPO_PROP, false);
     }
 
-    protected abstract void scanRemoteRepo(String privateRepoProp, boolean b) throws MalformedURLException;
+    protected abstract void scanRemoteRepo(String privateRepoProp, boolean useOnPremAuthentication) throws MalformedURLException;
 
-
-    
     protected CxScanConfig initScaConfig(String repoUrlProp, boolean useOnPremAuthentication) throws MalformedURLException {
         CxScanConfig config = initScaConfig(useOnPremAuthentication);
         config.getAstScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
@@ -49,6 +47,7 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
 
         URL repoUrl = new URL(props.getProperty(repoUrlProp));
         repoInfo.setUrl(repoUrl);
+        repoInfo.setUsername(prop("sca.remoteRepo.private.token"));
 
         config.getAstScaConfig().setRemoteRepositoryInfo(repoInfo);
         return config;
