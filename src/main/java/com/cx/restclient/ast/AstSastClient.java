@@ -35,7 +35,7 @@ public class AstSastClient extends AstClient implements Scanner {
 
     @Override
     protected String getScannerDisplayName() {
-        return ScannerType.AST.getDisplayName();
+        return ScannerType.AST_SAST.getDisplayName();
     }
 
     @Override

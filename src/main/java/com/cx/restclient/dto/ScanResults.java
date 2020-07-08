@@ -46,7 +46,7 @@ public class ScanResults implements Serializable, Results {
     }
 
     public ASTResults getAstResults() {
-        return (ASTResults)resultsMap.get(ScannerType.AST);
+        return (ASTResults)resultsMap.get(ScannerType.AST_SAST);
     }
 
     public AstScaResults getScaResults() {

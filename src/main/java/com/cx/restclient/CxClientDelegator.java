@@ -43,7 +43,7 @@ public class CxClientDelegator implements Scanner {
         this.config = config;
         this.log = log;
         if (config.isAstEnabled()) {
-            scannersMap.put(ScannerType.AST, new AstSastClient(config, log));
+            scannersMap.put(ScannerType.AST_SAST, new AstSastClient(config, log));
         }
 
         if (config.isSastEnabled()) {

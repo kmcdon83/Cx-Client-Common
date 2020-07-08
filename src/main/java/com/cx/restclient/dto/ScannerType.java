@@ -7,7 +7,7 @@ public enum ScannerType {
 
     // Scan engines of the new CxAST platform.
     AST_SCA("CxAST-SCA"),
-    AST("CxAST");
+    AST_SAST("CxAST-SAST");
 
     private final String displayName;
 
