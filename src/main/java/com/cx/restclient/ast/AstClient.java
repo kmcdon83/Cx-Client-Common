@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
+import java.util.List;
 
 public abstract class AstClient {
     private static final String LOCATION_HEADER = "Location";
@@ -29,9 +30,14 @@ public abstract class AstClient {
     protected CxHttpClient httpClient;
 
     public AstClient(CxScanConfig config, Logger log) {
+        validateArgs(config, log);
         this.config = config;
         this.log = log;
     }
+
+    protected abstract String getScannerDisplayName();
+
+    protected abstract ScanConfig getScanConfig();
 
     protected CxHttpClient createHttpClient(String baseUrl) {
         return new CxHttpClient(baseUrl,
@@ -43,30 +49,23 @@ public abstract class AstClient {
                 log);
     }
 
+    private void validateArgs(CxScanConfig config, Logger log) {
+        if (config == null && log == null) {
+            throw new CxClientException("Both scan config and log must be provided.");
+        }
+    }
+
     protected HttpResponse sendStartScanRequest(SourceLocationType sourceLocation,
                                                 String sourceUrl,
                                                 String projectId) throws IOException {
         log.info("Sending a request to start scan.");
 
-        HandlerRef ref = HandlerRef.builder().type("branch").value("").build();
-
-        GitCredentials credentials = GitCredentials.builder().type("password").value("").build();
-
-        ScanStartHandler handler = ScanStartHandler.builder()
-                .url(sourceUrl)
-                .ref(ref)
-                .credentials(credentials)
-                .build();
-
-        ProjectToScan project = ProjectToScan.builder()
-                .id(projectId)
-                .type(sourceLocation.getApiValue())
-                .handler(handler)
-                .build();
+        ProjectToScan project = getProjectToScan(sourceLocation, sourceUrl, projectId);
+        List<ScanConfig> apiScanConfig = Collections.singletonList(getScanConfig());
 
         StartScanRequest request = StartScanRequest.builder()
                 .project(project)
-                .config(Collections.singletonList(createScanConfig()))
+                .config(apiScanConfig)
                 .build();
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
@@ -80,7 +79,7 @@ public abstract class AstClient {
     protected HttpResponse submitSourcesFromRemoteRepo(ASTConfig config, String projectId) throws IOException {
         log.info("Using remote repository flow.");
         RemoteRepositoryInfo repoInfo = config.getRemoteRepositoryInfo();
-        validateRemoteRepoConfig(repoInfo);
+        validateRepoInfo(repoInfo);
 
         URL sanitizedUrl = sanitize(repoInfo.getUrl());
         log.info(String.format("Repository URL: %s", sanitizedUrl));
@@ -88,19 +87,39 @@ public abstract class AstClient {
         return sendStartScanRequest(SourceLocationType.REMOTE_REPOSITORY, repoInfo.getUrl().toString(), projectId);
     }
 
-    protected abstract String getScannerDisplayName();
+    private static ProjectToScan getProjectToScan(SourceLocationType sourceLocation, String sourceUrl, String projectId) {
+        HandlerRef ref = HandlerRef.builder()
+                .type("branch")
+                .value("")
+                .build();
 
-    protected abstract ScanConfig createScanConfig();
+        GitCredentials credentials = GitCredentials.builder()
+                .type("password")
+                .value("")
+                .build();
+
+        ScanStartHandler handler = ScanStartHandler.builder()
+                .url(sourceUrl)
+                .ref(ref)
+                .credentials(credentials)
+                .build();
+
+        return ProjectToScan.builder()
+                .id(projectId)
+                .type(sourceLocation.getApiValue())
+                .handler(handler)
+                .build();
+    }
 
     /**
      * Removes the userinfo part of the input URL (if present), so that the URL may be logged safely.
      * The URL may contain userinfo when a private repo is scanned.
      */
-    private URL sanitize(URL url) throws MalformedURLException {
+    private static URL sanitize(URL url) throws MalformedURLException {
         return new URL(url.getProtocol(), url.getHost(), url.getFile());
     }
 
-    private void validateRemoteRepoConfig(RemoteRepositoryInfo repoInfo) {
+    private void validateRepoInfo(RemoteRepositoryInfo repoInfo) {
         if (repoInfo == null) {
             String message = String.format(
                     "%s must be provided in %s configuration when using source location of type %s.",

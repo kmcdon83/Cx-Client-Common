@@ -43,7 +43,7 @@ import java.util.List;
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 public class AstScaClient extends AstClient implements Scanner {
-    private static final String API_ENGINE_TYPE = "sca";
+    private static final String ENGINE_TYPE_FOR_API = "sca";
 
     public static final String ENCODING = StandardCharsets.UTF_8.name();
 
@@ -57,7 +57,6 @@ public class AstScaClient extends AstClient implements Scanner {
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 
     private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
-
 
     private String projectId;
     private String scanId;
@@ -80,9 +79,9 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     @Override
-    protected ScanConfig createScanConfig() {
+    protected ScanConfig getScanConfig() {
         return ScanConfig.builder()
-                .type(API_ENGINE_TYPE)
+                .type(ENGINE_TYPE_FOR_API)
                 .build();
     }
 
