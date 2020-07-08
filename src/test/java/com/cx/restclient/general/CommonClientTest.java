@@ -88,8 +88,7 @@ public abstract class CommonClientTest {
     }
     
     protected static CxScanConfig initScaConfig(boolean useOnPremAuthentication,  CxScanConfig config) {
-   
-        config.addScannerType(ScannerType.SCA);
+        config.addScannerType(ScannerType.AST_SCA);
         config.setSastEnabled(false);
         config.setProjectName(props.getProperty("sca.projectName"));
 

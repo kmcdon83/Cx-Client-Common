@@ -32,7 +32,7 @@ public class DependencyScanResult implements Results {
     DependencyScanResult(){}
 
     DependencyScanResult(AstScaResults scaResults){
-        this.scannerType = ScannerType.SCA;
+        this.scannerType = ScannerType.AST_SCA;
         this.highVulnerability = scaResults.getSummary().getHighVulnerabilityCount();
         this.mediumVulnerability = scaResults.getSummary().getMediumVulnerabilityCount();
         this.lowVulnerability = scaResults.getSummary().getLowVulnerabilityCount();

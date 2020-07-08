@@ -138,13 +138,12 @@ public class CxScanConfig implements Serializable {
     }
 
     public boolean isScaEnabled() {
-        return scannerTypes.contains(ScannerType.SCA) ;
+        return scannerTypes.contains(ScannerType.AST_SCA) ;
     }
 
     public boolean isAstEnabled() {
         return scannerTypes.contains(ScannerType.AST) ;
     }
-
 
     public void setSastEnabled(boolean sastEnabled) {
         if(sastEnabled){

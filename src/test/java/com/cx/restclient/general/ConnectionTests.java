@@ -35,7 +35,7 @@ public class ConnectionTests extends CommonClientTest {
         config.setCxOrigin("common");
         AstScaConfig scaConfig = TestingUtils.getScaConfig(props, false);
         config.setAstScaConfig(scaConfig);
-        config.addScannerType(ScannerType.SCA);
+        config.addScannerType(ScannerType.AST_SCA);
         try {
             CxClientDelegator delegator = new CxClientDelegator(config, log);
             delegator.getScaClient().testScaConnection();

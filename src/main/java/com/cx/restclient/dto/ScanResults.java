@@ -50,7 +50,7 @@ public class ScanResults implements Serializable, Results {
     }
 
     public AstScaResults getScaResults() {
-        return (AstScaResults)resultsMap.get(ScannerType.SCA);
+        return (AstScaResults)resultsMap.get(ScannerType.AST_SCA);
     }
 
 

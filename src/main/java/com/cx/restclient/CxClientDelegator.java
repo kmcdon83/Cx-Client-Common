@@ -53,7 +53,7 @@ public class CxClientDelegator implements Scanner {
         if (config.isOsaEnabled()) {
             scannersMap.put(ScannerType.OSA, new CxOSAClient(config, log));
         } else if (config.isScaEnabled()) {
-            scannersMap.put(ScannerType.SCA, new AstScaClient(config, log));
+            scannersMap.put(ScannerType.AST_SCA, new AstScaClient(config, log));
         }
     }
 
@@ -169,7 +169,7 @@ public class CxClientDelegator implements Scanner {
         return SummaryUtils.generateSummary(
                 (SASTResults) combinedResults.get(ScannerType.SAST),
                 (OSAResults) combinedResults.get(ScannerType.OSA),
-                (AstScaResults) combinedResults.get(ScannerType.SCA), config);
+                (AstScaResults) combinedResults.get(ScannerType.AST_SCA), config);
     }
 
     public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults, AstScaResults scaResults) throws Exception {
@@ -185,7 +185,7 @@ public class CxClientDelegator implements Scanner {
     }
 
     public AstScaClient getScaClient() {
-        return (AstScaClient) scannersMap.get(ScannerType.SCA);
+        return (AstScaClient) scannersMap.get(ScannerType.AST_SCA);
     }
 
     public void close() {
