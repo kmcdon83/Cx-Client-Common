@@ -52,7 +52,9 @@ public class CxClientDelegator implements Scanner {
 
         if (config.isOsaEnabled()) {
             scannersMap.put(ScannerType.OSA, new CxOSAClient(config, log));
-        } else if (config.isAstScaEnabled()) {
+        }
+
+        if (config.isAstScaEnabled()) {
             scannersMap.put(ScannerType.AST_SCA, new AstScaClient(config, log));
         }
     }
