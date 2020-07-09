@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.net.URL;
 
 /**
- * Instructs SCA which repository should be scanned.
+ * Instructs AST scanners which repository should be scanned.
  * In the future this class may be expanded to include repo credentials and commit/branch/tag reference.
  */
 @Getter

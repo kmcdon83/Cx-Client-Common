@@ -1,7 +1,6 @@
 package com.cx.restclient.ast;
 
 import com.cx.restclient.ast.dto.common.*;
-import com.cx.restclient.ast.dto.common.ASTConfig;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
@@ -40,6 +39,7 @@ public abstract class AstClient {
     protected abstract ScanConfig getScanConfig();
 
     protected CxHttpClient createHttpClient(String baseUrl) {
+        log.debug("Creating HTTP client.");
         return new CxHttpClient(baseUrl,
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
@@ -58,7 +58,7 @@ public abstract class AstClient {
     protected HttpResponse sendStartScanRequest(RemoteRepositoryInfo repoInfo,
                                                 SourceLocationType sourceLocation,
                                                 String projectId) throws IOException {
-        log.info("Sending a request to start scan.");
+        log.debug("Constructing the 'start scan' request");
 
         ScanStartHandler handler = getScanStartHandler(repoInfo);
 
@@ -77,10 +77,9 @@ public abstract class AstClient {
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
-        String failedMessage = String.format("start %s scan", getScannerDisplayName());
-
+        log.info("Sending a request to start scan.");
         return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
-                HttpResponse.class, HttpStatus.SC_CREATED, failedMessage);
+                HttpResponse.class, HttpStatus.SC_CREATED, "start the scan");
     }
 
     protected HttpResponse submitSourcesFromRemoteRepo(ASTConfig config, String projectId) throws IOException {
@@ -97,7 +96,7 @@ public abstract class AstClient {
      * @param repoInfo may represent an actual git repo or a presigned URL of an uploaded archive.
      */
     private ScanStartHandler getScanStartHandler(RemoteRepositoryInfo repoInfo) {
-        ScanStartHandler.ScanStartHandlerBuilder builder = ScanStartHandler.builder();
+        log.debug("Creating the handler object.");
 
         // The ref/username/credentials objects are mandatory even if not specified in repoInfo.
         HandlerRef ref = HandlerRef.builder()
@@ -112,7 +111,7 @@ public abstract class AstClient {
 
         URL effectiveRepoUrl = getEffectiveRepoUrl(repoInfo);
 
-        return builder
+        return ScanStartHandler.builder()
                 .ref(ref)
                 .username(repoInfo.getUsername())
                 .credentials(credentials)
@@ -133,6 +132,7 @@ public abstract class AstClient {
     }
 
     private void validateRepoInfo(RemoteRepositoryInfo repoInfo) {
+        log.debug("Validating remote repository info.");
         if (repoInfo == null) {
             String message = String.format(
                     "%s must be provided in %s configuration when using source location of type %s.",
@@ -144,17 +144,22 @@ public abstract class AstClient {
         }
     }
 
-    protected static String extractScanIdFrom(HttpResponse response) {
+    protected String extractScanIdFrom(HttpResponse response) {
+        String result = null;
+        log.debug(String.format("Extracting scan ID from the '%s' response header.", LOCATION_HEADER));
         if (response != null && response.getLastHeader(LOCATION_HEADER) != null) {
             // Expecting values like
             //      /api/scans/1ecffa00-0e42-49b2-8755-388b9f6a9293
             //      /07e5b4b0-184a-458e-9d82-7f3da407f940
             String urlPathWithScanId = response.getLastHeader(LOCATION_HEADER).getValue();
-            String lastPathSegment = FilenameUtils.getName(urlPathWithScanId);
-            if (StringUtils.isNotEmpty(lastPathSegment)) {
-                return lastPathSegment;
-            }
+            result = FilenameUtils.getName(urlPathWithScanId);
         }
-        throw new CxClientException("Unable to get scan ID.");
+
+        if (StringUtils.isNotEmpty(result)) {
+            log.info(String.format("Scan started successfully. Scan ID: %s", result));
+        } else {
+            throw new CxClientException("Unable to get scan ID.");
+        }
+        return result;
     }
 }

@@ -90,14 +90,17 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     /**
-     * Transforms the URL from repoInfo if credentials are specified.
+     * Transforms the repo URL if credentials are specified in repoInfo.
      */
     @Override
     protected URL getEffectiveRepoUrl(RemoteRepositoryInfo repoInfo) {
+        URL result;
         URL initialUrl = repoInfo.getUrl();
+
+        // Otherwise we may get something like "https://mytoken:null@github.com".
         String username = StringUtils.defaultString(repoInfo.getUsername());
         String password = StringUtils.defaultString(repoInfo.getPassword());
-        URL result;
+
         try {
             if (StringUtils.isNotEmpty(username) || StringUtils.isNotEmpty(password)) {
                 log.info(String.format(
@@ -148,7 +151,8 @@ public class AstScaClient extends AstClient implements Scanner {
 
     @Override
     public Results initiateScan() {
-        log.info("----------------------------------- Creating CxSCA Scan:------------------------------------");
+        log.info(String.format("----------------------------------- Initiating %s Scan:------------------------------------",
+                getScannerDisplayName()));
         AstScaResults scaResults = new AstScaResults();
         scanId = null;
         try {
@@ -161,12 +165,10 @@ public class AstScaClient extends AstClient implements Scanner {
                 response = submitSourcesFromLocalDir();
             }
             this.scanId = extractScanIdFrom(response);
-            log.info(String.format("Scan started successfully. Scan ID: %s", scanId));
-
             scaResults.setScanId(scanId);
             return scaResults;
         } catch (IOException e) {
-            throw new CxClientException("Error creating CxSCA scan.", e);
+            throw new CxClientException("Error creating scan.", e);
         }
     }
 

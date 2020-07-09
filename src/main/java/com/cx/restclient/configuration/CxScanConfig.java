@@ -760,7 +760,7 @@ public class CxScanConfig implements Serializable {
     }
 
     /**
-     * SAST and OSA are currently deployed on-premises, whereas SCA is deployed in a cloud.
+     * SAST and OSA are currently deployed on-premises, whereas AST-SCA is deployed in a cloud.
      * If SAST or OSA are enabled, some of the config properties are mandatory (url, username, password etc).
      * Otherwise, these properties are optional.
      */

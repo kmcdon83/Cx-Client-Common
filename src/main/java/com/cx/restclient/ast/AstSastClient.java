@@ -32,6 +32,7 @@ public class AstSastClient extends AstClient implements Scanner {
         AstSastConfig astConfig = this.config.getAstSastConfig();
         validate(astConfig);
 
+        // Make sure we won't get URLs like "http://example.com//api/scans".
         String normalizedUrl = StringUtils.stripEnd(astConfig.getApiUrl(), "/");
 
         httpClient = createHttpClient(normalizedUrl);
@@ -39,6 +40,7 @@ public class AstSastClient extends AstClient implements Scanner {
 
     @Override
     public void init() {
+        log.debug(String.format("Initializing %s client.", getScannerDisplayName()));
         AstSastConfig astConfig = config.getAstSastConfig();
         httpClient.addCustomHeader(AUTH.WWW_AUTH_RESP, String.format("Bearer %s", astConfig.getAccessToken()));
     }
@@ -50,6 +52,9 @@ public class AstSastClient extends AstClient implements Scanner {
 
     @Override
     public Results initiateScan() {
+        log.info(String.format("----------------------------------- Initiating %s Scan:------------------------------------",
+                getScannerDisplayName()));
+
         ASTResults astResults = new ASTResults();
         AstSastConfig astConfig = config.getAstSastConfig();
         try {
@@ -61,12 +66,10 @@ public class AstSastClient extends AstClient implements Scanner {
                 throw new NotImplementedException("The upload flow is not yet supported.");
             }
             String scanId = extractScanIdFrom(response);
-            log.info(String.format("Scan started successfully. Scan ID: %s", scanId));
-
             astResults.setScanId(scanId);
             return astResults;
         } catch (IOException e) {
-            throw new CxClientException("Error creating CxAST-SAST scan.", e);
+            throw new CxClientException("Error creating scan.", e);
         }
     }
 
@@ -102,6 +105,7 @@ public class AstSastClient extends AstClient implements Scanner {
     }
 
     private void validate(ASTConfig astSastConfig) {
+        log.debug("Validating config.");
         String error = null;
         if (astSastConfig == null) {
             error = "%s config must be provided.";
