@@ -22,6 +22,7 @@ import java.util.List;
 
 public abstract class AstClient {
     private static final String LOCATION_HEADER = "Location";
+    private static final String CREDENTIAL_TYPE_PASSWORD = "password";
 
     protected final CxScanConfig config;
     protected final Logger log;
@@ -37,6 +38,8 @@ public abstract class AstClient {
     protected abstract String getScannerDisplayName();
 
     protected abstract ScanConfig getScanConfig();
+
+    protected abstract HandlerRef getBranchToScan(RemoteRepositoryInfo repoInfo);
 
     protected CxHttpClient createHttpClient(String baseUrl) {
         log.debug("Creating HTTP client.");
@@ -98,19 +101,16 @@ public abstract class AstClient {
     private ScanStartHandler getScanStartHandler(RemoteRepositoryInfo repoInfo) {
         log.debug("Creating the handler object.");
 
-        // The ref/username/credentials objects are mandatory even if not specified in repoInfo.
-        HandlerRef ref = HandlerRef.builder()
-                .type("branch")
-                .value(repoInfo.getBranch())
-                .build();
+        HandlerRef ref = getBranchToScan(repoInfo);
 
         GitCredentials credentials = GitCredentials.builder()
-                .type("password")
+                .type(CREDENTIAL_TYPE_PASSWORD)
                 .value(repoInfo.getPassword())
                 .build();
 
         URL effectiveRepoUrl = getEffectiveRepoUrl(repoInfo);
 
+        // The ref/username/credentials properties are mandatory even if not specified in repoInfo.
         return ScanStartHandler.builder()
                 .ref(ref)
                 .username(repoInfo.getUsername())

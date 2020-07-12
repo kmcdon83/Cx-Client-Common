@@ -1,5 +1,6 @@
 package com.cx.restclient.ast;
 
+import com.cx.restclient.ast.dto.common.HandlerRef;
 import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
 import com.cx.restclient.ast.dto.common.ScanConfig;
 import com.cx.restclient.ast.dto.sca.AstScaConfig;
@@ -89,6 +90,19 @@ public class AstScaClient extends AstClient implements Scanner {
         return ScanConfig.builder()
                 .type(ENGINE_TYPE_FOR_API)
                 .build();
+    }
+
+    @Override
+    protected HandlerRef getBranchToScan(RemoteRepositoryInfo repoInfo) {
+        if (StringUtils.isNotEmpty(repoInfo.getBranch())) {
+            // If we pass the branch to start scan API, the API will return an error:
+            // "Git references (branch, commit ID, etc.) are not yet supported."
+            //
+            // We can't just ignore the branch, because it will lead to confusion.
+            String message = String.format("Branch specification is not yet supported by %s.", getScannerDisplayName());
+            throw new CxClientException(message);
+        }
+        return null;
     }
 
     /**

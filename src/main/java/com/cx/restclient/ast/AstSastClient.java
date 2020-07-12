@@ -1,9 +1,6 @@
 package com.cx.restclient.ast;
 
-import com.cx.restclient.ast.dto.common.ASTConfig;
-import com.cx.restclient.ast.dto.common.ASTResults;
-import com.cx.restclient.ast.dto.common.ScanConfig;
-import com.cx.restclient.ast.dto.common.ScanConfigValue;
+import com.cx.restclient.ast.dto.common.*;
 import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.ast.dto.sast.SastScanConfigValue;
 import com.cx.restclient.common.Scanner;
@@ -25,6 +22,7 @@ import java.util.Optional;
 
 public class AstSastClient extends AstClient implements Scanner {
     private static final String ENGINE_TYPE_FOR_API = "sast";
+    private static final String REF_TYPE_BRANCH = "branch";
 
     public AstSastClient(CxScanConfig config, Logger log) {
         super(config, log);
@@ -86,6 +84,15 @@ public class AstSastClient extends AstClient implements Scanner {
         return ScanConfig.builder()
                 .type(ENGINE_TYPE_FOR_API)
                 .value(configValue)
+                .build();
+    }
+
+    @Override
+    protected HandlerRef getBranchToScan(RemoteRepositoryInfo repoInfo) {
+        // The HandlerRef object is mandatory for AST-SAST even if no branch is specified in repoInfo.
+        return HandlerRef.builder()
+                .type(REF_TYPE_BRANCH)
+                .value(repoInfo.getBranch())
                 .build();
     }
 
