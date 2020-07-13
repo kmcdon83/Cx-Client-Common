@@ -24,19 +24,19 @@ public final class TestingUtils {
     public static AstScaConfig getScaConfig(Properties props, boolean useOnPremiseAuthentication) {
         String accessControlProp, usernameProp, passwordProp;
         if (useOnPremiseAuthentication) {
-            accessControlProp = "sca.onPremise.accessControlUrl";
-            usernameProp = "sca.onPremise.username";
-            passwordProp = "sca.onPremise.password";
+            accessControlProp = "astSca.onPremise.accessControlUrl";
+            usernameProp = "astSca.onPremise.username";
+            passwordProp = "astSca.onPremise.password";
         } else {
-            accessControlProp = "sca.cloud.accessControlUrl";
-            usernameProp = "sca.cloud.username";
-            passwordProp = "sca.cloud.password";
+            accessControlProp = "astSca.cloud.accessControlUrl";
+            usernameProp = "astSca.cloud.username";
+            passwordProp = "astSca.cloud.password";
         }
 
         AstScaConfig result = new AstScaConfig();
-        result.setApiUrl(props.getProperty("sca.apiUrl"));
-        result.setWebAppUrl(props.getProperty("sca.webAppUrl"));
-        result.setTenant(props.getProperty("sca.tenant"));
+        result.setApiUrl(props.getProperty("astSca.apiUrl"));
+        result.setWebAppUrl(props.getProperty("astSca.webAppUrl"));
+        result.setTenant(props.getProperty("astSca.tenant"));
         result.setAccessControlUrl(props.getProperty(accessControlProp));
         result.setUsername(props.getProperty(usernameProp));
         result.setPassword(props.getProperty(passwordProp));

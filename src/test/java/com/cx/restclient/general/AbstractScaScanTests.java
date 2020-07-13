@@ -24,8 +24,8 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
     // Storing the test project as an archive to avoid cluttering the current project
     // and also to prevent false positives during a vulnerability scan of the current project.
     protected static final String PACKED_SOURCES_TO_SCAN = "sources-to-scan.zip";
-    protected static final String PUBLIC_REPO_PROP = "sca.remoteRepoUrl.public";
-    protected static final String PRIVATE_REPO_PROP = "sca.remoteRepoUrl.private";
+    protected static final String PUBLIC_REPO_PROP = "astSca.remoteRepoUrl.public";
+    protected static final String PRIVATE_REPO_PROP = "astSca.remoteRepoUrl.private";
 
 
     @Test
@@ -47,7 +47,7 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
 
         URL repoUrl = new URL(props.getProperty(repoUrlProp));
         repoInfo.setUrl(repoUrl);
-        repoInfo.setUsername(prop("sca.remoteRepo.private.token"));
+        repoInfo.setUsername(prop("astSca.remoteRepo.private.token"));
 
         config.getAstScaConfig().setRemoteRepositoryInfo(repoInfo);
         return config;
