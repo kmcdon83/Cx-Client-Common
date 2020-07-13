@@ -32,7 +32,7 @@ import static com.cx.restclient.osa.utils.OSAUtils.writeJsonToFile;
 /**
  * Created by Galn on 05/02/2018.
  */
-class CxOSAClient extends LegacyClient implements Scanner {
+public class CxOSAClient extends LegacyClient implements Scanner {
     
     private Waiter<OSAScanStatus> osaWaiter;
 
