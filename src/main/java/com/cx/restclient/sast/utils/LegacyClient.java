@@ -416,6 +416,11 @@ public abstract class LegacyClient {
         return (List<CxNameObj>) httpClient.getRequest(SAST_ENGINE_CONFIG, CONTENT_TYPE_APPLICATION_JSON_V1, CxNameObj.class, 200, "engine configurations", true);
     }
 
+    public String getTeamPath() {
+        return teamPath;
+    }
 
-
+    public void setTeamPath(String teamPath) {
+        this.teamPath = teamPath;
+    }
 }
