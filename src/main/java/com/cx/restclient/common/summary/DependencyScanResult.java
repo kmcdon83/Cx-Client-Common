@@ -5,8 +5,8 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.scansummary.Severity;
 import com.cx.restclient.osa.dto.CVEReportTableRow;
 import com.cx.restclient.osa.dto.OSAResults;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.report.Finding;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
+import com.cx.restclient.ast.dto.sca.report.Finding;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,15 +24,15 @@ public class DependencyScanResult implements Results {
     private int nonVulnerableLibraries;
     private String scanStartTime;
     private String scanEndTime;
-    private List<CVEReportTableRow> dependencyHighCVEReportTable = new ArrayList<CVEReportTableRow>();
-    private List<CVEReportTableRow> dependencyMediumCVEReportTable = new ArrayList<CVEReportTableRow>();
-    private List<CVEReportTableRow> dependencyLowCVEReportTable = new ArrayList<CVEReportTableRow>();
+    private List<CVEReportTableRow> dependencyHighCVEReportTable = new ArrayList<>();
+    private List<CVEReportTableRow> dependencyMediumCVEReportTable = new ArrayList<>();
+    private List<CVEReportTableRow> dependencyLowCVEReportTable = new ArrayList<>();
     private int totalLibraries;
 
     DependencyScanResult(){}
 
-    DependencyScanResult(SCAResults scaResults){
-        this.scannerType = ScannerType.SCA;
+    DependencyScanResult(AstScaResults scaResults){
+        this.scannerType = ScannerType.AST_SCA;
         this.highVulnerability = scaResults.getSummary().getHighVulnerabilityCount();
         this.mediumVulnerability = scaResults.getSummary().getMediumVulnerabilityCount();
         this.lowVulnerability = scaResults.getSummary().getLowVulnerabilityCount();

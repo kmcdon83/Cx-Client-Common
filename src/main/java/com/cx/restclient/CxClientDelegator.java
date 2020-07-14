@@ -1,5 +1,7 @@
 package com.cx.restclient;
 
+import com.cx.restclient.ast.AstSastClient;
+import com.cx.restclient.ast.AstScaClient;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.summary.SummaryUtils;
 import com.cx.restclient.configuration.CxScanConfig;
@@ -10,7 +12,7 @@ import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 
@@ -40,17 +42,20 @@ public class CxClientDelegator implements Scanner {
 
         this.config = config;
         this.log = log;
-
+        if (config.isAstSastEnabled()) {
+            scannersMap.put(ScannerType.AST_SAST, new AstSastClient(config, log));
+        }
 
         if (config.isSastEnabled()) {
             scannersMap.put(ScannerType.SAST, new CxSASTClient(config, log));
         }
-        
+
         if (config.isOsaEnabled()) {
             scannersMap.put(ScannerType.OSA, new CxOSAClient(config, log));
-        } 
-        else if (config.isScaEnabled()) {
-            scannersMap.put(ScannerType.SCA, new SCAClient(config, log));
+        }
+
+        if (config.isAstScaEnabled()) {
+            scannersMap.put(ScannerType.AST_SCA, new AstScaClient(config, log));
         }
     }
 
@@ -87,15 +92,12 @@ public class CxClientDelegator implements Scanner {
 
         ScanResults scanResultsCombined = new ScanResults();
 
-        scannersMap.entrySet().forEach(scannerEntry -> {
-                    Scanner scanner = scannerEntry.getValue();
-                    Results scanResults = scanner.initiateScan();
-                    scanResultsCombined.put(scannerEntry.getKey(), scanResults);
-                }
-        );
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.initiateScan();
+            scanResultsCombined.put(key, scanResults);
+        });
 
         return scanResultsCombined;
-
     }
 
 
@@ -104,12 +106,10 @@ public class CxClientDelegator implements Scanner {
 
         ScanResults scanResultsCombined = new ScanResults();
 
-        scannersMap.entrySet().forEach(scannerEntry -> {
-                    Scanner scanner = scannerEntry.getValue();
-                    Results scanResults = scanner.waitForScanResults();
-                    scanResultsCombined.put(scannerEntry.getKey(), scanResults);
-                }
-        );
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.waitForScanResults();
+            scanResultsCombined.put(key, scanResults);
+        });
 
         return scanResultsCombined;
     }
@@ -119,12 +119,10 @@ public class CxClientDelegator implements Scanner {
 
         ScanResults scanResultsCombined = new ScanResults();
 
-        scannersMap.entrySet().forEach(scannerEntry -> {
-                    Scanner scanner = scannerEntry.getValue();
-                    Results scanResults = scanner.getLatestScanResults();
-                    scanResultsCombined.put(scannerEntry.getKey(), scanResults);
-                }
-        );
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.getLatestScanResults();
+            scanResultsCombined.put(key, scanResults);
+        });
 
         return scanResultsCombined;
 
@@ -136,9 +134,9 @@ public class CxClientDelegator implements Scanner {
             log.info("Policy Management: ");
             log.info("--------------------");
 
-            OSAResults osaResults = (OSAResults)scanResults.get(ScannerType.OSA);
-            SASTResults sastResults = (SASTResults)scanResults.get(ScannerType.SAST);
-            
+            OSAResults osaResults = (OSAResults) scanResults.get(ScannerType.OSA);
+            SASTResults sastResults = (SASTResults) scanResults.get(ScannerType.SAST);
+
             boolean hasOsaViolations =
                     osaResults != null &&
                             osaResults.getOsaPolicies() != null &&
@@ -169,14 +167,14 @@ public class CxClientDelegator implements Scanner {
 
 
     public String generateHTMLSummary(ScanResults combinedResults) throws Exception {
-        
+
         return SummaryUtils.generateSummary(
-                (SASTResults) combinedResults.get(ScannerType.SAST), 
-                (OSAResults) combinedResults.get(ScannerType.OSA), 
-                (SCAResults) combinedResults.get(ScannerType.SCA), config);
+                (SASTResults) combinedResults.get(ScannerType.SAST),
+                (OSAResults) combinedResults.get(ScannerType.OSA),
+                (AstScaResults) combinedResults.get(ScannerType.AST_SCA), config);
     }
 
-    public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults, SCAResults scaResults) throws Exception {
+    public String generateHTMLSummary(SASTResults sastResults, OSAResults osaResults, AstScaResults scaResults) throws Exception {
         return SummaryUtils.generateSummary(sastResults, osaResults, scaResults, config);
     }
 
@@ -188,8 +186,8 @@ public class CxClientDelegator implements Scanner {
         return (CxOSAClient) scannersMap.get(ScannerType.OSA);
     }
 
-    public SCAClient getScaClient() {
-        return (SCAClient) scannersMap.get(ScannerType.SCA);
+    public AstScaClient getScaClient() {
+        return (AstScaClient) scannersMap.get(ScannerType.AST_SCA);
     }
 
     public void close() {

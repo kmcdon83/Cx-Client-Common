@@ -2,12 +2,12 @@ package com.cx.restclient.general;
 
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScanResults;
-import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.SourceLocationType;
-import com.cx.restclient.sca.dto.report.Finding;
-import com.cx.restclient.sca.dto.report.Package;
-import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
+import com.cx.restclient.dto.SourceLocationType;
+import com.cx.restclient.ast.dto.sca.report.Finding;
+import com.cx.restclient.ast.dto.sca.report.Package;
+import com.cx.restclient.ast.dto.sca.report.AstScaSummaryResults;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Test;
@@ -24,8 +24,8 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
     // Storing the test project as an archive to avoid cluttering the current project
     // and also to prevent false positives during a vulnerability scan of the current project.
     protected static final String PACKED_SOURCES_TO_SCAN = "sources-to-scan.zip";
-    protected static final String PUBLIC_REPO_PROP = "sca.remoteRepoUrl.public";
-    protected static final String PRIVATE_REPO_PROP = "sca.remoteRepoUrl.private";
+    protected static final String PUBLIC_REPO_PROP = "astSca.remoteRepoUrl.public";
+    protected static final String PRIVATE_REPO_PROP = "astSca.remoteRepoUrl.private";
 
 
     @Test
@@ -38,19 +38,18 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
         scanRemoteRepo(PRIVATE_REPO_PROP, false);
     }
 
-    protected abstract void scanRemoteRepo(String privateRepoProp, boolean b) throws MalformedURLException;
+    protected abstract void scanRemoteRepo(String privateRepoProp, boolean useOnPremAuthentication) throws MalformedURLException;
 
-
-    
     protected CxScanConfig initScaConfig(String repoUrlProp, boolean useOnPremAuthentication) throws MalformedURLException {
         CxScanConfig config = initScaConfig(useOnPremAuthentication);
-        config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
+        config.getAstScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
         RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
 
         URL repoUrl = new URL(props.getProperty(repoUrlProp));
         repoInfo.setUrl(repoUrl);
+        repoInfo.setUsername(prop("astSca.remoteRepo.private.token"));
 
-        config.getScaConfig().setRemoteRepositoryInfo(repoInfo);
+        config.getAstScaConfig().setRemoteRepositoryInfo(repoInfo);
         return config;
     }
 
@@ -59,7 +58,7 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
         assertNotNull("Scan results are null.", results);
         assertNull("OSA results are not null.", results.getOsaResults());
 
-        SCAResults scaResults = results.getScaResults();
+        AstScaResults scaResults = results.getScaResults();
         assertNotNull("SCA results are null", scaResults);
         
         System.out.println("scanID " + scaResults.getScanId());
@@ -72,7 +71,7 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
         verifyFindings(scaResults);
     }
     
-    private void verifySummary(SCASummaryResults summary) {
+    private void verifySummary(AstScaSummaryResults summary) {
 
         assertNotNull("SCA summary is null", summary);
         System.out.println("summary.getTotalPackages() " + summary.getTotalPackages());
@@ -85,7 +84,7 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
         assertTrue("Expected that at least one vulnerability would be detected.", anyVulnerabilitiesDetected);
     }
 
-    private void verifyPackages(SCAResults scaResults) {
+    private void verifyPackages(AstScaResults scaResults) {
         List<Package> packages = scaResults.getPackages();
 
         assertNotNull("Packages are null.", packages);
@@ -96,9 +95,9 @@ public  abstract class AbstractScaScanTests extends CommonClientTest {
                 packages.size());
     }
 
-    private void verifyFindings(SCAResults scaResults) {
+    private void verifyFindings(AstScaResults scaResults) {
         List<Finding> findings = scaResults.getFindings();
-        SCASummaryResults summary = scaResults.getSummary();
+        AstScaSummaryResults summary = scaResults.getSummary();
         assertNotNull("Findings are null", findings);
         assertFalse("Response contains no findings.", findings.isEmpty());
 

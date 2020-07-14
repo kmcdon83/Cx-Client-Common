@@ -1,16 +1,14 @@
 package com.cx.restclient.general;
 
 import com.cx.restclient.CxClientDelegator;
+import com.cx.restclient.ast.dto.sca.AstScaConfig;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ProxyConfig;
 import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sca.dto.SCAConfig;
-import com.cx.restclient.sca.dto.SCAResults;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 
@@ -18,9 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Properties;
-
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertTrue;
 
 @Slf4j
 public abstract class CommonClientTest {
@@ -33,6 +28,10 @@ public abstract class CommonClientTest {
     public static void initTest() throws IOException {
         props = TestingUtils.getProps(MAIN_PROPERTIES_FILE, CommonClientTest.class);
         loadOverrides(props);
+    }
+
+    protected static String prop(String key) {
+        return props.getProperty(key);
     }
 
     private static void loadOverrides(Properties targetProps) {
@@ -89,13 +88,12 @@ public abstract class CommonClientTest {
     }
     
     protected static CxScanConfig initScaConfig(boolean useOnPremAuthentication,  CxScanConfig config) {
-   
-        config.addScannerType(ScannerType.SCA);
+        config.addScannerType(ScannerType.AST_SCA);
         config.setSastEnabled(false);
-        config.setProjectName(props.getProperty("sca.projectName"));
+        config.setProjectName(props.getProperty("astSca.projectName"));
 
-        SCAConfig sca = TestingUtils.getScaConfig(props, useOnPremAuthentication);
-        config.setScaConfig(sca);
+        AstScaConfig sca = TestingUtils.getScaConfig(props, useOnPremAuthentication);
+        config.setAstScaConfig(sca);
 
         return config;
     }

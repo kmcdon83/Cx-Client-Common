@@ -1,10 +1,13 @@
 package com.cx.restclient.dto;
 
 public enum ScannerType {
+    // Legacy scanners.
     SAST("CxSAST"),
-    AST("AST"),
     OSA("CxOSA"),
-    SCA("CxSCA");
+
+    // Scan engines of the new CxAST platform.
+    AST_SCA("CxAST-SCA"),
+    AST_SAST("CxAST-SAST");
 
     private final String displayName;
 

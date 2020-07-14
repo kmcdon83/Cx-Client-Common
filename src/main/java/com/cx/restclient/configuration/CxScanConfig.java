@@ -1,11 +1,12 @@
 package com.cx.restclient.configuration;
 
+import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.dto.*;
-import com.cx.restclient.sca.dto.ASTConfig;
-import com.cx.restclient.sca.dto.SCAConfig;
 import com.cx.restclient.sast.dto.ReportType;
+import com.cx.restclient.ast.dto.sca.AstScaConfig;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.cookie.Cookie;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.*;
@@ -14,8 +15,6 @@ import java.util.*;
  * Created by galn on 21/12/2016.
  */
 public class CxScanConfig implements Serializable {
-
-   // private Boolean sastEnabled = false;
 
     private String cxOrigin;
     private CxVersion cxVersion;
@@ -105,13 +104,14 @@ public class CxScanConfig implements Serializable {
     private Integer maxZipSize;
     private String defaultProjectName;
 
-    private SCAConfig scaConfig;
-    private Set<ScannerType> scannerTypes = new HashSet<>();
-    private List<Cookie> sessionCookies = new ArrayList<>();
+    private AstScaConfig astScaConfig;
+    private AstSastConfig astSastConfig;
+
+    private final Set<ScannerType> scannerTypes = new HashSet<>();
+    private final List<Cookie> sessionCookies = new ArrayList<>();
     private ProxyConfig proxyConfig;
 
-    private ASTConfig astConfig;
-        
+
     public CxScanConfig() {
     }
 
@@ -130,33 +130,30 @@ public class CxScanConfig implements Serializable {
         this.disableCertificateValidation = disableCertificateValidation;
     }
 
-    public Boolean isSastEnabled() {
+    public boolean isSastEnabled() {
         return scannerTypes.contains(ScannerType.SAST) ;
     }
 
-    public Boolean isOsaEnabled() {
+    public boolean isOsaEnabled() {
         return scannerTypes.contains(ScannerType.OSA) ;
     }
 
-    public Boolean isScaEnabled() {
-        return scannerTypes.contains(ScannerType.SCA) ;
+    public boolean isAstScaEnabled() {
+        return scannerTypes.contains(ScannerType.AST_SCA) ;
     }
 
-    public Boolean isAstEnabled() {
-        return scannerTypes.contains(ScannerType.AST) ;
+    public boolean isAstSastEnabled() {
+        return scannerTypes.contains(ScannerType.AST_SAST) ;
     }
-    
-  
-    public void setSastEnabled(Boolean sastEnabled) {
-        if(sastEnabled){
+
+    public void setSastEnabled(boolean sastEnabled) {
+        if (sastEnabled) {
             scannerTypes.add(ScannerType.SAST);
-        }
-        else {
+        } else {
             scannerTypes.remove(ScannerType.SAST);
         }
     }
 
-    
     public String getCxOrigin() {
         return cxOrigin;
     }
@@ -521,7 +518,7 @@ public class CxScanConfig implements Serializable {
     }
 
     public boolean isOSAThresholdEffectivelyEnabled() {
-        return (isOsaEnabled() || isScaEnabled()) &&
+        return (isOsaEnabled() || isAstScaEnabled()) &&
                 getOsaThresholdsEnabled() &&
                 (getOsaHighThreshold() != null || getOsaMediumThreshold() != null || getOsaLowThreshold() != null);
     }
@@ -738,12 +735,20 @@ public class CxScanConfig implements Serializable {
         reports.put(ReportType.RTF, rtfReportPath);
     }
 
-    public SCAConfig getScaConfig() {
-        return scaConfig;
+    public AstScaConfig getAstScaConfig() {
+        return astScaConfig;
     }
 
-    public void setScaConfig(SCAConfig scaConfig) {
-        this.scaConfig = scaConfig;
+    public void setAstScaConfig(AstScaConfig astScaConfig) {
+        this.astScaConfig = astScaConfig;
+    }
+
+    public AstSastConfig getAstSastConfig() {
+        return astSastConfig;
+    }
+
+    public void setAstSastConfig(AstSastConfig astConfig) {
+        this.astSastConfig = astConfig;
     }
 
     public Set<ScannerType> getScannerTypes() {
@@ -755,7 +760,7 @@ public class CxScanConfig implements Serializable {
     }
 
     /**
-     * SAST and OSA are currently deployed on-premises, whereas SCA is deployed in a cloud.
+     * SAST and OSA are currently deployed on-premises, whereas AST-SCA is deployed in a cloud.
      * If SAST or OSA are enabled, some of the config properties are mandatory (url, username, password etc).
      * Otherwise, these properties are optional.
      */
@@ -774,6 +779,7 @@ public class CxScanConfig implements Serializable {
     public void addCookie(Cookie cookie){
         this.sessionCookies.add(cookie);
     }
+
     public List<Cookie> getSessionCookie() {
         return this.sessionCookies;
     }
@@ -784,13 +790,5 @@ public class CxScanConfig implements Serializable {
 
     public void setToken(TokenLoginResponse token) {
         this.token = token;
-    }
-
-    public ASTConfig getAstConfig() {
-        return astConfig;
-    }
-
-    public void setAstConfig(ASTConfig astConfig) {
-        this.astConfig = astConfig;
     }
 }

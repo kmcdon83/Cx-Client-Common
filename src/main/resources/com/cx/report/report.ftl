@@ -953,13 +953,13 @@
                     <#if policyViolated>
                         <li>${policyViolatedCount} ${policyLabel}  Violated</li>
                     </#if>
-                    <#if config.isSastEnabled() && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && (config.isOsaEnabled() || config.isScaEnabled()) && dependencyResult.resultReady && dependencyThresholdExceeded>
+                    <#if config.isSastEnabled() && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded) && (config.isOsaEnabled() || config.isAstScaEnabled()) && dependencyResult.resultReady && dependencyThresholdExceeded>
                         <li>Exceeded CxSAST and CxOSA/CxSCA Vulnerability Thresholds</li>
                     <#elseif config.isSastEnabled() && sast.sastResultsReady && (sastThresholdExceeded || sastNewResultsExceeded)>
                         <li>Exceeded CxSAST Vulnerability Threshold</li>
                     <#elseif config.isOsaEnabled() && dependencyResult.resultReady && dependencyThresholdExceeded>
                         <li>Exceeded CxOSA Vulnerability Threshold</li>
-                    <#elseif config.isScaEnabled() && dependencyResult.resultReady && dependencyThresholdExceeded>
+                    <#elseif config.isAstScaEnabled() && dependencyResult.resultReady && dependencyThresholdExceeded>
                         <li>Exceeded CxSCA Vulnerability Threshold</li>
                     <#else>
                         <li>CxScan Failed</li>
@@ -1311,7 +1311,7 @@
                 </div>
             </#if>
 
-            <#if config.isOsaEnabled()|| config.isScaEnabled() >
+            <#if config.isOsaEnabled()|| config.isAstScaEnabled() >
         <div class="osa-summary <#if !config.isSastEnabled()>sast-summary chart-large</#if>" id="osa-summary">
             <div class="summary-report-title osa">
                 <div class="summary-title-text osa">Cx${dependencyResult.scannerType} Vulnerabilities & Libraries</div>
@@ -2581,7 +2581,7 @@
         </#if>
     </#if>
 
-    <#if (config.isOsaEnabled() || config.isScaEnabled()|| config.isSastEnabled()) &&  policyViolated>
+    <#if (config.isOsaEnabled() || config.isAstScaEnabled()|| config.isSastEnabled()) &&  policyViolated>
 
         <#if policyViolatedCount gt 0>
         <div class="osa-full full-results-section">

@@ -4,8 +4,8 @@ package com.cx.restclient.dto;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
-import com.cx.restclient.sca.dto.ASTResults;
-import com.cx.restclient.sca.dto.SCAResults;
+import com.cx.restclient.ast.dto.common.ASTResults;
+import com.cx.restclient.ast.dto.sca.AstScaResults;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -21,10 +21,6 @@ public class ScanResults implements Serializable, Results {
     private Exception osaWaitException = null;
     private Exception generalException = null;
 
- 
-    public ScanResults() {
-    }
-    
     public Map<ScannerType, Results> getResults(){
         return resultsMap;
     }
@@ -50,11 +46,11 @@ public class ScanResults implements Serializable, Results {
     }
 
     public ASTResults getAstResults() {
-        return (ASTResults)resultsMap.get(ScannerType.AST);
+        return (ASTResults)resultsMap.get(ScannerType.AST_SAST);
     }
 
-    public SCAResults getScaResults() {
-        return (SCAResults)resultsMap.get(ScannerType.SCA);
+    public AstScaResults getScaResults() {
+        return (AstScaResults)resultsMap.get(ScannerType.AST_SCA);
     }
 
 
