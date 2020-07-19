@@ -4,6 +4,7 @@
 def workspace
 def cxCommonVersion = "${BUILD_TAG}"
 def vmName = "${BUILD_TAG}-CxSAST"
+def installationLogs = "Installation-Logs-CxSAST"
 def vmTemplate89 = "CxSDLC-Template-CxSAST-8-9"
 def ipAddress89
 def vmTemplate90 = "CxSDLC-Template-CxSAST-9-0"
@@ -74,9 +75,29 @@ pipeline {
                 }
 
                 stage('Run Code Quality') {
+                    environment {
+                        SONAR_CLOUD_TOKEN = credentials('sonarcloud')
+                    }
                     steps {
                         script {
                             sh "docker run --rm --name sonar-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}:/usr/src/cx-common -w /usr/src/cx-common maven:3.6.1-jdk-8-alpine mvn sonar:sonar -Dcxcommon.version=${cxCommonVersion}"
+                            def sonarTaskUrl = sh (returnStdout: true, script: "awk '/./{line=\$0} END{print line}' ./target/sonar/report-task.txt | cut -d '=' -f '2,3'").trim()
+                            def sonarTaskStatus = sh (returnStdout: true, script: "curl -s -u ${SONAR_CLOUD_TOKEN}: ${sonarTaskUrl} | jq -r '.task.status'").trim()
+                            while (sonarTaskStatus == 'PENDING' || sonarTaskStatus == 'IN_PROGRESS') {
+                                echo "Sonar task status is: ${sonarTaskStatus}. Waiting for 5 seconds..."
+                                sleep(5)
+                                sonarTaskStatus = sh (returnStdout: true, script: "curl -s -u ${SONAR_CLOUD_TOKEN}: ${sonarTaskUrl} | jq -r '.task.status'").trim()
+                            }
+                            if (sonarTaskStatus == "FAILED" || sonarTaskStatus == "CANCELED") {
+                                Error_Msg("Sonar scan ${sonarTaskStatus}. You can find more details at https://sonarcloud.io/dashboard?id=checkmarx-ltd_Cx-Client-Common")
+                                error "Sonar scan ${sonarTaskStatus}. You can find more details at https://sonarcloud.io/dashboard?id=checkmarx-ltd_Cx-Client-Common"
+                            }
+                            def sonarAnalysisId = sh (returnStdout: true, script: "curl -s -u ${SONAR_CLOUD_TOKEN}: ${sonarTaskUrl} | jq -r '.task.analysisId'").trim()
+                            def sonarResultsStatus = sh (returnStdout: true, script: "curl -s -u ${SONAR_CLOUD_TOKEN}: https://sonarcloud.io/api/qualitygates/project_status?analysisId=${sonarAnalysisId} | jq -r '.projectStatus.status'").trim()
+                            if (sonarResultsStatus == "ERROR") {
+                                kit.Error_Msg("Sonar scan FAILED. You can find more details at https://sonarcloud.io/dashboard?id=checkmarx-ltd_Cx-Client-Common")
+                                error "Sonar scan FAILED. You can find more details at https://sonarcloud.io/dashboard?id=checkmarx-ltd_Cx-Client-Common"
+                            }
                         }
                     }
                 }
@@ -86,19 +107,25 @@ pipeline {
         stage('System Tests') {
             when {
                 expression {
-                    BRANCH_NAME == 'master' //|| BRANCH_NAME.startsWith("PR-") && CHANGE_TARGET == 'master'
+                    BRANCH_NAME == 'master' || BRANCH_NAME.startsWith("PR-") && CHANGE_TARGET == 'master'
                 }
             }
             parallel {
 
                 stage('8.9') {
+                    when {
+                        expression { false }
+                    }
                     stages {
                         stage('Create VM') {
                             steps {
                                 script {
                                     kit.Create_Vm_Terraform(vmName + "-8.9", vmTemplate89, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
                                     ipAddress89 = kit.getIpAddress(vmName + "-8.9", provider)
-                                    echo "ipAddress89 = ${ipAddress89}"
+                                    node('install01') {
+                                        kit.Create_Jenkins_Slave_On_Master(vmName + "-8.9")
+                                        kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddress89, vmName + "-8.9")
+                                    }
                                 }
                             }
                         }
@@ -114,29 +141,26 @@ pipeline {
                         stage('Plugins API Sanity Test') {
                             steps {
                                 dir("${workspace}/8.9/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                                    sh "docker run --rm --name plugins-api-sanity-test-8.9-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/8.9/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q clean test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                    sh "docker run --rm --name plugins-api-sanity-test-8.9-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/8.9/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation --add-host WIN2012-ENV9-B:${ipAddress89} maven:3.6.1-jdk-8-alpine \
+                                        mvn -q clean test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=8.9 -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
                         stage('Plugins API Smoke Tests') {
                             steps {
                                 dir("${workspace}/8.9/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                                    sh "docker run --rm --name plugins-api-smoke-tests-8.9-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/8.9/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
-                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                    sh "docker run --rm --name plugins-api-smoke-tests-8.9-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/8.9/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation --add-host WIN2012-ENV9-B:${ipAddress89} maven:3.6.1-jdk-8-alpine \
+                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=8.9 -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
+                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
                         stage('Plugins CxCommonClient All Tests') {
                             steps {
                                 dir("${workspace}/8.9/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
                                     sh "docker run --rm --name plugins-cxcommonclient-all-tests-8.9-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/8.9/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
-                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=8.9 -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
+                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
@@ -148,6 +172,10 @@ pipeline {
                                     junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                                 }
                                 if (ipAddress89 != null) {
+                                    node(vmName + "-8.9") {
+                                        kit.zipStashInstallationLogs(installationLogs + "-8.9")
+                                    }
+                                    unstash installationLogs + "-8.9"
                                     deleteVm(provider, ipAddress89, vmName + "-8.9")
                                 }
                             }
@@ -162,7 +190,10 @@ pipeline {
                                 script {
                                     kit.Create_Vm_Terraform(vmName + "-9.0", vmTemplate90, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
                                     ipAddress90 = kit.getIpAddress(vmName + "-9.0", provider)
-                                    echo "ipAddress90 = ${ipAddress90}"
+                                    node('install01') {
+                                        kit.Create_Jenkins_Slave_On_Master(vmName + "-9.0")
+                                        kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddress90, vmName + "-9.0")
+                                    }
                                 }
                             }
                         }
@@ -178,29 +209,26 @@ pipeline {
                         stage('Plugins API Sanity Test') {
                             steps {
                                 dir("${workspace}/9.0/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                                    sh "docker run --rm --name plugins-api-sanity-test-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q clean test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                    sh "docker run --rm --name plugins-api-sanity-test-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation --add-host WIN2012-ENV9-B:${ipAddress90} maven:3.6.1-jdk-8-alpine \
+                                        mvn -q clean test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=9.0 -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
                         stage('Plugins API Smoke Tests') {
                             steps {
                                 dir("${workspace}/9.0/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                                    sh "docker run --rm --name plugins-api-smoke-tests-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
-                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                    sh "docker run --rm --name plugins-api-smoke-tests-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation --add-host WIN2012-ENV9-B:${ipAddress90} maven:3.6.1-jdk-8-alpine \
+                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=9.0 -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
+                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
                         stage('Plugins CxCommonClient All Tests') {
                             steps {
                                 dir("${workspace}/9.0/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
                                     sh "docker run --rm --name plugins-cxcommonclient-all-tests-9.0-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.0/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
-                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=9.0 -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
+                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
@@ -212,6 +240,10 @@ pipeline {
                                     junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                                 }
                                 if (ipAddress90 != null) {
+                                    node(vmName + "-9.0") {
+                                        kit.zipStashInstallationLogs(installationLogs + "-9.0")
+                                    }
+                                    unstash installationLogs + "-9.0"
                                     deleteVm(provider, ipAddress90, vmName + "-9.0")
                                 }
                             }
@@ -226,7 +258,10 @@ pipeline {
                                 script {
                                     kit.Create_Vm_Terraform(vmName + "-9.2", vmTemplate92, ram, cpu, provider, decommissionPeriod, "Auto", "Dynamic-CI", vmwareNetwork)
                                     ipAddress92 = kit.getIpAddress(vmName + "-9.2", provider)
-                                    echo "ipAddress92 = ${ipAddress92}"
+                                    node('install01') {
+                                        kit.Create_Jenkins_Slave_On_Master(vmName + "-9.2")
+                                        kit.Start_Jenkins_Slave_On_Windows_Pstools(ipAddress92, vmName + "-9.2")
+                                    }
                                 }
                             }
                         }
@@ -242,29 +277,26 @@ pipeline {
                         stage('Plugins API Sanity Test') {
                             steps {
                                 dir("${workspace}/9.2/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                                    sh "docker run --rm --name plugins-api-sanity-test-9.2-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.2/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q clean test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                    sh "docker run --rm --name plugins-api-sanity-test-9.2-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.2/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation --add-host WIN2012-ENV9-B:${ipAddress92} maven:3.6.1-jdk-8-alpine \
+                                        mvn -q clean test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=9.2 -Dtest=com.cx.automation.plugin.test.cxcommonclient.sanity.* -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
                         stage('Plugins API Smoke Tests') {
                             steps {
                                 dir("${workspace}/9.2/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
-                                    sh "docker run --rm --name plugins-api-smoke-tests-9.2-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.2/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
-                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                    sh "docker run --rm --name plugins-api-smoke-tests-9.2-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.2/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation --add-host WIN2012-ENV9-B:${ipAddress92} maven:3.6.1-jdk-8-alpine \
+                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=9.2 -Dtest=com.cx.automation.plugin.test.cxcommonclient.PluginsCxSASTSmokeTests,com.cx.automation.plugin.test.cxcommonclient.PluginsCxMandOAndOSASmokeTests \
+                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
                         stage('Plugins CxCommonClient All Tests') {
                             steps {
                                 dir("${workspace}/9.2/Checkmarx-System-Test") {
-                                    //todo: cancel ignore tests failures (maven.test.failure.ignore)
                                     sh "docker run --rm --name plugins-cxcommonclient-all-tests-9.2-${BUILD_TAG} -v maven-repo:/root/.m2 -v ${workspace}/9.2/Checkmarx-System-Test:/usr/src/automation -w /usr/src/automation maven:3.6.1-jdk-8-alpine \
-                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
-                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=true -DskipTests=false"
+                                        mvn -q test -Dcxcommon.version=${cxCommonVersion} -Dsast.version=9.2 -Dtest=com.cx.automation.plugin.test.cxcommonclient.scan.*,com.cx.automation.plugin.test.cxcommonclient.osa.* \
+                                            -Dtopology.xml.ref=/usr/src/automation/env/topology.xml -Denv=hardening_env -DfailIfNoTests=false -Dmaven.test.failure.ignore=false -DskipTests=false"
                                 }
                             }
                         }
@@ -276,6 +308,10 @@ pipeline {
                                     junit '**/PluginsCommonClient/target/surefire-reports/**/*.xml'
                                 }
                                 if (ipAddress92 != null) {
+                                    node(vmName + "-9.2") {
+                                        kit.zipStashInstallationLogs(installationLogs + "-9.2")
+                                    }
+                                    unstash installationLogs + "-9.2"
                                     deleteVm(provider, ipAddress92, vmName + "-9.2")
                                 }
                             }
@@ -288,7 +324,7 @@ pipeline {
         stage('Publish') {
             when {
                 expression {
-                    BRANCH_NAME == 'master'
+                    BRANCH_NAME == 'master' && cxCommonVersion != '2020.2.23'
                 }
             }
             parallel {
@@ -317,10 +353,11 @@ pipeline {
     }
 
     post {
+        always {
+            archiveArtifacts "*.zip, target/cx-client-common-${cxCommonVersion}.jar"
+        }
         cleanup {
-            script{
-                cleanWs()
-            }
+            cleanWs()
         }
     }
 }
