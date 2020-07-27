@@ -1,5 +1,6 @@
 #!/groovy
 @Library('cx-jenkins-pipeline-kit') _
+import java.time.*
 
 def workspace
 def vmName = "${BUILD_TAG}-CxSAST"
@@ -40,16 +41,21 @@ pipeline {
         stage('Pipeline Info') {
             steps {
                 script {
-                    env.cxCommonVersion = "${BUILD_TAG}"
                     env.PIPELINE_STATUS = "Success"
                     env.STAGE_NAME_FAILED = "None"
                     if (BRANCH_NAME == 'master') {
+                        Calendar cal = Calendar.getInstance(Locale.US)
+                        int quarter = (cal.get(Calendar.MONTH) / 3) + 1
+                        int year = cal.get(Calendar.YEAR)
+                        env.cxCommonVersion = "${year}.${quarter}.${BUILD_NUMBER}"
                         // remove -SNAPSHOT if exist (temporary)
-                        sh "sed -e 's/-SNAPSHOT//g' -i ./pom.xml"
+                        //sh "sed -e 's/-SNAPSHOT//g' -i ./pom.xml"
                         // get version from POM
-                        sh "mvn resources:resources"
+                        /*sh "mvn resources:resources"
                         def commonPropertiesContent = readFile "./target/classes/common.properties"
-                        env.cxCommonVersion = commonPropertiesContent.substring(10)
+                        env.cxCommonVersion = commonPropertiesContent.substring(10)*/
+                    } else {
+                        env.cxCommonVersion = "${BUILD_TAG}"
                     }
                     workspace = pwd()
                     sh 'printenv'
@@ -368,7 +374,7 @@ pipeline {
         stage('Publish') {
             when {
                 expression {
-                    BRANCH_NAME == 'master' && env.cxCommonVersion != '2020.2.24'
+                    BRANCH_NAME == 'master'
                 }
             }
             parallel {
@@ -416,14 +422,8 @@ pipeline {
         always {
             archiveArtifacts "*.zip, target/cx-client-common-${env.cxCommonVersion}.jar"
             script {
-                echo "${env.cxCommonVersion}"
-                echo "${env.PIPELINE_STATUS}"
-                echo "${env.STAGE_NAME_FAILED}"
                 try {
-                    //wrap([$class: 'BuildUser']) {
-                        kit.Command_Execution_Sh("jq -n env > env.json")
-                        sh "cat ./env.json"
-                    //}
+                    kit.Command_Execution_Sh("jq -n env > env.json")
                     kit.Command_Execution_Sh("curl -sb -k -v -H \"Content-type: application/json\" -XPOST http://cx-elastic01:9200/cx-client-common/_doc -d @env.json")
                 } catch (Exception e) {
                     kit.Warning_Msg("The message couldn't be pushed to elastic, error:\n" + e.toString())
