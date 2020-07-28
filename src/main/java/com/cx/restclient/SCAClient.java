@@ -39,6 +39,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
@@ -85,12 +88,15 @@ public class SCAClient implements DependencyScanner {
 
     private String projectId;
     private String scanId;
+    private SCAConfig scaConfig;
+    private String manifestFilePatterns;
 
     SCAClient(CxScanConfig config, Logger log) {
         this.log = log;
         this.config = config;
+        this.scaConfig = getScaConfig();
+        this.manifestFilePatterns = null;
 
-        SCAConfig scaConfig = getScaConfig();
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
 
@@ -103,6 +109,10 @@ public class SCAClient implements DependencyScanner {
     public void init() {
         try {
             login();
+            if (!getScaConfig().isIncludeSources()){
+                this.manifestFilePatterns = getManifestFilePatters();
+                log.info(String.format("Got the following manifest patterns %s", this.manifestFilePatterns));
+            }
             resolveProject();
         } catch (IOException e) {
             throw new CxClientException("Failed to init CxSCA Client.", e);
@@ -141,7 +151,13 @@ public class SCAClient implements DependencyScanner {
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
                 response = submitSourcesFromRemoteRepo();
             } else {
-                response = submitSourcesFromLocalDir();
+                if (scaConfig.isIncludeSources()){
+                    response = submitAllSourcesFromLocalDir();
+                } else {
+                    response = submitManifestAndFingerprintsFromLocalDir();
+                }
+
+
             }
             scanId = extractScanIdFrom(response);
             log.info(String.format("Scan started successfully. Scan ID: %s", scanId));
@@ -183,7 +199,7 @@ public class SCAClient implements DependencyScanner {
         return new URL(url.getProtocol(), url.getHost(), url.getFile());
     }
 
-    private HttpResponse submitSourcesFromLocalDir() throws IOException {
+    private HttpResponse submitAllSourcesFromLocalDir() throws IOException {
         log.info("Using local directory flow.");
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
@@ -191,6 +207,27 @@ public class SCAClient implements DependencyScanner {
         File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
+        uploadArchive(zipFile, uploadedArchiveUrl);
+        CxZipUtils.deleteZippedSources(zipFile, config, log);
+
+        return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
+    }
+
+    private HttpResponse submitManifestAndFingerprintsFromLocalDir() throws IOException {
+        log.info("Using manifest only and fingerprint flow");
+
+        String combinedFilter =
+                Stream.of(config.getOsaFilterPattern(), manifestFilePatterns)
+                        .filter(s -> s != null && !s.isEmpty())
+                        .collect(Collectors.joining(","));
+
+
+        PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), combinedFilter, log);
+        String sourceDir = config.getEffectiveSourceDirForDependencyScan();
+        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
+
+        String uploadedArchiveUrl = getSourcesUploadUrl();
+        log.info(String.format("Uploading to: %s", uploadedArchiveUrl));
         uploadArchive(zipFile, uploadedArchiveUrl);
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
@@ -369,6 +406,10 @@ public class SCAClient implements DependencyScanner {
         } catch (IOException e) {
             throw new CxClientException("Error retrieving CxSCA scan results.", e);
         }
+    }
+
+    private String getManifestFilePatters(){
+        return "**/pom.xml";
     }
 
     private String getWebReportLink(String reportId) {

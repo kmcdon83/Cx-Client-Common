@@ -16,4 +16,6 @@ public class SCAConfig implements Serializable {
     private String webAppUrl;
     private RemoteRepositoryInfo remoteRepositoryInfo;
     private SourceLocationType sourceLocationType;
+    private boolean includeSources;
+
 }
