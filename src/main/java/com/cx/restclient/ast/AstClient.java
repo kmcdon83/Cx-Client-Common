@@ -43,13 +43,17 @@ public abstract class AstClient {
 
     protected CxHttpClient createHttpClient(String baseUrl) {
         log.debug("Creating HTTP client.");
-        return new CxHttpClient(baseUrl,
+        CxHttpClient client = new CxHttpClient(baseUrl,
                 config.getCxOrigin(),
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 null,
                 config.getProxyConfig(),
                 log);
+        //initializing Team Path to prevent null pointer in login when called from automation
+        client.setTeamPathHeader("");
+        
+        return client;
     }
 
     private void validate(CxScanConfig config, Logger log) {
@@ -80,7 +84,7 @@ public abstract class AstClient {
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
-        log.info("Sending a request to start scan.");
+        log.info("Sending the 'start scan' request.");
         return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
                 HttpResponse.class, HttpStatus.SC_CREATED, "start the scan");
     }
@@ -95,6 +99,15 @@ public abstract class AstClient {
         return sendStartScanRequest(repoInfo, SourceLocationType.REMOTE_REPOSITORY, projectId);
     }
 
+    protected void waitForScanToFinish(String scanId) {
+        log.info(String.format("------------------------------------Get %s Results:-----------------------------------", getScannerDisplayName()));
+
+        log.info((String.format("Waiting for %s scan to finish", getScannerDisplayName())));
+        AstWaiter waiter = new AstWaiter(httpClient, config, getScannerDisplayName());
+        waiter.waitForScanToFinish(scanId);
+        log.info(String.format("%1$s scan finished successfully. Retrieving %1$s scan results.", getScannerDisplayName()));
+    }
+
     /**
      * @param repoInfo may represent an actual git repo or a presigned URL of an uploaded archive.
      */
@@ -103,9 +116,13 @@ public abstract class AstClient {
 
         HandlerRef ref = getBranchToScan(repoInfo);
 
+        // AST-SAST doesn't allow nulls here.
+        String password = StringUtils.defaultString(repoInfo.getPassword());
+        String username = StringUtils.defaultString(repoInfo.getUsername());
+
         GitCredentials credentials = GitCredentials.builder()
                 .type(CREDENTIAL_TYPE_PASSWORD)
-                .value(repoInfo.getPassword())
+                .value(password)
                 .build();
 
         URL effectiveRepoUrl = getEffectiveRepoUrl(repoInfo);
@@ -113,7 +130,7 @@ public abstract class AstClient {
         // The ref/username/credentials properties are mandatory even if not specified in repoInfo.
         return ScanStartHandler.builder()
                 .ref(ref)
-                .username(repoInfo.getUsername())
+                .username(username)
                 .credentials(credentials)
                 .url(effectiveRepoUrl.toString())
                 .build();
