@@ -1,10 +1,10 @@
 package com.cx.restclient.sca.utils;
 
-public class SCAFileSignature {
+public class CxSCAFileSignature {
     private String type;
     private String value;
 
-    public SCAFileSignature(String type, String value) {
+    public CxSCAFileSignature(String type, String value) {
         this.type = type;
         this.value = value;
     }

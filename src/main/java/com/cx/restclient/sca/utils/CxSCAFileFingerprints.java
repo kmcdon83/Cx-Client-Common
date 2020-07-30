@@ -3,19 +3,19 @@ package com.cx.restclient.sca.utils;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SCAFileFingerprints {
+public class CxSCAFileFingerprints {
     private String path;
     private long size;
-    private List<SCAFileSignature> signatures = new ArrayList<>();
+    private List<CxSCAFileSignature> signatures = new ArrayList<>();
 
 
-    public SCAFileFingerprints(String path, long size, List<SCAFileSignature> sig) {
+    public CxSCAFileFingerprints(String path, long size, List<CxSCAFileSignature> sig) {
         this.path = path;
         this.size = size;
         this.signatures = sig;
     }
 
-    public SCAFileFingerprints(String path, long size) {
+    public CxSCAFileFingerprints(String path, long size) {
         this.path = path;
         this.size = size;
     }
@@ -37,15 +37,15 @@ public class SCAFileFingerprints {
     }
 
 
-    public List<SCAFileSignature> getSignatures() {
+    public List<CxSCAFileSignature> getSignatures() {
         return signatures;
     }
 
-    public void setSignatures(List<SCAFileSignature> signatures) {
+    public void setSignatures(List<CxSCAFileSignature> signatures) {
         this.signatures = signatures;
     }
 
-    public void addFileSignature(SCAFileSignature signature){
+    public void addFileSignature(CxSCAFileSignature signature){
         this.signatures.add(signature);
     }
 }

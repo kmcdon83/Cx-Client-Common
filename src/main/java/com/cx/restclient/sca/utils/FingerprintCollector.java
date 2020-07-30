@@ -7,7 +7,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class FingerprintCollector {
 
@@ -19,29 +22,32 @@ public class FingerprintCollector {
         sha1SignatureCalculator = new Sha1SignatureCalculator();
     }
 
-    public SCAScanFingerprints collectFingerprints(String baseDir,
-                                                   String[] filterIncludePatterns,
-                                                   String[] filterExcludePatterns) {
+    public CxSCAScanFingerprints collectFingerprints(String baseDir,
+                                                     String[] filterIncludePatterns,
+                                                     String[] filterExcludePatterns) {
         log.info(String.format("Started fingerprint collection on %s", baseDir));
 
-        SCAScanFingerprints scanFingerprints = new SCAScanFingerprints();
+        CxSCAScanFingerprints scanFingerprints = new CxSCAScanFingerprints();
         DirectoryScanner ds = createDirectoryScanner(new File(baseDir), filterIncludePatterns, filterExcludePatterns);
         ds.setFollowSymlinks(true);
         ds.scan();
 
 
         for (String filePath : ds.getIncludedFiles()) {
-            try (FileInputStream fileInputStream = new FileInputStream(new File(filePath))) {
+            Path fullFilePath = Paths.get(baseDir, filePath);
+            try (FileInputStream fileInputStream = new FileInputStream(new File(fullFilePath.toString()))) {
 
-                SCAFileFingerprints fingerprints = new SCAFileFingerprints(filePath, Files.size(Paths.get(filePath)));
+
+                CxSCAFileFingerprints fingerprints = new CxSCAFileFingerprints(fullFilePath.toString(), Files.size(fullFilePath));
 
                 fingerprints.addFileSignature(sha1SignatureCalculator.calculateSignature(fileInputStream));
 
                 scanFingerprints.addFileFingerprints(fingerprints);
             } catch (IOException e) {
-                log.error(String.format("Failed calculating file signature: %s", filePath), e);
+                log.error(String.format("Failed calculating file signature: %s",fullFilePath.toString() ), e);
             }
         }
+        scanFingerprints.setTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         return scanFingerprints;
 
     }

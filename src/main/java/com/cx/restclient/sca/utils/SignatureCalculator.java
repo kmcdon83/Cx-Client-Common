@@ -6,6 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public interface SignatureCalculator {
-    SCAFileSignature calculateSignature(InputStream inputStream) throws IOException, CxClientException;
+    CxSCAFileSignature calculateSignature(InputStream inputStream) throws IOException, CxClientException;
 
 }

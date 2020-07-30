@@ -18,7 +18,7 @@ import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
 import com.cx.restclient.sca.utils.FingerprintCollector;
-import com.cx.restclient.sca.utils.SCAScanFingerprints;
+import com.cx.restclient.sca.utils.CxSCAScanFingerprints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -235,7 +235,8 @@ public class SCAClient implements DependencyScanner {
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), combinedFilter, log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
-        SCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, null, null);
+        CxSCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, null, null);
+
         this.writeScanFingerprintsFile(fingerprints, sourceDir);
 
         File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
@@ -558,7 +559,7 @@ public class SCAClient implements DependencyScanner {
                 log);
     }
 
-    private void writeScanFingerprintsFile(SCAScanFingerprints scanFingerprints, String baseDir){
+    private void writeScanFingerprintsFile(CxSCAScanFingerprints scanFingerprints, String baseDir){
 
         long fingerprintCount = scanFingerprints.getFingerprints().size();
         if (fingerprintCount == 0){

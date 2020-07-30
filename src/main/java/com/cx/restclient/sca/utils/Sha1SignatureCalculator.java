@@ -14,7 +14,7 @@ public class Sha1SignatureCalculator implements SignatureCalculator {
     public static final String SHA1_SIGNATURE_TYPE_NAME = "SHA1";
 
     @Override
-    public SCAFileSignature calculateSignature(InputStream inputStream) throws IOException, CxClientException {
+    public CxSCAFileSignature calculateSignature(InputStream inputStream) throws IOException, CxClientException {
         MessageDigest digest = null;
         try {
             digest = MessageDigest.getInstance("SHA-1");
@@ -30,7 +30,7 @@ public class Sha1SignatureCalculator implements SignatureCalculator {
                 digest.update(buffer, 0, n);
             }
         }
-        return new SCAFileSignature(SHA1_SIGNATURE_TYPE_NAME, DigestUtils.sha1Hex(digest.digest()));
+        return new CxSCAFileSignature(SHA1_SIGNATURE_TYPE_NAME, DigestUtils.sha1Hex(digest.digest()));
     }
 
 }
