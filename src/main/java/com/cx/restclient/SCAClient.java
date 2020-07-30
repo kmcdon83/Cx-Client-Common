@@ -17,6 +17,8 @@ import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.restclient.sca.utils.FingerprintCollector;
+import com.cx.restclient.sca.utils.SCAScanFingerprints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -37,9 +39,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -60,6 +63,8 @@ public class SCAClient implements DependencyScanner {
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 
     private static final String CLOUD_ACCESS_CONTROL_BASE_URL = "https://platform.checkmarx.net";
+    private static final String FINGERPRINT_FILE_NAME = ".cxsca.sig";
+    public static final String MANIFEST_ONLY_INCLUDE_PATTERN = "**/pom.xml,**/package.json,**/packge-lock.json,**/lerna.json,**/.npmrc,**/settings.gradle,**/build.gradle,**/gradle-wrapper.properties,**/build.gradle.kts,**/*.csproj,**/nuget.config,**/build.sbt,**/requirements.txt,**/packages.txt,**/yarn.lock,**/yarn.rc,**/composer.json,**/composer.lock,**/bower.json";
 
     public static class UrlPaths {
         private UrlPaths() {
@@ -86,16 +91,21 @@ public class SCAClient implements DependencyScanner {
     // This class uses its own instance of CxHttpClient, because SCA has a different base URL and Access Control server.
     private final CxHttpClient httpClient;
 
+    private final FingerprintCollector fingerprintCollector;
+    private final SCAConfig scaConfig;
+
     private String projectId;
     private String scanId;
-    private SCAConfig scaConfig;
     private String manifestFilePatterns;
+    private boolean isZeroCodeScan;
 
     SCAClient(CxScanConfig config, Logger log) {
         this.log = log;
         this.config = config;
         this.scaConfig = getScaConfig();
         this.manifestFilePatterns = null;
+        this.isZeroCodeScan = !getScaConfig().isIncludeSources();
+
 
 
         httpClient = createHttpClient(scaConfig.getApiUrl());
@@ -103,13 +113,15 @@ public class SCAClient implements DependencyScanner {
         // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
         // and then use this token for SCA authentication in cloud.
         httpClient.addCustomHeader(TENANT_HEADER_NAME, getScaConfig().getTenant());
+
+        fingerprintCollector = new FingerprintCollector(log);
     }
 
     @Override
     public void init() {
         try {
             login();
-            if (!getScaConfig().isIncludeSources()){
+            if (isZeroCodeScan){
                 this.manifestFilePatterns = getManifestFilePatters();
                 log.info(String.format("Got the following manifest patterns %s", this.manifestFilePatterns));
             }
@@ -217,13 +229,15 @@ public class SCAClient implements DependencyScanner {
         log.info("Using manifest only and fingerprint flow");
 
         String combinedFilter =
-                Stream.of(config.getOsaFilterPattern(), manifestFilePatterns)
+                Stream.of(config.getOsaFilterPattern(), manifestFilePatterns, FINGERPRINT_FILE_NAME)
                         .filter(s -> s != null && !s.isEmpty())
                         .collect(Collectors.joining(","));
 
-
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), combinedFilter, log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
+        SCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, null, null);
+        this.writeScanFingerprintsFile(fingerprints, sourceDir);
+
         File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
@@ -269,7 +283,23 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getSourcesUploadUrl() throws IOException {
-        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL, null, null, JsonNode.class,
+
+        CxSCAScanAPIConfig CxSCAConfig = CxSCAScanAPIConfig.builder()
+                .isZeroCodeZip(isZeroCodeScan)
+                .build();
+
+        CxSCAScanApiConfigEntry scanAPIConfig = CxSCAScanApiConfigEntry.builder()
+                .type("sca")
+                .value(CxSCAConfig)
+                .build();
+
+        GetUploadUrlRequest request = GetUploadUrlRequest.builder()
+                .config(new ArrayList<ScanAPIConfigEntry>() { { add(scanAPIConfig); } } )
+                .build();
+
+        StringEntity entity = HttpClientHelper.convertToStringEntity(request);
+
+        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL, null, entity, JsonNode.class,
                 HttpStatus.SC_OK, "get upload URL for sources");
 
         if (response == null || response.get("url") == null) {
@@ -409,7 +439,8 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getManifestFilePatters(){
-        return "**/pom.xml";
+        //TODO: Replace with API call
+        return MANIFEST_ONLY_INCLUDE_PATTERN;
     }
 
     private String getWebReportLink(String reportId) {
@@ -525,5 +556,23 @@ public class SCAClient implements DependencyScanner {
                 null,
                 config.getProxyConfig(),
                 log);
+    }
+
+    private void writeScanFingerprintsFile(SCAScanFingerprints scanFingerprints, String baseDir){
+
+        long fingerprintCount = scanFingerprints.getFingerprints().size();
+        if (fingerprintCount == 0){
+            log.info("No supported files for fingerprinting found in this scan");
+        }
+        String fingerprintFilePath = Paths.get(baseDir, FINGERPRINT_FILE_NAME).toString();
+
+        log.info(String.format("Writing %d file signatures to fingerprint file: %s", fingerprintCount, fingerprintFilePath));
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            File fingerprintFile = new File(fingerprintFilePath);
+            objectMapper.writeValue(fingerprintFile, scanFingerprints);
+        } catch (IOException e) {
+            throw new CxClientException(String.format("Failed to write signature file to %s ", fingerprintFilePath) + e.getMessage());
+        }
     }
 }
