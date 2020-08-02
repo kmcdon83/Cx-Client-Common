@@ -1,4 +1,4 @@
-package com.cx.restclient.sca.utils;
+package com.cx.restclient.sca.utils.fingerprints;
 
 import java.util.ArrayList;
 import java.util.List;

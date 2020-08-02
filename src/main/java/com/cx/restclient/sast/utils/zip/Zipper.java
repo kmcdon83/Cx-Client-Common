@@ -12,10 +12,8 @@ import org.apache.tools.zip.ZipEntry;
 import org.apache.tools.zip.ZipOutputStream;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
+import java.util.Map;
 
 public class Zipper {
     private final Logger log;
@@ -24,7 +22,7 @@ public class Zipper {
         this.log = log;
     }
 
-    public void zip(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns, OutputStream outputStream, long maxZipSize, ZipListener listener) throws IOException {
+    public void zip(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns, OutputStream outputStream, long maxZipSize, ZipListener listener, Map<String, byte[]> additionalFiles) throws IOException {
         assert baseDir != null : "baseDir must not be null";
 
         assert outputStream != null : "outputStream must not be null";
@@ -33,16 +31,16 @@ public class Zipper {
         ds.setFollowSymlinks(true);
         ds.scan();
        // this.printDebug(ds);
-        if (ds.getIncludedFiles().length == 0) {
+        if (ds.getIncludedFiles().length == 0 && additionalFiles.isEmpty()) {
             outputStream.close();
             log.info("No files to zip");
             throw new Zipper.NoFilesToZip();
         } else {
-            this.zipFile(baseDir, ds.getIncludedFiles(), outputStream, maxZipSize, listener);
+            this.zipFile(baseDir, ds.getIncludedFiles(), outputStream, maxZipSize, listener, additionalFiles);
         }
     }
 
-    private void zipFile(File baseDir, String[] files, OutputStream outputStream, long maxZipSize, ZipListener listener) throws IOException {
+    private void zipFile(File baseDir, String[] files, OutputStream outputStream, long maxZipSize, ZipListener listener, Map<String, byte[]> additionalFiles) throws IOException {
         ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream);
         zipOutputStream.setEncoding("UTF8");
         long compressedSize = 0L;
@@ -72,6 +70,28 @@ public class Zipper {
                 FileInputStream fileInputStream = new FileInputStream(file);
                 IOUtils.copy(fileInputStream, zipOutputStream);
                 fileInputStream.close();
+                zipOutputStream.closeEntry();
+                compressedSize += zipEntry.getCompressedSize();
+            }
+        }
+        if (additionalFiles != null){
+
+            for(String path : additionalFiles.keySet()){
+                byte[] content = additionalFiles.get(path);
+                if (maxZipSize > 0L && (double) compressedSize + (double) content.length / 4.0D > (double) maxZipSize) {
+                    log.info("Maximum zip file size reached. Zip size: " + compressedSize + " bytes Limit: " + maxZipSize + " bytes");
+                    zipOutputStream.close();
+                    throw new Zipper.MaxZipSizeReached(compressedSize, maxZipSize);
+                }
+
+                if (listener != null) {
+                    listener.updateProgress(path, compressedSize);
+                }
+                ZipEntry zipEntry = new ZipEntry(path);
+                zipOutputStream.putNextEntry(zipEntry);
+                ByteArrayInputStream inputStream = new ByteArrayInputStream(content);
+                IOUtils.copy(inputStream, zipOutputStream);
+                inputStream.close();
                 zipOutputStream.closeEntry();
                 compressedSize += zipEntry.getCompressedSize();
             }

@@ -1,6 +1,6 @@
 package com.cx.restclient.general;
-import com.cx.restclient.sca.utils.CxSCAFileSignature;
-import com.cx.restclient.sca.utils.Sha1SignatureCalculator;
+import com.cx.restclient.sca.utils.fingerprints.CxSCAFileSignature;
+import com.cx.restclient.sca.utils.fingerprints.Sha1SignatureCalculator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
@@ -23,7 +23,7 @@ public class FingerprintTests {
         CxSCAFileSignature fileSignature = calculator.calculateSignature(readResourceFile(JAR_SAMPLE_RESOURCE_NAME));
         assertEquals(String.format("Sha1 signature of file %s is unexpected", JAR_SAMPLE_RESOURCE_NAME), EXPECTED_JAR_SHA1, fileSignature.getValue());
     }
-    
+
 
     private static byte[] readResourceFile(String fileName) throws IOException {
         log.info("Reading resource file content '{}'", fileName);

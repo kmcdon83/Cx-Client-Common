@@ -1,5 +1,12 @@
-package com.cx.restclient.sca.utils;
+package com.cx.restclient.sca.utils.fingerprints;
 
+import com.cx.restclient.exception.CxClientException;
+import com.cx.restclient.sca.utils.fingerprints.CxSCAFileFingerprints;
+import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
+import com.cx.restclient.sca.utils.fingerprints.Sha1SignatureCalculator;
+import com.cx.restclient.sca.utils.fingerprints.SignatureCalculator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.tools.ant.DirectoryScanner;
 import org.slf4j.Logger;
 
@@ -11,8 +18,11 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+
+
 public class FingerprintCollector {
 
+    private static final String DEFAULT_FINGERPRINT_FILENAME = "CxSCAFingerprints.json";
     private final SignatureCalculator sha1SignatureCalculator;
     private final Logger log;
 
@@ -36,7 +46,7 @@ public class FingerprintCollector {
             Path fullFilePath = Paths.get(baseDir, filePath);
             try  {
                 byte[] fileContent = Files.readAllBytes(fullFilePath);
-                CxSCAFileFingerprints fingerprints = new CxSCAFileFingerprints(fullFilePath.toString(), Files.size(fullFilePath));
+                CxSCAFileFingerprints fingerprints = new CxSCAFileFingerprints(filePath, Files.size(fullFilePath));
 
                 fingerprints.addFileSignature(sha1SignatureCalculator.calculateSignature(fileContent));
 
@@ -66,6 +76,31 @@ public class FingerprintCollector {
         }
 
         return ds;
+    }
+
+    public void writeScanFingerprintsFile(CxSCAScanFingerprints scanFingerprints, String path) throws IOException {
+
+        long fingerprintCount = scanFingerprints.getFingerprints().size();
+        if (fingerprintCount == 0){
+            log.info("No supported files for fingerprinting found in this scan");
+        }
+        String fingerprintFilePath = path;
+        File targetLocation = new File(path);
+        if (targetLocation.isDirectory()){
+            fingerprintFilePath = Paths.get(path, DEFAULT_FINGERPRINT_FILENAME).toString();
+        }
+
+        log.info(String.format("Writing %d file signatures to fingerprint file: %s", fingerprintCount, fingerprintFilePath));
+        ObjectMapper objectMapper = new ObjectMapper();
+        File fingerprintFile = new File(fingerprintFilePath);
+        objectMapper.writeValue(fingerprintFile, scanFingerprints);
+
+    }
+
+
+    public static String getFingerprintsAsJsonString(CxSCAScanFingerprints scanFingerprints) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.writeValueAsString(scanFingerprints);
     }
 
 

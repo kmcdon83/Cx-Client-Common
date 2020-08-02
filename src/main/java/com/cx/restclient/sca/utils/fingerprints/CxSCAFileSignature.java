@@ -1,4 +1,4 @@
-package com.cx.restclient.sca.utils;
+package com.cx.restclient.sca.utils.fingerprints;
 
 public class CxSCAFileSignature {
     private String type;
