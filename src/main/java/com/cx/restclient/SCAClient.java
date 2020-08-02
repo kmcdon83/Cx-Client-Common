@@ -93,11 +93,11 @@ public class SCAClient implements DependencyScanner {
 
     private final FingerprintCollector fingerprintCollector;
     private final SCAConfig scaConfig;
+    private final boolean isZeroCodeScan;
 
     private String projectId;
     private String scanId;
     private String manifestFilePatterns;
-    private boolean isZeroCodeScan;
 
     SCAClient(CxScanConfig config, Logger log) {
         this.log = log;
@@ -166,7 +166,7 @@ public class SCAClient implements DependencyScanner {
                 if (scaConfig.isIncludeSources()){
                     response = submitAllSourcesFromLocalDir();
                 } else {
-                    response = submitManifestAndFingerprintsFromLocalDir();
+                    response = submitZeroCodeScanFromLocalDir();
                 }
 
 
@@ -225,7 +225,7 @@ public class SCAClient implements DependencyScanner {
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
-    private HttpResponse submitManifestAndFingerprintsFromLocalDir() throws IOException {
+    private HttpResponse submitZeroCodeScanFromLocalDir() throws IOException {
         log.info("Using manifest only and fingerprint flow");
 
         String combinedFilter =
@@ -300,7 +300,7 @@ public class SCAClient implements DependencyScanner {
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
-        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL, null, entity, JsonNode.class,
+        JsonNode response = httpClient.postRequest(UrlPaths.GET_UPLOAD_URL, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity, JsonNode.class,
                 HttpStatus.SC_OK, "get upload URL for sources");
 
         if (response == null || response.get("url") == null) {
