@@ -4,7 +4,6 @@ import org.apache.tools.ant.DirectoryScanner;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,12 +34,11 @@ public class FingerprintCollector {
 
         for (String filePath : ds.getIncludedFiles()) {
             Path fullFilePath = Paths.get(baseDir, filePath);
-            try (FileInputStream fileInputStream = new FileInputStream(new File(fullFilePath.toString()))) {
-
-
+            try  {
+                byte[] fileContent = Files.readAllBytes(fullFilePath);
                 CxSCAFileFingerprints fingerprints = new CxSCAFileFingerprints(fullFilePath.toString(), Files.size(fullFilePath));
 
-                fingerprints.addFileSignature(sha1SignatureCalculator.calculateSignature(fileInputStream));
+                fingerprints.addFileSignature(sha1SignatureCalculator.calculateSignature(fileContent));
 
                 scanFingerprints.addFileFingerprints(fingerprints);
             } catch (IOException e) {

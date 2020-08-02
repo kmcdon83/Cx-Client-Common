@@ -21,7 +21,7 @@ public final class TestingUtils {
         return properties;
     }
 
-    public static SCAConfig getScaConfig(Properties props, boolean useOnPremiseAuthentication) {
+    public static SCAConfig getScaConfig(Properties props, boolean useOnPremiseAuthentication, boolean includeSource) {
         String accessControlProp, usernameProp, passwordProp;
         if (useOnPremiseAuthentication) {
             accessControlProp = "sca.onPremise.accessControlUrl";
@@ -40,6 +40,11 @@ public final class TestingUtils {
         result.setAccessControlUrl(props.getProperty(accessControlProp));
         result.setUsername(props.getProperty(usernameProp));
         result.setPassword(props.getProperty(passwordProp));
+        result.setIncludeSources(includeSource);
         return result;
+    }
+
+    public static SCAConfig getScaConfig(Properties props, boolean useOnPremiseAuthentication) {
+        return getScaConfig(props, useOnPremiseAuthentication, false);
     }
 }

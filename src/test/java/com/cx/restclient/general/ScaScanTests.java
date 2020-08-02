@@ -12,6 +12,9 @@ import com.cx.restclient.sca.dto.SourceLocationType;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.restclient.sca.utils.CxSCAScanFingerprints;
+import com.cx.restclient.sca.utils.FingerprintCollector;
+import com.cx.restclient.sca.utils.Sha1SignatureCalculator;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -48,21 +51,15 @@ public class ScaScanTests extends CommonClientTest {
     private static final String PRIVATE_REPO_PROP = "sca.remoteRepoUrl.private";
 
     @Test
-    public void scan_localDirUpload() throws IOException, CxClientException {
-        CxScanConfig config = initScaConfig(false);
-        config.setOsaThresholdsEnabled(true);
-        config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
+    public void scan_localDirUploadIncludeSources() throws IOException, CxClientException {
+        CxScanConfig config = initScaConfig(false, true);
+        localDirScan(config);
+    }
 
-        Path sourcesDir = null;
-        try {
-            sourcesDir = extractTestProjectFromResources();
-            config.setSourceDir(sourcesDir.toString());
-
-            DependencyScanResults scanResults = scanUsing(config);
-            verifyScanResults(scanResults);
-        } finally {
-            deleteDir(sourcesDir);
-        }
+    @Test
+    public void scan_localDirZeroCodeScan() throws IOException, CxClientException {
+        CxScanConfig config = initScaConfig(false, false);
+        localDirScan(config);
     }
 
     @Test
@@ -83,14 +80,29 @@ public class ScaScanTests extends CommonClientTest {
     @Test
     @Ignore("Needs specific network configuration with a proxy.")
     public void runScaScanWithProxy() throws MalformedURLException, CxClientException {
-        CxScanConfig config = initScaConfig(false);
+        CxScanConfig config = initScaConfig(false, true);
         setProxy(config);
         DependencyScanResults scanResults = scanUsing(config);
         verifyScanResults(scanResults);
     }
 
+    private void localDirScan(CxScanConfig config) throws MalformedURLException {
+        config.setOsaThresholdsEnabled(true);
+        config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
+
+        Path sourcesDir = null;
+        try {
+            sourcesDir = extractTestProjectFromResources();
+            config.setSourceDir(sourcesDir.toString());
+
+            DependencyScanResults scanResults = scanUsing(config);
+            verifyScanResults(scanResults);
+        } finally {
+            deleteDir(sourcesDir);
+        }
+    }
     private void scanRemoteRepo(String repoUrlProp, boolean useOnPremAuthentication) throws MalformedURLException {
-        CxScanConfig config = initScaConfig(useOnPremAuthentication);
+        CxScanConfig config = initScaConfig(useOnPremAuthentication, true);
         config.getScaConfig().setSourceLocationType(SourceLocationType.REMOTE_REPOSITORY);
         RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
 
@@ -244,13 +256,13 @@ public class ScaScanTests extends CommonClientTest {
         assertTrue("Some of the findings have severity set to null.", allSeveritiesAreSpecified);
     }
 
-    private static CxScanConfig initScaConfig(boolean useOnPremAuthentication) {
+    private static CxScanConfig initScaConfig(boolean useOnPremAuthentication, boolean includeSource) {
         CxScanConfig config = new CxScanConfig();
         config.setDependencyScannerType(DependencyScannerType.SCA);
         config.setSastEnabled(false);
         config.setProjectName(props.getProperty("sca.projectName"));
 
-        SCAConfig sca = TestingUtils.getScaConfig(props, useOnPremAuthentication);
+        SCAConfig sca = TestingUtils.getScaConfig(props, useOnPremAuthentication, includeSource);
         config.setScaConfig(sca);
 
         return config;
