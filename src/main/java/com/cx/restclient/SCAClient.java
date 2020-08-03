@@ -92,7 +92,7 @@ public class SCAClient implements DependencyScanner {
 
     private final FingerprintCollector fingerprintCollector;
     private final SCAConfig scaConfig;
-    private final boolean isZeroCodeScan;
+    private final boolean isManifestAndFingerprintsOnly;
 
     private String projectId;
     private String scanId;
@@ -103,7 +103,7 @@ public class SCAClient implements DependencyScanner {
         this.config = config;
         this.scaConfig = getScaConfig();
         this.resolvingConfiguration = null;
-        this.isZeroCodeScan = !getScaConfig().isIncludeSources();
+        this.isManifestAndFingerprintsOnly = !getScaConfig().isIncludeSources();
 
 
 
@@ -121,7 +121,7 @@ public class SCAClient implements DependencyScanner {
         try {
             login();
             resolveProject();
-            if (isZeroCodeScan){
+            if (isManifestAndFingerprintsOnly){
                 this.resolvingConfiguration = getCxSCAResolvingConfigurationForProject(this.projectId);
                 log.info(String.format("Got the following manifest patterns %s", this.resolvingConfiguration.getManifests()));
             }
@@ -165,7 +165,7 @@ public class SCAClient implements DependencyScanner {
                 if (scaConfig.isIncludeSources()){
                     response = submitAllSourcesFromLocalDir();
                 } else {
-                    response = submitZeroCodeScanFromLocalDir();
+                    response = submitManifestsAndFingerprintsFromLocalDir();
                 }
 
 
@@ -224,7 +224,7 @@ public class SCAClient implements DependencyScanner {
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
-    private HttpResponse submitZeroCodeScanFromLocalDir() throws IOException {
+    private HttpResponse submitManifestsAndFingerprintsFromLocalDir() throws IOException {
         log.info("Using manifest only and fingerprint flow");
 
         String combinedFilter =
@@ -305,7 +305,7 @@ public class SCAClient implements DependencyScanner {
     private String getSourcesUploadUrl() throws IOException {
 
         CxSCAScanAPIConfig CxSCAConfig = CxSCAScanAPIConfig.builder()
-                .isZeroCodeZip(isZeroCodeScan)
+                .isZeroCodeZip(isManifestAndFingerprintsOnly)
                 .build();
 
         CxSCAScanApiConfigEntry scanAPIConfig = CxSCAScanApiConfigEntry.builder()

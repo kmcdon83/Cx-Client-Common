@@ -30,7 +30,6 @@ public class FingerprintTests {
         return IOUtils.toByteArray(Objects.requireNonNull(Thread.currentThread()
                 .getContextClassLoader()
                 .getResourceAsStream(fileName)));
-
     }
 
 }

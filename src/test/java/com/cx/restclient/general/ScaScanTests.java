@@ -54,7 +54,7 @@ public class ScaScanTests extends CommonClientTest {
     }
 
     @Test
-    public void scan_localDirZeroCodeScan() throws IOException, CxClientException {
+    public void scan_localDirManifestAndFingerprintsOnly() throws IOException, CxClientException {
         CxScanConfig config = initScaConfig(false, false);
         localDirScan(config);
     }
