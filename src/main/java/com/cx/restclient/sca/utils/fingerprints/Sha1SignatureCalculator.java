@@ -1,8 +1,6 @@
 package com.cx.restclient.sca.utils.fingerprints;
 
 import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sca.utils.fingerprints.CxSCAFileSignature;
-import com.cx.restclient.sca.utils.fingerprints.SignatureCalculator;
 import org.apache.commons.codec.binary.Hex;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

@@ -1,10 +1,5 @@
 package com.cx.restclient.sca.utils.fingerprints;
 
-import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sca.utils.fingerprints.CxSCAFileFingerprints;
-import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
-import com.cx.restclient.sca.utils.fingerprints.Sha1SignatureCalculator;
-import com.cx.restclient.sca.utils.fingerprints.SignatureCalculator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.tools.ant.DirectoryScanner;
