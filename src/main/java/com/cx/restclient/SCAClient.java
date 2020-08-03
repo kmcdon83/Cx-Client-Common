@@ -260,11 +260,12 @@ public class SCAClient implements DependencyScanner {
     }
 
     private void optionallyWriteFingerprintsToFile(CxSCAScanFingerprints fingerprints) {
-        StringUtils.isNotEmpty(scaConfig.getFingerprintFilePath());
-        try{
+        if (StringUtils.isNotEmpty(scaConfig.getFingerprintFilePath())) {
+            try {
                 fingerprintCollector.writeScanFingerprintsFile(fingerprints, scaConfig.getFingerprintFilePath());
-        } catch (IOException ioException){
-            log.error(String.format("Failed writing fingerprint file to %s", scaConfig.getFingerprintFilePath()), ioException);
+            } catch (IOException ioException) {
+                log.error(String.format("Failed writing fingerprint file to %s", scaConfig.getFingerprintFilePath()), ioException);
+            }
         }
     }
 
