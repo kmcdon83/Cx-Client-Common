@@ -10,6 +10,6 @@ import java.util.List;
 @Getter
 @Setter
 public class CxSCAResolvingConfiguration implements Serializable {
-    List<String> manifests = new ArrayList<>();
-    List<String> Extensions = new ArrayList<>();
+    List<String> Manifests = new ArrayList<>();
+    List<String> Fingerprints = new ArrayList<>();
 }

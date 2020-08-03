@@ -12,6 +12,8 @@ import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
+import com.cx.restclient.sast.utils.zip.NewCxZipFile;
+import com.cx.restclient.sast.utils.zip.Zipper;
 import com.cx.restclient.sca.SCAWaiter;
 import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
@@ -24,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -34,7 +37,9 @@ import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -42,6 +47,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.cx.restclient.sast.utils.SASTParam.MAX_ZIP_SIZE_BYTES;
+import static com.cx.restclient.sast.utils.SASTParam.TEMP_FILE_NAME_TO_ZIP;
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
@@ -215,7 +223,7 @@ public class SCAClient implements DependencyScanner {
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
-        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log, null);
+        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
         uploadArchive(zipFile, uploadedArchiveUrl);
@@ -228,7 +236,7 @@ public class SCAClient implements DependencyScanner {
         log.info("Using manifest only and fingerprint flow");
 
         String combinedFilter =
-                Stream.of(config.getOsaFilterPattern(), getManifestFilesIncludePatterns(resolvingConfiguration))
+                Stream.of(config.getOsaFilterPattern(), getManifestFileIncludePatterns(resolvingConfiguration))
                         .filter(StringUtils::isNotEmpty)
                         .collect(Collectors.joining(","));
 
@@ -238,17 +246,7 @@ public class SCAClient implements DependencyScanner {
 
         CxSCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, null, null);
 
-        HashMap<String, byte[]> additionalFiles = null;
-        if (fingerprints.getFingerprints().size() > 0){
-            additionalFiles = new HashMap<String, byte[]>() {{
-                put(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
-            }};
-        }
-        else{
-            log.info("No supported files found for fingerprinting");
-        }
-        //Add the fingerprint file in memory, to avoid disk write
-        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log, additionalFiles);
+        File zipFile = zipDirectoryAndFingerprints(sourceDir, filter, fingerprints);
 
         optionallyWriteFingerprintsToFile(fingerprints);
 
@@ -257,6 +255,42 @@ public class SCAClient implements DependencyScanner {
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
+    }
+
+    private File zipDirectoryAndFingerprints(String sourceDir, PathFilter filter, CxSCAScanFingerprints fingerprints) throws IOException {
+        File result = config.getZipFile();
+        if (result != null){
+            return result;
+        }
+        File tempFile = File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin");
+        Long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
+
+        NewCxZipFile zipper = null;
+        try {
+            zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
+            zipper.zipFolder(new File(sourceDir), filter.getIncludes(), filter.getExcludes());
+            if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0){
+                tempFile.delete();
+                throw new CxClientException("No files found to zip and no supported fingerprints found");
+            }
+            zipper.zipContentAsFile(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
+            log.debug("The sources were zipped to " + tempFile.getAbsolutePath());
+            return tempFile;
+        }
+        catch (Zipper.MaxZipSizeReached e) {
+            tempFile.delete();
+            throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes));
+        }
+        catch (IOException ioException) {
+            tempFile.delete();
+            throw new CxClientException("Error creating zip file", ioException);
+        }
+        finally {
+            if (zipper != null) {
+                zipper.close();
+            }
+        }
+
     }
 
     private void optionallyWriteFingerprintsToFile(CxSCAScanFingerprints fingerprints) {
@@ -594,17 +628,23 @@ public class SCAClient implements DependencyScanner {
     }
 
 
-    private String getManifestFilesIncludePatterns(CxSCAResolvingConfiguration resolvingConfiguration){
+    private String getManifestFileIncludePatterns(CxSCAResolvingConfiguration resolvingConfiguration){
 
-        if (resolvingConfiguration == null || resolvingConfiguration.getManifests() == null){
+        if (resolvingConfiguration == null || resolvingConfiguration.getManifests().isEmpty()){
             throw new CxClientException("No manifest patterns could be retrieved");
         }
         StringJoiner manifestIncludePatternsJoiner = new StringJoiner(",");
         for (String manifest : resolvingConfiguration.getManifests()) {
             if (!manifest.isEmpty()) {
-                manifestIncludePatternsJoiner.add(String.format("**/%s", manifest.toLowerCase()));
+                manifestIncludePatternsJoiner.add(manifest.toLowerCase());
             }
         }
-        return manifestIncludePatternsJoiner.toString();
+        String includePatterns = manifestIncludePatternsJoiner.toString();
+
+        //protect against bad cloud response. Do not allow empty pattern
+        if (includePatterns.isEmpty()){
+            throw new CxClientException("No manifest patterns could be retrieved");
+        }
+        return includePatterns;
     }
 }

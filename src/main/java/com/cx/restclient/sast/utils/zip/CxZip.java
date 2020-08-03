@@ -2,7 +2,7 @@ package com.cx.restclient.sast.utils.zip;
 
 
 import com.cx.restclient.dto.PathFilter;
-import javafx.util.Pair;
+
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
@@ -10,8 +10,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
-import java.util.Map;
 
 
 public class CxZip {
@@ -27,7 +25,7 @@ public class CxZip {
         this.maxZipSizeInBytes = maxZipSizeInBytes;
     }
 
-    public File zipWorkspaceFolder(File baseDir, PathFilter filter, Map<String, byte[]> additionalFiles)
+    public File zipWorkspaceFolder(File baseDir, PathFilter filter)
             throws IOException {
         log.info("Zipping workspace: '" + baseDir + "'");
 
@@ -41,7 +39,7 @@ public class CxZip {
         File tempFile = File.createTempFile(tempFileName, ".bin");
 
         try (OutputStream fileOutputStream = new FileOutputStream(tempFile)) {
-            new Zipper(log).zip(baseDir, filter.getIncludes(), filter.getExcludes(), fileOutputStream, maxZipSizeInBytes, zipListener, additionalFiles);
+            new Zipper(log).zip(baseDir, filter.getIncludes(), filter.getExcludes(), fileOutputStream, maxZipSizeInBytes, zipListener);
         } catch (Zipper.MaxZipSizeReached e) {
             tempFile.delete();
             throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeInBytes));
@@ -55,7 +53,7 @@ public class CxZip {
 
         return tempFile;
     }
-
+    
     public CxZip setMaxZipSizeInBytes(long maxZipSizeInBytes) {
         this.maxZipSizeInBytes = maxZipSizeInBytes;
         return this;

@@ -1,0 +1,183 @@
+package com.cx.restclient.sast.utils.zip;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.tools.ant.DirectoryScanner;
+import org.apache.tools.zip.ZipEntry;
+import org.apache.tools.zip.ZipOutputStream;
+import org.slf4j.Logger;
+
+import java.io.*;
+
+
+public class NewCxZipFile {
+
+    private static final double AVERAGE_ZIP_COMPRESSION_RATIO = 4.0D;
+
+    private final Logger log;
+    private final long maxSize;
+    private final ZipListener listener;
+    private final OutputStream outputStream;
+    private final ZipOutputStream zipOutputStream;
+    private long fileCount;
+    private long compressedSize;
+    private final File zipFile;
+
+
+    public NewCxZipFile(File zipFile, long maxZipSizeInBytes, Logger log) throws IOException {
+        this.log = log;
+        this.maxSize = maxZipSizeInBytes;
+        this.fileCount = 0;
+        this.compressedSize = 0;
+        this.listener = (fileName, size) -> {
+            fileCount++;
+            log.info("Zipping (" + FileUtils.byteCountToDisplaySize(size) + "): " + fileName);
+        };
+        this.zipFile = zipFile;
+        outputStream = new FileOutputStream(zipFile);
+        zipOutputStream = new ZipOutputStream(outputStream);
+
+    }
+
+    public NewCxZipFile zipFolder(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns) throws IOException {
+        assert baseDir != null : "baseDir must not be null";
+
+        assert outputStream != null : "outputStream must not be null";
+
+        DirectoryScanner ds = this.createDirectoryScanner(baseDir, filterIncludePatterns, filterExcludePatterns);
+        ds.setFollowSymlinks(true);
+        ds.scan();
+
+//        if (ds.getIncludedFiles().length == 0) {
+//            outputStream.close();
+//            log.info("No files to zip");
+//            throw new Zipper.NoFilesToZip();
+//        } else {
+            this.addMultipleFilesToArchive(baseDir, ds.getIncludedFiles());
+            return this;
+        //}
+    }
+
+
+    public NewCxZipFile zipContentAsFile(String pathInZip, byte[] content) throws IOException {
+
+        validateNextFileWillNotReachMaxCompressedSize((double) content.length);
+
+        if (listener != null) {
+            listener.updateProgress(pathInZip, compressedSize);
+        }
+        ByteArrayInputStream inputStream = null;
+        try
+        {
+            inputStream = new ByteArrayInputStream(content);
+            compressedSize += InsertZipEntry(zipOutputStream, pathInZip, inputStream);
+            fileCount += 1;
+        }
+        catch (IOException ioException){
+            log.warn(String.format("Failed to add file to archive: %s", pathInZip), ioException);
+        }
+        finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+        return this;
+    }
+
+    public void close(){
+        IOUtils.closeQuietly(zipOutputStream);
+        IOUtils.closeQuietly(outputStream);
+    }
+
+
+    private void addMultipleFilesToArchive(File baseDir, String[] files) throws IOException {
+        zipOutputStream.setEncoding("UTF8");
+
+        String[] arr$ = files;
+        int len$ = files.length;
+
+        for (int i$ = 0; i$ < len$; ++i$) {
+            String fileName = arr$[i$];
+
+            File file = new File(baseDir, fileName);
+            if (!file.canRead()) {
+                log.warn("Skipping unreadable file: " + file);
+                continue;
+            }
+            validateNextFileWillNotReachMaxCompressedSize((double) file.length());
+
+            if (listener != null) {
+                listener.updateProgress(fileName, compressedSize);
+            }
+
+            FileInputStream fileInputStream = null;
+            try
+            {
+                fileInputStream = new FileInputStream(file);
+                compressedSize += InsertZipEntry(zipOutputStream, fileName, fileInputStream);
+                fileCount += 1;
+            }
+            catch (IOException ioException){
+                log.warn(String.format("Failed to add file to archive: %s", fileName), ioException);
+            }
+            finally {
+                IOUtils.closeQuietly(fileInputStream);
+            }
+        }
+        zipOutputStream.flush();
+
+    }
+
+    private void validateNextFileWillNotReachMaxCompressedSize(double uncompressedSize) throws IOException {
+        if (maxSize > 0L && (double) compressedSize + uncompressedSize / AVERAGE_ZIP_COMPRESSION_RATIO > (double) maxSize) {
+            log.info("Maximum zip file size reached. Zip size: " + compressedSize + " bytes Limit: " + maxSize + " bytes");
+            throw new MaxZipSizeReached(compressedSize, maxSize);
+        }
+    }
+
+    private long InsertZipEntry(ZipOutputStream zipOutputStream, String fileName, InputStream inputStream) throws IOException {
+        ZipEntry zipEntry = new ZipEntry(fileName);
+        zipOutputStream.putNextEntry(zipEntry);
+        IOUtils.copy(inputStream, zipOutputStream);
+        zipOutputStream.closeEntry();
+        return zipEntry.getCompressedSize();
+    }
+
+    private DirectoryScanner createDirectoryScanner(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns) {
+        DirectoryScanner ds = new DirectoryScanner();
+        ds.setBasedir(baseDir);
+        ds.setCaseSensitive(false);
+        ds.setFollowSymlinks(false);
+        ds.setErrorOnMissingDir(false);
+        if (filterIncludePatterns != null && filterIncludePatterns.length > 0) {
+            ds.setIncludes(filterIncludePatterns);
+        }
+
+        if (filterExcludePatterns != null && filterExcludePatterns.length > 0) {
+            ds.setExcludes(filterExcludePatterns);
+        }
+
+        return ds;
+    }
+
+    public long getFileCount() {
+        return fileCount;
+    }
+
+
+    public static class MaxZipSizeReached extends IOException {
+        private long compressedSize;
+        private long maxZipSize;
+
+        public MaxZipSizeReached(long compressedSize, long maxZipSize) {
+            super("Zip compressed size reached a limit of " + maxZipSize + " bytes");
+        }
+
+        public long getCompressedSize() {
+            return this.compressedSize;
+        }
+
+        public long getMaxZipSize() {
+            return this.maxZipSize;
+        }
+    }
+}
+
