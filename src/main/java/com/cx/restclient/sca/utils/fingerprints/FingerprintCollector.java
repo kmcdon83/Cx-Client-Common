@@ -1,5 +1,6 @@
 package com.cx.restclient.sca.utils.fingerprints;
 
+import com.cx.restclient.dto.PathFilter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.tools.ant.DirectoryScanner;
@@ -27,12 +28,11 @@ public class FingerprintCollector {
     }
 
     public CxSCAScanFingerprints collectFingerprints(String baseDir,
-                                                     String[] filterIncludePatterns,
-                                                     String[] filterExcludePatterns) {
+                                                     PathFilter filter) {
         log.info(String.format("Started fingerprint collection on %s", baseDir));
 
         CxSCAScanFingerprints scanFingerprints = new CxSCAScanFingerprints();
-        DirectoryScanner ds = createDirectoryScanner(new File(baseDir), filterIncludePatterns, filterExcludePatterns);
+        DirectoryScanner ds = createDirectoryScanner(new File(baseDir), filter.getIncludes(), filter.getExcludes());
         ds.setFollowSymlinks(true);
         ds.scan();
 
@@ -40,6 +40,7 @@ public class FingerprintCollector {
         for (String filePath : ds.getIncludedFiles()) {
             Path fullFilePath = Paths.get(baseDir, filePath);
             try  {
+                log.debug(String.format("Calculating signatures for file %s", fullFilePath));
                 byte[] fileContent = Files.readAllBytes(fullFilePath);
                 CxSCAFileFingerprints fingerprints = new CxSCAFileFingerprints(filePath, Files.size(fullFilePath));
 
@@ -50,9 +51,9 @@ public class FingerprintCollector {
                 log.error(String.format("Failed calculating file signature: %s",fullFilePath.toString() ), e);
             }
         }
+        log.info(String.format("Calculated fingerprints for %d files", scanFingerprints.getFingerprints().size()));
         scanFingerprints.setTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         return scanFingerprints;
-
     }
 
     private static DirectoryScanner createDirectoryScanner(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns) {

@@ -3,14 +3,10 @@ package com.cx.restclient.sast.utils.zip;
 
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.PathFilter;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Map;
 
 import static com.cx.restclient.sast.utils.SASTParam.MAX_ZIP_SIZE_BYTES;
 import static com.cx.restclient.sast.utils.SASTParam.TEMP_FILE_NAME_TO_ZIP;
@@ -32,7 +28,6 @@ public abstract class CxZipUtils {
         }
         return result;
     }
-
 
     public static void deleteZippedSources(File file, CxScanConfig config, Logger log) {
         boolean isZipFileProvidedExternally = (config.getZipFile() != null);

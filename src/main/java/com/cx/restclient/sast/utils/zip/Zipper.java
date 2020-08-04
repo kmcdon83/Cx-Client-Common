@@ -12,7 +12,10 @@ import org.apache.tools.zip.ZipEntry;
 import org.apache.tools.zip.ZipOutputStream;
 import org.slf4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 public class Zipper {
     private final Logger log;
@@ -73,6 +76,7 @@ public class Zipper {
                 compressedSize += zipEntry.getCompressedSize();
             }
         }
+
         zipOutputStream.close();
     }
 

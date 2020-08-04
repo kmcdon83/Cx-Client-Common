@@ -1,5 +1,6 @@
 package com.cx.restclient.sast.utils.zip;
 
+import com.cx.restclient.dto.PathFilter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.tools.ant.DirectoryScanner;
@@ -39,39 +40,31 @@ public class NewCxZipFile {
 
     }
 
-    public NewCxZipFile zipFolder(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns) throws IOException {
+    public void zipFolder(File baseDir, PathFilter pathFilter) throws IOException {
         assert baseDir != null : "baseDir must not be null";
 
         assert outputStream != null : "outputStream must not be null";
 
-        DirectoryScanner ds = this.createDirectoryScanner(baseDir, filterIncludePatterns, filterExcludePatterns);
+        DirectoryScanner ds = this.createDirectoryScanner(baseDir, pathFilter.getIncludes(), pathFilter.getExcludes());
         ds.setFollowSymlinks(true);
         ds.scan();
-
-//        if (ds.getIncludedFiles().length == 0) {
-//            outputStream.close();
-//            log.info("No files to zip");
-//            throw new Zipper.NoFilesToZip();
-//        } else {
-            this.addMultipleFilesToArchive(baseDir, ds.getIncludedFiles());
-            return this;
-        //}
+         this.addMultipleFilesToArchive(baseDir, ds.getIncludedFiles());
     }
 
 
-    public NewCxZipFile zipContentAsFile(String pathInZip, byte[] content) throws IOException {
+    public void zipContentAsFile(String pathInZip, byte[] content) throws IOException {
 
         validateNextFileWillNotReachMaxCompressedSize((double) content.length);
 
-        if (listener != null) {
-            listener.updateProgress(pathInZip, compressedSize);
-        }
+
         ByteArrayInputStream inputStream = null;
         try
         {
             inputStream = new ByteArrayInputStream(content);
             compressedSize += InsertZipEntry(zipOutputStream, pathInZip, inputStream);
-            fileCount += 1;
+            if (listener != null) {
+                listener.updateProgress(pathInZip, compressedSize);
+            }
         }
         catch (IOException ioException){
             log.warn(String.format("Failed to add file to archive: %s", pathInZip), ioException);
@@ -79,7 +72,6 @@ public class NewCxZipFile {
         finally {
             IOUtils.closeQuietly(inputStream);
         }
-        return this;
     }
 
     public void close(){
@@ -104,16 +96,14 @@ public class NewCxZipFile {
             }
             validateNextFileWillNotReachMaxCompressedSize((double) file.length());
 
-            if (listener != null) {
-                listener.updateProgress(fileName, compressedSize);
-            }
-
             FileInputStream fileInputStream = null;
             try
             {
                 fileInputStream = new FileInputStream(file);
                 compressedSize += InsertZipEntry(zipOutputStream, fileName, fileInputStream);
-                fileCount += 1;
+                if (listener != null) {
+                    listener.updateProgress(fileName, compressedSize);
+                }
             }
             catch (IOException ioException){
                 log.warn(String.format("Failed to add file to archive: %s", fileName), ioException);

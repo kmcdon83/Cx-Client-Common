@@ -2,7 +2,6 @@ package com.cx.restclient.sast.utils.zip;
 
 
 import com.cx.restclient.dto.PathFilter;
-
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
@@ -53,7 +52,7 @@ public class CxZip {
 
         return tempFile;
     }
-    
+
     public CxZip setMaxZipSizeInBytes(long maxZipSizeInBytes) {
         this.maxZipSizeInBytes = maxZipSizeInBytes;
         return this;

@@ -37,9 +37,7 @@ import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -132,6 +130,7 @@ public class SCAClient implements DependencyScanner {
             if (isManifestAndFingerprintsOnly){
                 this.resolvingConfiguration = getCxSCAResolvingConfigurationForProject(this.projectId);
                 log.info(String.format("Got the following manifest patterns %s", this.resolvingConfiguration.getManifests()));
+                log.info(String.format("Got the following fingerprint patterns %s", this.resolvingConfiguration.getFingerprints()));
             }
         } catch (IOException e) {
             throw new CxClientException("Failed to init CxSCA Client.", e);
@@ -236,17 +235,22 @@ public class SCAClient implements DependencyScanner {
         log.info("Using manifest only and fingerprint flow");
 
         String combinedFilter =
-                Stream.of(config.getOsaFilterPattern(), getManifestFileIncludePatterns(resolvingConfiguration))
+                Stream.of(config.getOsaFilterPattern(), resolvingConfiguration.getManifestsIncludePattern())
                         .filter(StringUtils::isNotEmpty)
                         .collect(Collectors.joining(","));
 
-        PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), combinedFilter, log);
+        PathFilter zipFilter = new PathFilter(config.getOsaFolderExclusions(), combinedFilter, log);
+        PathFilter fingerprintFilter = new PathFilter(config.getOsaFolderExclusions(), resolvingConfiguration.getFingerprintsIncludePattern(), log);
+
+        log.info(String.format("Zip include filter: %s", combinedFilter));
+        log.info(String.format("Fingerprint include filter: %s", resolvingConfiguration.getFingerprintsIncludePattern() ));
+        log.info(String.format("Exclude Filter: %s", config.getOsaFolderExclusions()));
 
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
 
-        CxSCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, null, null);
+        CxSCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, fingerprintFilter);
 
-        File zipFile = zipDirectoryAndFingerprints(sourceDir, filter, fingerprints);
+        File zipFile = zipDirectoryAndFingerprints(sourceDir, zipFilter, fingerprints);
 
         optionallyWriteFingerprintsToFile(fingerprints);
 
@@ -263,17 +267,22 @@ public class SCAClient implements DependencyScanner {
             return result;
         }
         File tempFile = File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin");
-        Long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
+        long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
 
         NewCxZipFile zipper = null;
         try {
             zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
-            zipper.zipFolder(new File(sourceDir), filter.getIncludes(), filter.getExcludes());
+            zipper.zipFolder(new File(sourceDir), filter);
             if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0){
                 tempFile.delete();
                 throw new CxClientException("No files found to zip and no supported fingerprints found");
             }
-            zipper.zipContentAsFile(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
+            if (fingerprints.getFingerprints().size() > 0){
+                zipper.zipContentAsFile(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
+            } else{
+                log.info("No supported fingerprints found to zip");
+            }
+
             log.debug("The sources were zipped to " + tempFile.getAbsolutePath());
             return tempFile;
         }
@@ -613,38 +622,12 @@ public class SCAClient implements DependencyScanner {
         log.info(String.format("Getting CxSCA Resolving configuration for project: %s", projectId));
         String path = String.format(UrlPaths.RESOLVING_CONFIGURATION_API, URLEncoder.encode(projectId, ENCODING));
 
-        try {
-            return  httpClient.getRequest(path,
-                    ContentType.CONTENT_TYPE_APPLICATION_JSON,
-                    CxSCAResolvingConfiguration.class,
-                    HttpStatus.SC_OK,
-                    "get CxSCA resolving configuration",
-                    false);
-        }
-        catch (CxClientException exception){
-            log.warn("Failed getting CxSCA resolving configuration from remote", exception);
-            return null;
-        }
-    }
+        return  httpClient.getRequest(path,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                CxSCAResolvingConfiguration.class,
+                HttpStatus.SC_OK,
+                "get CxSCA resolving configuration",
+                false);
 
-
-    private String getManifestFileIncludePatterns(CxSCAResolvingConfiguration resolvingConfiguration){
-
-        if (resolvingConfiguration == null || resolvingConfiguration.getManifests().isEmpty()){
-            throw new CxClientException("No manifest patterns could be retrieved");
-        }
-        StringJoiner manifestIncludePatternsJoiner = new StringJoiner(",");
-        for (String manifest : resolvingConfiguration.getManifests()) {
-            if (!manifest.isEmpty()) {
-                manifestIncludePatternsJoiner.add(manifest.toLowerCase());
-            }
-        }
-        String includePatterns = manifestIncludePatternsJoiner.toString();
-
-        //protect against bad cloud response. Do not allow empty pattern
-        if (includePatterns.isEmpty()){
-            throw new CxClientException("No manifest patterns could be retrieved");
-        }
-        return includePatterns;
     }
 }
