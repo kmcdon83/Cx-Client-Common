@@ -104,7 +104,7 @@ public class SCAClient implements DependencyScanner {
     private String scanId;
     private CxSCAResolvingConfiguration resolvingConfiguration;
 
-    SCAClient(CxScanConfig config, Logger log) {
+    public SCAClient(CxScanConfig config, Logger log) {
         this.log = log;
         this.config = config;
         this.scaConfig = getScaConfig();
@@ -255,7 +255,9 @@ public class SCAClient implements DependencyScanner {
         optionallyWriteFingerprintsToFile(fingerprints);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
+        log.info(String.format("Uploading to: %s", uploadedArchiveUrl));
         uploadArchive(zipFile, uploadedArchiveUrl);
+
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
@@ -618,7 +620,7 @@ public class SCAClient implements DependencyScanner {
                 log);
     }
 
-    private CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException{
+    public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException{
         log.info(String.format("Getting CxSCA Resolving configuration for project: %s", projectId));
         String path = String.format(UrlPaths.RESOLVING_CONFIGURATION_API, URLEncoder.encode(projectId, ENCODING));
 
@@ -630,4 +632,9 @@ public class SCAClient implements DependencyScanner {
                 false);
 
     }
+
+    public String getProjectId(){
+        return projectId;
+    }
+
 }

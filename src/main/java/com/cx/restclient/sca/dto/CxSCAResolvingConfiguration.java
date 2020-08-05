@@ -15,10 +15,10 @@ public class CxSCAResolvingConfiguration implements Serializable {
     List<String> Fingerprints = new ArrayList<>();
 
     public String getManifestsIncludePattern(){
-        return StringUtils.joinWith(",", Manifests);
+        return String.join(",", Manifests);
     }
 
     public String getFingerprintsIncludePattern(){
-        return StringUtils.joinWith(",", Fingerprints);
+        return String.join(",", Fingerprints);
     }
 }

@@ -1,14 +1,12 @@
 package com.cx.restclient.general;
 
 import com.cx.restclient.CxShragaClient;
+import com.cx.restclient.SCAClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
 import com.cx.restclient.exception.CxClientException;
-import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
-import com.cx.restclient.sca.dto.SCAConfig;
-import com.cx.restclient.sca.dto.SCAResults;
-import com.cx.restclient.sca.dto.SourceLocationType;
+import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
@@ -72,6 +70,18 @@ public class ScaScanTests extends CommonClientTest {
     @Test
     public void scan_onPremiseAuthentication() throws MalformedURLException {
         scanRemoteRepo(PUBLIC_REPO_PROP, true);
+    }
+
+    @Test
+    public void scan_getResolvingConfiguration() throws IOException {
+        CxScanConfig config = initScaConfig(false, false);
+        SCAClient client = new SCAClient(config, log);
+        client.init();
+        CxSCAResolvingConfiguration resolvingConfiguration = client.getCxSCAResolvingConfigurationForProject(client.getProjectId());
+        assertNotNull(resolvingConfiguration);
+        assertNotNull(resolvingConfiguration.getManifests());
+        assertNotNull(resolvingConfiguration.getManifestsIncludePattern());
+        assertNotNull(resolvingConfiguration.getFingerprintsIncludePattern());
     }
 
     @Test
