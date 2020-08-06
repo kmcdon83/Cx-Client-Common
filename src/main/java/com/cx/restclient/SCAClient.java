@@ -234,16 +234,13 @@ public class SCAClient implements DependencyScanner {
     private HttpResponse submitManifestsAndFingerprintsFromLocalDir() throws IOException {
         log.info("Using manifest only and fingerprint flow");
 
-        String combinedFilter =
-                Stream.of(config.getOsaFilterPattern(), resolvingConfiguration.getManifestsIncludePattern())
-                        .filter(StringUtils::isNotEmpty)
-                        .collect(Collectors.joining(","));
+        String combinedZipFilter = combinePatterWithConfiguredFilter(resolvingConfiguration.getManifestsIncludePattern());
+        String combinedFingerprintFilter = combinePatterWithConfiguredFilter(resolvingConfiguration.getFingerprintsIncludePattern());
+        PathFilter zipFilter = new PathFilter(config.getOsaFolderExclusions(), combinedZipFilter, log);
+        PathFilter fingerprintFilter = new PathFilter(config.getOsaFolderExclusions(), combinedFingerprintFilter, log);
 
-        PathFilter zipFilter = new PathFilter(config.getOsaFolderExclusions(), combinedFilter, log);
-        PathFilter fingerprintFilter = new PathFilter(config.getOsaFolderExclusions(), resolvingConfiguration.getFingerprintsIncludePattern(), log);
-
-        log.info(String.format("Zip include filter: %s", combinedFilter));
-        log.info(String.format("Fingerprint include filter: %s", resolvingConfiguration.getFingerprintsIncludePattern() ));
+        log.info(String.format("Zip include filter: %s", combinedZipFilter));
+        log.info(String.format("Fingerprint include filter: %s", combinedFingerprintFilter ));
         log.info(String.format("Exclude Filter: %s", config.getOsaFolderExclusions()));
 
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
@@ -255,12 +252,18 @@ public class SCAClient implements DependencyScanner {
         optionallyWriteFingerprintsToFile(fingerprints);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
-        log.info(String.format("Uploading to: %s", uploadedArchiveUrl));
+        log.info(String.format("Uploading to: %s", uploadedArchiveUrl.split("\\?")[0]));
         uploadArchive(zipFile, uploadedArchiveUrl);
 
         CxZipUtils.deleteZippedSources(zipFile, config, log);
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
+    }
+
+    private String combinePatterWithConfiguredFilter(String pattern) {
+        return Stream.of(config.getOsaFilterPattern(), pattern)
+                .filter(StringUtils::isNotEmpty)
+                .collect(Collectors.joining(","));
     }
 
     private File zipDirectoryAndFingerprints(String sourceDir, PathFilter filter, CxSCAScanFingerprints fingerprints) throws IOException {
