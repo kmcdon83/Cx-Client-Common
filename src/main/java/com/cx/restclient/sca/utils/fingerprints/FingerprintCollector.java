@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
+import java.util.List;
 
 
 public class FingerprintCollector {
@@ -28,16 +28,14 @@ public class FingerprintCollector {
     }
 
     public CxSCAScanFingerprints collectFingerprints(String baseDir,
-                                                     PathFilter filter) {
+                                                     List<String> files) {
         log.info(String.format("Started fingerprint collection on %s", baseDir));
 
         CxSCAScanFingerprints scanFingerprints = new CxSCAScanFingerprints();
-        DirectoryScanner ds = createDirectoryScanner(new File(baseDir), filter.getIncludes(), filter.getExcludes());
-        ds.setFollowSymlinks(true);
-        ds.scan();
 
 
-        for (String filePath : ds.getIncludedFiles()) {
+        for (String filePath : files) {
+
             Path fullFilePath = Paths.get(baseDir, filePath);
             try  {
                 log.debug(String.format("Calculating signatures for file %s", fullFilePath));
@@ -54,24 +52,6 @@ public class FingerprintCollector {
         log.info(String.format("Calculated fingerprints for %d files", scanFingerprints.getFingerprints().size()));
         scanFingerprints.setTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         return scanFingerprints;
-    }
-
-    private static DirectoryScanner createDirectoryScanner(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns) {
-        DirectoryScanner ds = new DirectoryScanner();
-        ds.setBasedir(baseDir);
-        ds.setCaseSensitive(false);
-        ds.setFollowSymlinks(false);
-        ds.setErrorOnMissingDir(false);
-
-        if (filterIncludePatterns != null && filterIncludePatterns.length > 0) {
-            ds.setIncludes(filterIncludePatterns);
-        }
-
-        if (filterExcludePatterns != null && filterExcludePatterns.length > 0) {
-            ds.setExcludes(filterExcludePatterns);
-        }
-
-        return ds;
     }
 
     public void writeScanFingerprintsFile(CxSCAScanFingerprints scanFingerprints, String path) throws IOException {

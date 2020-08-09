@@ -19,6 +19,7 @@ import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.restclient.sca.utils.FileSystemUtils;
 import com.cx.restclient.sca.utils.fingerprints.FingerprintCollector;
 import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -226,7 +227,11 @@ public class SCAClient implements DependencyScanner {
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
         uploadArchive(zipFile, uploadedArchiveUrl);
-        CxZipUtils.deleteZippedSources(zipFile, config, log);
+
+        //delete only if path not specified in the config
+        if (StringUtils.isEmpty(scaConfig.getZipFilePath())) {
+            CxZipUtils.deleteZippedSources(zipFile, config, log);
+        }
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
@@ -234,20 +239,27 @@ public class SCAClient implements DependencyScanner {
     private HttpResponse submitManifestsAndFingerprintsFromLocalDir() throws IOException {
         log.info("Using manifest only and fingerprint flow");
 
-        String combinedZipFilter = combinePatterWithConfiguredFilter(resolvingConfiguration.getManifestsIncludePattern());
-        String combinedFingerprintFilter = combinePatterWithConfiguredFilter(resolvingConfiguration.getFingerprintsIncludePattern());
-        PathFilter zipFilter = new PathFilter(config.getOsaFolderExclusions(), combinedZipFilter, log);
-        PathFilter fingerprintFilter = new PathFilter(config.getOsaFolderExclusions(), combinedFingerprintFilter, log);
-
-        log.info(String.format("Zip include filter: %s", combinedZipFilter));
-        log.info(String.format("Fingerprint include filter: %s", combinedFingerprintFilter ));
-        log.info(String.format("Exclude Filter: %s", config.getOsaFolderExclusions()));
-
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
 
-        CxSCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, fingerprintFilter);
+        PathFilter userFilter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
+        Set<String> scannedFileSet = new HashSet<String>(Arrays.asList(FileSystemUtils.scanAndGetIncludedFiles(sourceDir, userFilter)));
 
-        File zipFile = zipDirectoryAndFingerprints(sourceDir, zipFilter, fingerprints);
+        List<String> filesToZip =
+            Arrays.stream(FileSystemUtils.scanAndGetIncludedFiles(sourceDir,
+                new PathFilter(null, getManifestsIncludePattern(), log)))
+                .filter(scannedFileSet::contains).
+                collect(Collectors.toList());
+
+        List<String> filesToFingerprint =
+                Arrays.stream(FileSystemUtils.scanAndGetIncludedFiles(sourceDir,
+                        new PathFilter(null, getFingerprintsIncludePattern(), log)))
+                        .filter(scannedFileSet::contains).
+                        collect(Collectors.toList());
+
+
+        CxSCAScanFingerprints fingerprints = fingerprintCollector.collectFingerprints(sourceDir, filesToFingerprint);
+
+        File zipFile = zipDirectoryAndFingerprints(sourceDir, filesToZip, fingerprints);
 
         optionallyWriteFingerprintsToFile(fingerprints);
 
@@ -260,24 +272,41 @@ public class SCAClient implements DependencyScanner {
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
+    private String getFingerprintsIncludePattern() {
+        if (StringUtils.isNotEmpty(scaConfig.getFingerprintsIncludePattern())){
+            return scaConfig.getFingerprintsIncludePattern();
+        }
+
+        return resolvingConfiguration.getFingerprintsIncludePattern();
+    }
+
+    private String getManifestsIncludePattern() {
+        if (StringUtils.isNotEmpty(scaConfig.getManifestsIncludePattern())){
+            return scaConfig.getManifestsIncludePattern();
+        }
+
+        return resolvingConfiguration.getManifestsIncludePattern();
+    }
+
     private String combinePatterWithConfiguredFilter(String pattern) {
         return Stream.of(config.getOsaFilterPattern(), pattern)
                 .filter(StringUtils::isNotEmpty)
                 .collect(Collectors.joining(","));
     }
 
-    private File zipDirectoryAndFingerprints(String sourceDir, PathFilter filter, CxSCAScanFingerprints fingerprints) throws IOException {
+    private File zipDirectoryAndFingerprints(String sourceDir, List<String> paths, CxSCAScanFingerprints fingerprints) throws IOException {
         File result = config.getZipFile();
         if (result != null){
             return result;
         }
-        File tempFile = File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin");
+        File tempFile = getZipFile();
+        log.info(String.format("Collecting files to zip archive: %s", tempFile.getAbsolutePath()));
         long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
 
         NewCxZipFile zipper = null;
         try {
             zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
-            zipper.zipFolder(new File(sourceDir), filter);
+            zipper.addMultipleFilesToArchive(new File(sourceDir), paths);
             if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0){
                 tempFile.delete();
                 throw new CxClientException("No files found to zip and no supported fingerprints found");
@@ -305,6 +334,13 @@ public class SCAClient implements DependencyScanner {
             }
         }
 
+    }
+
+    private File getZipFile() throws IOException {
+        if (StringUtils.isNotEmpty(scaConfig.getZipFilePath())){
+            return new File(scaConfig.getZipFilePath());
+        }
+        return File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin");
     }
 
     private void optionallyWriteFingerprintsToFile(CxSCAScanFingerprints fingerprints) {

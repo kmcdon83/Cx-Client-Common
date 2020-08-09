@@ -9,6 +9,7 @@ import org.apache.tools.zip.ZipOutputStream;
 import org.slf4j.Logger;
 
 import java.io.*;
+import java.util.List;
 
 
 public class NewCxZipFile {
@@ -37,19 +38,9 @@ public class NewCxZipFile {
         this.zipFile = zipFile;
         outputStream = new FileOutputStream(zipFile);
         zipOutputStream = new ZipOutputStream(outputStream);
-
+        zipOutputStream.setEncoding("UTF8");
     }
 
-    public void zipFolder(File baseDir, PathFilter pathFilter) throws IOException {
-        assert baseDir != null : "baseDir must not be null";
-
-        assert outputStream != null : "outputStream must not be null";
-
-        DirectoryScanner ds = this.createDirectoryScanner(baseDir, pathFilter.getIncludes(), pathFilter.getExcludes());
-        ds.setFollowSymlinks(true);
-        ds.scan();
-         this.addMultipleFilesToArchive(baseDir, ds.getIncludedFiles());
-    }
 
 
     public void zipContentAsFile(String pathInZip, byte[] content) throws IOException {
@@ -80,14 +71,14 @@ public class NewCxZipFile {
     }
 
 
-    private void addMultipleFilesToArchive(File baseDir, String[] files) throws IOException {
-        zipOutputStream.setEncoding("UTF8");
+    public void addMultipleFilesToArchive(File baseDir, List<String> relativePaths) throws IOException {
+        assert baseDir != null : "baseDir must not be null";
+        assert outputStream != null : "outputStream must not be null";
 
-        String[] arr$ = files;
-        int len$ = files.length;
+        int len$ = relativePaths.size();
 
         for (int i$ = 0; i$ < len$; ++i$) {
-            String fileName = arr$[i$];
+            String fileName = relativePaths.get(i$);
 
             File file = new File(baseDir, fileName);
             if (!file.canRead()) {

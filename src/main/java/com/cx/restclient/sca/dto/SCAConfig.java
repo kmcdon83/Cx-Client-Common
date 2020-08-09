@@ -17,6 +17,8 @@ public class SCAConfig implements Serializable {
     private RemoteRepositoryInfo remoteRepositoryInfo;
     private SourceLocationType sourceLocationType;
     private boolean includeSources;
-    private String FingerprintIncludePattern;
+    private String FingerprintsIncludePattern;
+    private String ManifestsIncludePattern;
     private String FingerprintFilePath;
+    private String zipFilePath;
 }
