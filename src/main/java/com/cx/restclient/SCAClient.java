@@ -19,7 +19,7 @@ import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
-import com.cx.restclient.sca.utils.FileSystemUtils;
+import com.cx.restclient.sca.utils.CxSCAFileSystemUtils;
 import com.cx.restclient.sca.utils.fingerprints.FingerprintCollector;
 import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -242,16 +242,16 @@ public class SCAClient implements DependencyScanner {
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
 
         PathFilter userFilter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
-        Set<String> scannedFileSet = new HashSet<String>(Arrays.asList(FileSystemUtils.scanAndGetIncludedFiles(sourceDir, userFilter)));
+        Set<String> scannedFileSet = new HashSet<String>(Arrays.asList(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir, userFilter)));
 
         List<String> filesToZip =
-            Arrays.stream(FileSystemUtils.scanAndGetIncludedFiles(sourceDir,
+            Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,
                 new PathFilter(null, getManifestsIncludePattern(), log)))
                 .filter(scannedFileSet::contains).
                 collect(Collectors.toList());
 
         List<String> filesToFingerprint =
-                Arrays.stream(FileSystemUtils.scanAndGetIncludedFiles(sourceDir,
+                Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,
                         new PathFilter(null, getFingerprintsIncludePattern(), log)))
                         .filter(scannedFileSet::contains).
                         collect(Collectors.toList());
@@ -267,7 +267,10 @@ public class SCAClient implements DependencyScanner {
         log.info(String.format("Uploading to: %s", uploadedArchiveUrl.split("\\?")[0]));
         uploadArchive(zipFile, uploadedArchiveUrl);
 
-        CxZipUtils.deleteZippedSources(zipFile, config, log);
+        //delete only if path not specified in the config
+        if (StringUtils.isEmpty(scaConfig.getZipFilePath())) {
+            CxZipUtils.deleteZippedSources(zipFile, config, log);
+        }
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }

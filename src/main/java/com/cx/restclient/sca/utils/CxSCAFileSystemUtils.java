@@ -5,7 +5,7 @@ import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.File;
 
-public class FileSystemUtils {
+public class CxSCAFileSystemUtils {
 
     public static String[] scanAndGetIncludedFiles(String baseDir, PathFilter filter) {
         DirectoryScanner ds = createDirectoryScanner(new File(baseDir), filter.getIncludes(), filter.getExcludes());

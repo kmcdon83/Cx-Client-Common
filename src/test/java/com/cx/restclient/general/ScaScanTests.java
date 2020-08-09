@@ -5,34 +5,35 @@ import com.cx.restclient.SCAClient;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.DependencyScanResults;
 import com.cx.restclient.dto.DependencyScannerType;
+import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sca.dto.*;
 import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
+import com.cx.restclient.sca.utils.CxSCAFileSystemUtils;
 import com.cx.utility.TestingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.utils.ArchiveUtils;
+import org.apache.commons.io.FileSystemUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+
 
 import static org.junit.Assert.*;
 
@@ -48,13 +49,15 @@ public class ScaScanTests extends CommonClientTest {
     @Test
     public void scan_localDirUploadIncludeSources() throws IOException, CxClientException {
         CxScanConfig config = initScaConfig(false, true);
-        localDirScan(config);
+        DependencyScanResults scanResults = localDirScan(config);
+        verifyScanResults(scanResults);
     }
 
     @Test
     public void scan_localDirManifestAndFingerprintsOnly() throws IOException, CxClientException {
         CxScanConfig config = initScaConfig(false, false);
-        localDirScan(config);
+        DependencyScanResults scanResults = localDirScan(config);
+        verifyScanResults(scanResults);
     }
 
     @Test
@@ -85,6 +88,43 @@ public class ScaScanTests extends CommonClientTest {
     }
 
     @Test
+    public void scan_manifestOnlyNoSourceInZip() throws IOException {
+        CxScanConfig config = initScaConfig(false, false);
+        String systemTempDir = FileUtils.getTempDirectoryPath();
+        Path zipPath = Paths.get(systemTempDir, "cxsca-common-test.zip");
+        if (Files.exists(zipPath)){
+            Files.delete(zipPath);
+        }
+        Path tempDirectory = null;
+        try {
+            config.getScaConfig().setZipFilePath(zipPath.toString());
+            localDirScan(config);
+
+            assertTrue(Files.exists(zipPath));
+
+            tempDirectory = createTempDirectory();
+            HashSet<String> filesMap = extractAndGetFiles(zipPath, tempDirectory);
+            assertEquals(2, filesMap.size());
+            assertTrue(filesMap.contains("SastAndOsaSource\\pom.xml"));
+            assertTrue(filesMap.contains(".cxsca.sig"));
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+        finally {
+            deleteDir(tempDirectory);
+            deleteFile(zipPath);
+        }
+    }
+
+    private HashSet<String> extractAndGetFiles(Path zipPath, Path tempDirectory) throws IOException {
+        InputStream fis = new BufferedInputStream(new FileInputStream(new File(zipPath.toString())));
+        extractStreamAsZip(fis, tempDirectory);
+        fis.close();
+
+        return new HashSet<>(Arrays.asList(CxSCAFileSystemUtils.scanAndGetIncludedFiles(tempDirectory.toString(), new PathFilter(null, "**/*", log))));
+    }
+
+    @Test
     @Ignore("Needs specific network configuration with a proxy.")
     public void runScaScanWithProxy() throws MalformedURLException, CxClientException {
         CxScanConfig config = initScaConfig(false, true);
@@ -93,7 +133,7 @@ public class ScaScanTests extends CommonClientTest {
         verifyScanResults(scanResults);
     }
 
-    private void localDirScan(CxScanConfig config) throws MalformedURLException {
+    private DependencyScanResults localDirScan(CxScanConfig config) throws MalformedURLException {
         config.setOsaThresholdsEnabled(true);
         config.getScaConfig().setSourceLocationType(SourceLocationType.LOCAL_DIRECTORY);
 
@@ -102,8 +142,8 @@ public class ScaScanTests extends CommonClientTest {
             sourcesDir = extractTestProjectFromResources();
             config.setSourceDir(sourcesDir.toString());
 
-            DependencyScanResults scanResults = scanUsing(config);
-            verifyScanResults(scanResults);
+            return scanUsing(config);
+
         } finally {
             deleteDir(sourcesDir);
         }
@@ -126,11 +166,11 @@ public class ScaScanTests extends CommonClientTest {
     private Path extractTestProjectFromResources() {
         InputStream testProjectStream = getTestProjectStream();
         Path tempDirectory = createTempDirectory();
-        extractResourceToDir(testProjectStream, tempDirectory);
+        extractStreamAsZip(testProjectStream, tempDirectory);
         return tempDirectory;
     }
 
-    private void extractResourceToDir(InputStream source, Path targetDir) {
+    private void extractStreamAsZip(InputStream source, Path targetDir) {
         log.info("Unpacking sources into the temp dir.");
         int fileCount = 0;
         try (ArchiveInputStream inputStream = new ArchiveStreamFactory().createArchiveInputStream(source)) {
@@ -191,6 +231,19 @@ public class ScaScanTests extends CommonClientTest {
             FileUtils.deleteDirectory(directory.toFile());
         } catch (IOException e) {
             log.warn("Failed to delete temp dir.", e);
+        }
+    }
+
+    private static void deleteFile(Path file) {
+        if (file == null) {
+            return;
+        }
+
+        log.info("Deleting '{}'", file);
+        try {
+            Files.delete(file);
+        } catch (IOException e) {
+            log.warn("Failed to delete temp file.", e);
         }
     }
 
