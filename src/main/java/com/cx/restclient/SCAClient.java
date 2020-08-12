@@ -244,9 +244,13 @@ public class SCAClient implements DependencyScanner {
         PathFilter userFilter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         Set<String> scannedFileSet = new HashSet<String>(Arrays.asList(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir, userFilter)));
 
+        PathFilter manifestIncludeFilter = new PathFilter(null, getManifestsIncludePattern(), log);
+        if (manifestIncludeFilter.getIncludes().length == 0){
+            throw new CxClientException(String.format("Using manifest only mode requires include filter. Resolving config does not have include patterns defined: %s", getManifestsIncludePattern()));
+        }
+
         List<String> filesToZip =
-            Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,
-                new PathFilter(null, getManifestsIncludePattern(), log)))
+            Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,manifestIncludeFilter))
                 .filter(scannedFileSet::contains).
                 collect(Collectors.toList());
 
