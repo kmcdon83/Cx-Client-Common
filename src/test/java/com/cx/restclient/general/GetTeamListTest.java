@@ -11,7 +11,7 @@ import org.junit.Test;
 import java.util.List;
 
 @Slf4j
-public class GetTeamListTests extends CommonClientTest {
+public class GetTeamListTest extends CommonClientTest {
     @Test
     public void getTeamListTest() {
         CxScanConfig config = initConfig();

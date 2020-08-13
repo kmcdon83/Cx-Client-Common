@@ -10,7 +10,7 @@ import org.junit.Test;
 
 
 @Slf4j
-public class ClientTypeResolverTests extends CommonClientTest {
+public class ClientTypeResolverTest extends CommonClientTest {
     @Test
     public void determineClientType_cloudAccessControl() {
         testDetermineClientType("astSca.cloud.accessControlUrl");

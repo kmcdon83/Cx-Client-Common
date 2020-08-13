@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 
 @Slf4j
-public class ConnectionTests extends CommonClientTest {
+public class ConnectionTest extends CommonClientTest {
 
     @Test
     public void ssoConnectionTest() {
