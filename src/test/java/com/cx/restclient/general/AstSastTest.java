@@ -20,7 +20,7 @@ import java.net.URL;
 import java.util.List;
 
 @Slf4j
-public class AstSastTests extends CommonClientTest {
+public class AstSastTest extends CommonClientTest {
     @Test
     public void scan_remotePublicRepo() throws MalformedURLException {
         CxScanConfig config = getScanConfig();
