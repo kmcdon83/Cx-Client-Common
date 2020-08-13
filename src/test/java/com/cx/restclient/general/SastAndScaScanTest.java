@@ -12,14 +12,14 @@ import java.net.MalformedURLException;
 public class SastAndScaScanTest extends ScaTestsBase {
     //TODO : fix this test
     @Test
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     public void scan_remotePublicRepo() throws MalformedURLException {
         scanRemoteRepo(PUBLIC_REPO_PROP, false);
     }
 
     //TODO : fix this test
     @Test
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     public void scan_remotePrivateRepo() throws MalformedURLException {
         scanRemoteRepo(PRIVATE_REPO_PROP, false);
     }

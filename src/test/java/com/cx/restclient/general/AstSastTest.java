@@ -24,7 +24,7 @@ import java.util.List;
 public class AstSastTest extends CommonClientTest {
     //TODO : Fix this test
     @Test
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     public void scan_remotePublicRepo() throws MalformedURLException {
         CxScanConfig config = getScanConfig();
 

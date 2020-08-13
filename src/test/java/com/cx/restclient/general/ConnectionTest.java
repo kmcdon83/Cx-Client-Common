@@ -19,7 +19,7 @@ public class ConnectionTest extends CommonClientTest {
 
     //TODO : fix this test
     @Test
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     public void ssoConnectionTest() {
         CxScanConfig config = initConfig();
         try {
@@ -32,7 +32,7 @@ public class ConnectionTest extends CommonClientTest {
         }
     }
 //TODO : Fix this test
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     @Test
     public void scaConnectionTest() {
         CxScanConfig config = new CxScanConfig();

@@ -19,7 +19,7 @@ public class ClientTypeResolverTest extends CommonClientTest {
 
     //TODO : fix this test
     @Test
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     public void determineClientType_onPremAccessControl() {
         testDetermineClientType("astSca.onPremise.accessControlUrl");
     }

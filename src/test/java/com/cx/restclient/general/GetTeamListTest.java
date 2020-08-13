@@ -15,7 +15,7 @@ import java.util.List;
 public class GetTeamListTest extends CommonClientTest {
 
     //TODO : Fix this tes
-    @Ignore
+    @Ignore("this test fails and needs to be fixed")
     @Test
     public void getTeamListTest() {
         CxScanConfig config = initConfig();
