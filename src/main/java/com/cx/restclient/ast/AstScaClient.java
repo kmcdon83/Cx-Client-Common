@@ -282,7 +282,7 @@ public class AstScaClient extends AstClient implements Scanner {
             zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
             zipper.addMultipleFilesToArchive(new File(sourceDir), paths);
             if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0) {
-                handleFileDeletion(tempFile,"No files found to zip and no supported fingerprints found");
+                throw handleFileDeletion(tempFile,"No files found to zip and no supported fingerprints found");
             }
             if (fingerprints.getFingerprints().size() > 0) {
                 zipper.zipContentAsFile(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
@@ -291,30 +291,29 @@ public class AstScaClient extends AstClient implements Scanner {
             }
 
             log.debug("The sources were zipped to " + tempFile.getAbsolutePath());
-
+            return tempFile;
         } catch (Zipper.MaxZipSizeReached e) {
-            handleFileDeletion(tempFile, new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes)));
+            throw handleFileDeletion(tempFile, new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes)));
         } catch (IOException ioException) {
-            handleFileDeletion(tempFile,ioException);
+            throw handleFileDeletion(tempFile,ioException);
         } finally {
             if (zipper != null) {
                 zipper.close();
             }
-            return tempFile;
         }
 
     }
 
-    private void handleFileDeletion(File file, IOException ioException){
+    private CxClientException handleFileDeletion(File file, IOException ioException){
         if(file.delete())
-            throw new CxClientException(ioException);
-        throw new CxClientException("failed to remove temporary file.");
+            return new CxClientException(ioException);
+        return new CxClientException("failed to remove temporary file.");
     }
 
-    private void handleFileDeletion(File file, String message){
+    private CxClientException handleFileDeletion(File file, String message){
         if(file.delete())
-            throw new CxClientException(message);
-        throw new CxClientException("failed to remove temporary file:"+file.getAbsolutePath());
+            return new CxClientException(message);
+        return new CxClientException("failed to remove temporary file:"+file.getAbsolutePath());
     }
 
     private String getFingerprintsIncludePattern() {
