@@ -13,12 +13,7 @@ import com.cx.restclient.ast.dto.sca.report.Package;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.LoginSettings;
-import com.cx.restclient.dto.PathFilter;
-import com.cx.restclient.dto.Results;
-import com.cx.restclient.dto.ScanResults;
-import com.cx.restclient.dto.ScannerType;
-import com.cx.restclient.dto.SourceLocationType;
+import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
@@ -163,7 +158,7 @@ public class AstScaClient extends AstClient implements Scanner {
         try {
             login();
             resolveProject();
-            if (isManifestAndFingerprintsOnly){
+            if (isManifestAndFingerprintsOnly) {
                 this.resolvingConfiguration = getCxSCAResolvingConfigurationForProject(this.projectId);
                 log.info(String.format("Got the following manifest patterns %s", this.resolvingConfiguration.getManifests()));
                 log.info(String.format("Got the following fingerprint patterns %s", this.resolvingConfiguration.getFingerprints()));
@@ -173,11 +168,11 @@ public class AstScaClient extends AstClient implements Scanner {
         }
     }
 
-    public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException{
+    public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException {
         log.info(String.format("Getting CxSCA Resolving configuration for project: %s", projectId));
         String path = String.format(UrlPaths.RESOLVING_CONFIGURATION_API, URLEncoder.encode(projectId, ENCODING));
 
-        return  httpClient.getRequest(path,
+        return httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 CxSCAResolvingConfiguration.class,
                 HttpStatus.SC_OK,
@@ -212,7 +207,7 @@ public class AstScaClient extends AstClient implements Scanner {
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
                 response = submitSourcesFromRemoteRepo(scaConfig, projectId);
             } else {
-                if (scaConfig.isIncludeSources()){
+                if (scaConfig.isIncludeSources()) {
                     response = submitAllSourcesFromLocalDir();
                 } else {
                     response = submitManifestsAndFingerprintsFromLocalDir();
@@ -235,12 +230,12 @@ public class AstScaClient extends AstClient implements Scanner {
         Set<String> scannedFileSet = new HashSet<String>(Arrays.asList(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir, userFilter)));
 
         PathFilter manifestIncludeFilter = new PathFilter(null, getManifestsIncludePattern(), log);
-        if (manifestIncludeFilter.getIncludes().length == 0){
+        if (manifestIncludeFilter.getIncludes().length == 0) {
             throw new CxClientException(String.format("Using manifest only mode requires include filter. Resolving config does not have include patterns defined: %s", getManifestsIncludePattern()));
         }
 
         List<String> filesToZip =
-                Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,manifestIncludeFilter))
+                Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir, manifestIncludeFilter))
                         .filter(scannedFileSet::contains).
                         collect(Collectors.toList());
 
@@ -269,13 +264,13 @@ public class AstScaClient extends AstClient implements Scanner {
         RemoteRepositoryInfo uploadedFileInfo = new RemoteRepositoryInfo();
         uploadedFileInfo.setUrl(new URL(uploadedArchiveUrl));
 
-        return sendStartScanRequest(uploadedFileInfo,SourceLocationType.LOCAL_DIRECTORY, projectId);
+        return sendStartScanRequest(uploadedFileInfo, SourceLocationType.LOCAL_DIRECTORY, projectId);
     }
 
 
     private File zipDirectoryAndFingerprints(String sourceDir, List<String> paths, CxSCAScanFingerprints fingerprints) throws IOException {
         File result = config.getZipFile();
-        if (result != null){
+        if (result != null) {
             return result;
         }
         File tempFile = getZipFile();
@@ -286,37 +281,44 @@ public class AstScaClient extends AstClient implements Scanner {
         try {
             zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
             zipper.addMultipleFilesToArchive(new File(sourceDir), paths);
-            if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0){
-                tempFile.delete();
-                throw new CxClientException("No files found to zip and no supported fingerprints found");
+            if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0) {
+                handleFileDeletion(tempFile,"No files found to zip and no supported fingerprints found");
             }
-            if (fingerprints.getFingerprints().size() > 0){
+            if (fingerprints.getFingerprints().size() > 0) {
                 zipper.zipContentAsFile(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
-            } else{
+            } else {
                 log.info("No supported fingerprints found to zip");
             }
 
             log.debug("The sources were zipped to " + tempFile.getAbsolutePath());
-            return tempFile;
-        }
-        catch (Zipper.MaxZipSizeReached e) {
-            tempFile.delete();
-            throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes));
-        }
-        catch (IOException ioException) {
-            tempFile.delete();
-            throw new CxClientException("Error creating zip file", ioException);
-        }
-        finally {
+
+        } catch (Zipper.MaxZipSizeReached e) {
+            handleFileDeletion(tempFile, new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes)));
+        } catch (IOException ioException) {
+            handleFileDeletion(tempFile,ioException);
+        } finally {
             if (zipper != null) {
                 zipper.close();
             }
+            return tempFile;
         }
 
     }
 
+    private void handleFileDeletion(File file, IOException ioException){
+        if(file.delete())
+            throw new CxClientException(ioException);
+        throw new CxClientException("failed to remove temporary file.");
+    }
+
+    private void handleFileDeletion(File file, String message){
+        if(file.delete())
+            throw new CxClientException(message);
+        throw new CxClientException("failed to remove temporary file:"+file.getAbsolutePath());
+    }
+
     private String getFingerprintsIncludePattern() {
-        if (StringUtils.isNotEmpty(astScaConfig.getFingerprintsIncludePattern())){
+        if (StringUtils.isNotEmpty(astScaConfig.getFingerprintsIncludePattern())) {
             return astScaConfig.getFingerprintsIncludePattern();
         }
 
@@ -324,7 +326,7 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     private String getManifestsIncludePattern() {
-        if (StringUtils.isNotEmpty(astScaConfig.getFingerprintsIncludePattern())){
+        if (StringUtils.isNotEmpty(astScaConfig.getFingerprintsIncludePattern())) {
             return astScaConfig.getFingerprintsIncludePattern();
         }
 
@@ -332,7 +334,7 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     private File getZipFile() throws IOException {
-        if (StringUtils.isNotEmpty(astScaConfig.getZipFilePath())){
+        if (StringUtils.isNotEmpty(astScaConfig.getZipFilePath())) {
             return new File(astScaConfig.getZipFilePath());
         }
         return File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin");
@@ -366,7 +368,7 @@ public class AstScaClient extends AstClient implements Scanner {
         RemoteRepositoryInfo uploadedFileInfo = new RemoteRepositoryInfo();
         uploadedFileInfo.setUrl(new URL(uploadedArchiveUrl));
 
-        return sendStartScanRequest(uploadedFileInfo,SourceLocationType.LOCAL_DIRECTORY, projectId);
+        return sendStartScanRequest(uploadedFileInfo, SourceLocationType.LOCAL_DIRECTORY, projectId);
     }
 
 

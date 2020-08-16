@@ -10,8 +10,8 @@ import java.util.List;
 @Getter
 @Setter
 public class CxSCAResolvingConfiguration implements Serializable {
-    List<String> Manifests = new ArrayList<>();
-    List<String> Fingerprints = new ArrayList<>();
+    private List<String> Manifests = new ArrayList<>();
+    private List<String> Fingerprints = new ArrayList<>();
 
     public String getManifestsIncludePattern(){
         return String.join(",", Manifests);
