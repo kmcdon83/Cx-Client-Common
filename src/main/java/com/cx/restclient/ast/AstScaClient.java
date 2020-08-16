@@ -47,6 +47,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -136,9 +137,8 @@ public class AstScaClient extends AstClient implements Scanner {
 
         try {
             if (StringUtils.isNotEmpty(username) || StringUtils.isNotEmpty(password)) {
-                log.info(String.format(
-                        "Adding credentials as the userinfo part of the URL, because %s only supports this kind of authentication.",
-                        getScannerDisplayName()));
+                log.info("Adding credentials as the userinfo part of the URL, because {} only supports this kind of authentication.",
+                        getScannerDisplayName());
 
                 result = new URIBuilder(initialUrl.toURI())
                         .setUserInfo(username, password)
@@ -160,8 +160,8 @@ public class AstScaClient extends AstClient implements Scanner {
             resolveProject();
             if (isManifestAndFingerprintsOnly) {
                 this.resolvingConfiguration = getCxSCAResolvingConfigurationForProject(this.projectId);
-                log.info(String.format("Got the following manifest patterns %s", this.resolvingConfiguration.getManifests()));
-                log.info(String.format("Got the following fingerprint patterns %s", this.resolvingConfiguration.getFingerprints()));
+                log.info("Got the following manifest patterns {}", this.resolvingConfiguration.getManifests());
+                log.info("Got the following fingerprint patterns {}", this.resolvingConfiguration.getFingerprints());
             }
         } catch (IOException e) {
             throw new CxClientException("Failed to init CxSCA Client.", e);
@@ -169,7 +169,7 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException {
-        log.info(String.format("Getting CxSCA Resolving configuration for project: %s", projectId));
+        log.info("Getting CxSCA Resolving configuration for project: {}", projectId);
         String path = String.format(UrlPaths.RESOLVING_CONFIGURATION_API, URLEncoder.encode(projectId, ENCODING));
 
         return httpClient.getRequest(path,
@@ -196,8 +196,8 @@ public class AstScaClient extends AstClient implements Scanner {
 
     @Override
     public Results initiateScan() {
-        log.info(String.format("----------------------------------- Initiating %s Scan:------------------------------------",
-                getScannerDisplayName()));
+        log.info("----------------------------------- Initiating {} Scan:------------------------------------",
+                getScannerDisplayName());
         AstScaResults scaResults = new AstScaResults();
         scanId = null;
         try {
@@ -253,7 +253,8 @@ public class AstScaClient extends AstClient implements Scanner {
         optionallyWriteFingerprintsToFile(fingerprints);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
-        log.info(String.format("Uploading to: %s", uploadedArchiveUrl.split("\\?")[0]));
+        String cleanPath = uploadedArchiveUrl.split("\\?")[0];
+        log.info("Uploading to: {}",cleanPath);
         uploadArchive(zipFile, uploadedArchiveUrl);
 
         //delete only if path not specified in the config
@@ -274,7 +275,7 @@ public class AstScaClient extends AstClient implements Scanner {
             return result;
         }
         File tempFile = getZipFile();
-        log.info(String.format("Collecting files to zip archive: %s", tempFile.getAbsolutePath()));
+        log.info("Collecting files to zip archive: {}", tempFile.getAbsolutePath());
         long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
 
         NewCxZipFile zipper = null;
@@ -290,7 +291,7 @@ public class AstScaClient extends AstClient implements Scanner {
                 log.info("No supported fingerprints found to zip");
             }
 
-            log.debug("The sources were zipped to " + tempFile.getAbsolutePath());
+            log.debug("The sources were zipped to {}" , tempFile.getAbsolutePath());
             return tempFile;
         } catch (Zipper.MaxZipSizeReached e) {
             throw handleFileDeletion(tempFile, new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes)));
@@ -305,15 +306,24 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     private CxClientException handleFileDeletion(File file, IOException ioException){
-        if(file.delete())
-            return new CxClientException(ioException);
-        return new CxClientException("failed to remove temporary file.");
+        try {
+            Files.delete(file.toPath());
+        } catch (IOException e) {
+            return new CxClientException(e);
+        }
+
+        return new CxClientException(ioException);
+
     }
 
     private CxClientException handleFileDeletion(File file, String message){
-        if(file.delete())
-            return new CxClientException(message);
-        return new CxClientException("failed to remove temporary file:"+file.getAbsolutePath());
+        try {
+            Files.delete(file.toPath());
+        } catch (IOException e) {
+            return new CxClientException(e);
+        }
+
+        return new CxClientException(message);
     }
 
     private String getFingerprintsIncludePattern() {
@@ -325,11 +335,11 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     private String getManifestsIncludePattern() {
-        if (StringUtils.isNotEmpty(astScaConfig.getFingerprintsIncludePattern())) {
-            return astScaConfig.getFingerprintsIncludePattern();
+        if (StringUtils.isNotEmpty(astScaConfig.getManifestsIncludePattern())) {
+            return astScaConfig.getManifestsIncludePattern();
         }
 
-        return resolvingConfiguration.getFingerprintsIncludePattern();
+        return resolvingConfiguration.getManifestsIncludePattern();
     }
 
     private File getZipFile() throws IOException {
@@ -396,7 +406,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
     private void printWebReportLink(AstScaResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
-            log.info(String.format("CxSCA scan results location: %s", scaResult.getWebReportLink()));
+            log.info("CxSCA scan results location: {}", scaResult.getWebReportLink());
         }
     }
 
@@ -456,14 +466,14 @@ public class AstScaClient extends AstClient implements Scanner {
 
     private void resolveProject() throws IOException {
         String projectName = config.getProjectName();
-        log.info(String.format("Getting project by name: '%s'", projectName));
+        log.info("Getting project by name: '{}'", projectName);
         projectId = getProjectIdByName(projectName);
         if (projectId == null) {
             log.info("Project not found, creating a new one.");
             projectId = createProject(projectName);
-            log.info(String.format("Created a project with ID %s", projectId));
+            log.info("Created a project with ID {}", projectId);
         } else {
-            log.info(String.format("Project already exists with ID %s", projectId));
+            log.info("Project already exists with ID {}", projectId);
         }
     }
 
@@ -537,7 +547,7 @@ public class AstScaClient extends AstClient implements Scanner {
         try {
             String webAppUrl = config.getAstScaConfig().getWebAppUrl();
             if (StringUtils.isEmpty(webAppUrl)) {
-                log.warn(String.format("%s Web app URL is not specified.", MESSAGE));
+                log.warn("{} Web app URL is not specified.", MESSAGE);
             } else {
                 String path = String.format(UrlPaths.WEB_REPORT,
                         URLEncoder.encode(projectId, ENCODING),
@@ -554,7 +564,7 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     private String getReportId() throws IOException {
-        log.debug(String.format("Getting report ID by scan ID: %s", scanId));
+        log.debug("Getting report ID by scan ID:{}", scanId);
         String path = String.format(UrlPaths.REPORT_ID,
                 URLEncoder.encode(scanId, ENCODING));
 
@@ -564,7 +574,7 @@ public class AstScaClient extends AstClient implements Scanner {
                 HttpStatus.SC_OK,
                 "Risk report ID",
                 false);
-        log.debug(String.format("Found report ID: %s", reportId));
+        log.debug("Found report ID: {}", reportId);
         return reportId;
     }
 

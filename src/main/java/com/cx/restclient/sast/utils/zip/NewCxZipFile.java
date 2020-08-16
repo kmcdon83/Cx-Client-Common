@@ -22,7 +22,6 @@ public class NewCxZipFile {
     private final ZipOutputStream zipOutputStream;
     private long fileCount;
     private long compressedSize;
-    private final File zipFile;
 
 
     public NewCxZipFile(File zipFile, long maxZipSizeInBytes, Logger log) throws IOException {
@@ -32,14 +31,13 @@ public class NewCxZipFile {
         this.compressedSize = 0;
         this.listener = (fileName, size) -> {
             fileCount++;
-            log.info("Zipping (" + FileUtils.byteCountToDisplaySize(size) + "): " + fileName);
+            if (log.isInfoEnabled())
+                log.info("Zipping ( {} ): {}", FileUtils.byteCountToDisplaySize(size), fileName);
         };
-        this.zipFile = zipFile;
         outputStream = new FileOutputStream(zipFile);
         zipOutputStream = new ZipOutputStream(outputStream);
         zipOutputStream.setEncoding("UTF8");
     }
-
 
 
     public void zipContentAsFile(String pathInZip, byte[] content) throws IOException {
@@ -47,19 +45,17 @@ public class NewCxZipFile {
         validateNextFileWillNotReachMaxCompressedSize((double) content.length);
 
 
-        try(ByteArrayInputStream inputStream = new ByteArrayInputStream(content))
-        {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(content)) {
             compressedSize += InsertZipEntry(zipOutputStream, pathInZip, inputStream);
             if (listener != null) {
                 listener.updateProgress(pathInZip, compressedSize);
             }
-        }
-        catch (IOException ioException){
+        } catch (IOException ioException) {
             log.warn(String.format("Failed to add file to archive: %s", pathInZip), ioException);
         }
     }
 
-    public void close(){
+    public void close() {
         IOUtils.closeQuietly(zipOutputStream);
         IOUtils.closeQuietly(outputStream);
     }
@@ -76,20 +72,18 @@ public class NewCxZipFile {
 
             File file = new File(baseDir, fileName);
             if (!file.canRead()) {
-                log.warn("Skipping unreadable file: " + file);
+                log.warn("Skipping unreadable file: {}", file);
                 continue;
             }
             validateNextFileWillNotReachMaxCompressedSize((double) file.length());
 
-            try(FileInputStream fileInputStream = new FileInputStream(file);)
-            {
+            try (FileInputStream fileInputStream = new FileInputStream(file);) {
 
                 compressedSize += InsertZipEntry(zipOutputStream, fileName, fileInputStream);
                 if (listener != null) {
                     listener.updateProgress(fileName, compressedSize);
                 }
-            }
-            catch (IOException ioException){
+            } catch (IOException ioException) {
                 log.warn(String.format("Failed to add file to archive: %s", fileName), ioException);
             }
         }
@@ -99,7 +93,7 @@ public class NewCxZipFile {
 
     private void validateNextFileWillNotReachMaxCompressedSize(double uncompressedSize) throws IOException {
         if (maxSize > 0L && (double) compressedSize + uncompressedSize / AVERAGE_ZIP_COMPRESSION_RATIO > (double) maxSize) {
-            log.info("Maximum zip file size reached. Zip size: " + compressedSize + " bytes Limit: " + maxSize + " bytes");
+            log.info("Maximum zip file size reached. Zip size: {} bytes Limit: {} bytes", compressedSize, maxSize);
             throw new MaxZipSizeReached(compressedSize, maxSize);
         }
     }
