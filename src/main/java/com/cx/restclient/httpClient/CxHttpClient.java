@@ -129,12 +129,8 @@ public class CxHttpClient {
                         .build();
                 cm = new PoolingHttpClientConnectionManager(registry);
                 cm.setMaxTotal(100);
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (KeyStoreException e) {
-                e.printStackTrace();
-            } catch (KeyManagementException e) {
-                e.printStackTrace();
+            } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
+                log.error(e.getMessage());
             }
             cb.setSSLSocketFactory(sslConnectionSocketFactory);
             cb.setConnectionManager(cm);
