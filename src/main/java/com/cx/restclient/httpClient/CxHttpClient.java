@@ -87,7 +87,7 @@ public class CxHttpClient {
     private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
     private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
 
-    private static final String  HTTPS = "https";
+    private static final String HTTPS = "https";
 
     private static final String LOGIN_FAILED_MSG = "Fail to login with windows authentication: ";
 
@@ -228,6 +228,8 @@ public class CxHttpClient {
                 ssoLegacyLogin();
             } else {
                 token = ssoLogin();
+                // Don't delete this print, it is being used on VS Code plugin
+                System.out.println(String.format("Access Token: %s", token.getAccess_token()));
             }
         } else {
             token = generateToken(settings);
@@ -275,6 +277,10 @@ public class CxHttpClient {
         List<Header> headers = new ArrayList<>();
         headers.add(new BasicHeader(CSRF_TOKEN_HEADER, csrfToken));
         headers.add(new BasicHeader("cookie", String.format("CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie)));
+
+        // Don't delete these prints, they are being used on VS Code plugin
+        System.out.println(CSRF_TOKEN_HEADER + ": " + csrfToken);
+        System.out.println(String.format("cookie: CXCSRFToken=%s; cxCookie=%s", csrfToken, cxCookie));
 
         apacheClient = cb.setDefaultHeaders(headers).build();
     }
