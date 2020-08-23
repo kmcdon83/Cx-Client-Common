@@ -87,6 +87,8 @@ public class CxHttpClient {
     private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
     private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
 
+    private static final String  HTTPS = "https";
+
     private static final String LOGIN_FAILED_MSG = "Fail to login with windows authentication: ";
 
     private static HttpClient apacheClient;
@@ -123,7 +125,7 @@ public class CxHttpClient {
                 sslConnectionSocketFactory = new SSLConnectionSocketFactory(builder.build(), NoopHostnameVerifier.INSTANCE);
                 registry = RegistryBuilder.<ConnectionSocketFactory>create()
                         .register("http", new PlainConnectionSocketFactory())
-                        .register("https", sslConnectionSocketFactory)
+                        .register(HTTPS, sslConnectionSocketFactory)
                         .build();
                 cm = new PoolingHttpClientConnectionManager(registry);
                 cm.setMaxTotal(100);
@@ -161,7 +163,7 @@ public class CxHttpClient {
             return;
         }
 
-        String scheme = proxyConfig.isUseHttps() ? "https" : "http";
+        String scheme = proxyConfig.isUseHttps() ? HTTPS : "http";
         HttpHost proxy = new HttpHost(proxyConfig.getHost(), proxyConfig.getPort(), scheme);
         if (StringUtils.isNotEmpty(proxyConfig.getUsername()) &&
                 StringUtils.isNotEmpty(proxyConfig.getPassword())) {
@@ -196,7 +198,7 @@ public class CxHttpClient {
             factory = new SSLConnectionSocketFactory(SSLContexts.createDefault());
         }
         Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-                .register("https", factory)
+                .register(HTTPS, factory)
                 .register("http", new PlainConnectionSocketFactory())
                 .build();
         PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
