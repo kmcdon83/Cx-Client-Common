@@ -6,6 +6,7 @@ import com.cx.restclient.dto.TokenLoginResponse;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.exception.CxTokenExpiredException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -20,6 +21,7 @@ import org.apache.http.client.methods.*;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -36,12 +38,12 @@ import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
 import org.slf4j.Logger;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -52,8 +54,10 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.PatternSyntaxException;
 
-import static com.cx.restclient.common.CxPARAM.*;
+import static com.cx.restclient.common.CxPARAM.AUTHENTICATION;
+import static com.cx.restclient.common.CxPARAM.ORIGIN_HEADER;
 import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.*;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -63,6 +67,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
  * Created by Galn on 05/02/2018.
  */
 public class CxHttpClient {
+
+    private static String HTTP_NO_HOST = System.getProperty("http.nonProxyHosts");
 
     private static String HTTP_HOST = System.getProperty("http.proxyHost");
     private static String HTTP_PORT = System.getProperty("http.proxyPort");
@@ -135,7 +141,7 @@ public class CxHttpClient {
         if (proxy != null) {
             logi.info("Setting proxy for Checkmarx http client");
             cb.setProxy(proxy);
-            cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
+            cb.setRoutePlanner(getRoutePlanner(proxy, logi));
             cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
         }
     }
@@ -158,10 +164,34 @@ public class CxHttpClient {
         }
         if (proxyHost != null) {
             logi.info("Setting proxy for Checkmarx http client");
-            cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxyHost));
+            cb.setRoutePlanner(getRoutePlanner(proxyHost, logi));
             cb.setProxy(proxyHost);
             cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
         }
+    }
+
+    private static DefaultProxyRoutePlanner getRoutePlanner(HttpHost proxyHost, Logger logi) {
+        return new DefaultProxyRoutePlanner(proxyHost) {
+            public HttpRoute determineRoute(
+                    final HttpHost host,
+                    final HttpRequest request,
+                    final HttpContext context) throws HttpException {
+                String hostname = host.getHostName();
+                if (StringUtils.isNotEmpty(HTTP_NO_HOST)) {
+                    String[] hosts = HTTP_NO_HOST.split("\\|");
+                    for (String nonHost : hosts) {
+                        try {
+                            if (hostname.matches(nonHost)) {
+                                System.out.println("Host matched: " + nonHost);
+                            }
+                        } catch (PatternSyntaxException e) {
+                            logi.warn("Wrong nonProxyHost param: " + nonHost);
+                        }
+                    }
+                }
+                return super.determineRoute(host, request, context);
+            }
+        };
     }
 
     private static SSLConnectionSocketFactory getSSLSF() throws CxClientException {
