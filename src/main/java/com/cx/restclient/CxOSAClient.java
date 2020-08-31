@@ -69,9 +69,7 @@ public class CxOSAClient extends LegacyClient implements Scanner {
 
     @Override
     public Results initiateScan()  {
-        
         osaResults = new OSAResults();
-        
         ensureProjectIdSpecified();
 
         log.info("----------------------------------- Create CxOSA Scan:------------------------------------");
@@ -81,7 +79,9 @@ public class CxOSAClient extends LegacyClient implements Scanner {
             try {
                 osaDependenciesJson = resolveOSADependencies();
             } catch (Exception e) {
-                throw new CxClientException("Failed to resolve dependencies for OSA scan: " + e.getMessage(), e);
+                CxClientException ex = new CxClientException("Failed to resolve dependencies for OSA scan: " + e.getMessage(), e);
+                osaResults.setCreateException(ex);
+                return osaResults;
             }
         }
 
@@ -89,14 +89,14 @@ public class CxOSAClient extends LegacyClient implements Scanner {
             scanId = sendOSAScan(osaDependenciesJson, projectId);
         } catch (IOException e) {
             scanId = null;
-            throw new CxClientException("Error sending OSA scan request.", e);
+            CxClientException ex = new CxClientException("Error sending OSA scan request.", e);
+            osaResults.setCreateException(ex);
+            return osaResults;
         }
-
 
         osaResults.setOsaProjectSummaryLink(config.getUrl(), projectId);
         osaResults.setOsaScanId(scanId);
         return osaResults;
-        
     }
 
 
@@ -135,7 +135,9 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         ensureProjectIdSpecified();
 
         if (scanId == null) {
-            throw new CxClientException("Scan was not created.");
+            CxClientException e = new CxClientException("Scan was not created.");
+            osaResults.setWaitException(e);
+            return osaResults;
         }
 
         log.info("-------------------------------------Get CxOSA Results:-----------------------------------");
@@ -150,7 +152,9 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         try {
             osaResults = retrieveOSAResults(scanId, osaScanStatus, projectId);
         } catch (IOException e) {
-            throw new CxClientException("Failed to retrieve OSA results.", e);
+            CxClientException ex = new CxClientException("Failed to retrieve OSA results.", e);
+            osaResults.setWaitException(ex);
+            return osaResults;
         }
 
         if (config.getEnablePolicyViolations()) {
@@ -194,7 +198,6 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         ensureProjectIdSpecified();
 
         log.info("----------------------------------Get CxOSA Last Results:--------------------------------");
-        OSAResults osaResults = null;
         try {
             List<OSAScanStatus> scanList = getOSALastOSAStatus(projectId);
             for (OSAScanStatus s : scanList) {
@@ -204,7 +207,8 @@ public class CxOSAClient extends LegacyClient implements Scanner {
                 }
             }
         } catch (IOException e) {
-            throw new CxClientException("Error getting last scan results.");
+            CxClientException ex = new CxClientException("Error getting last scan results.");
+            osaResults.setWaitException(ex);
         }
         
         return osaResults;

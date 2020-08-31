@@ -13,7 +13,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class AstScaResults implements Serializable, Results {
+public class AstScaResults extends Results implements Serializable {
     private String scanId;
     private AstScaSummaryResults summary;
     private String webReportLink;
