@@ -177,7 +177,12 @@ public class AstScaClient extends AstClient implements Scanner {
         waitForScanToFinish(scanId);
 
         return tryGetScanResults(scanId)
-                .orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
+                .orElseGet(() -> {
+                    AstScaResults scaResults = new AstScaResults();
+                    CxClientException e = new CxClientException("Unable to get scan results: scan not found.");
+                    scaResults.setWaitException(e);
+                    return scaResults;
+                });
     }
 
     @Override
@@ -211,10 +216,11 @@ public class AstScaClient extends AstClient implements Scanner {
             }
             this.scanId = extractScanIdFrom(response);
             scaResults.setScanId(scanId);
-            return scaResults;
         } catch (IOException e) {
-            throw new CxClientException("Error creating scan.", e);
+            CxClientException ex = new CxClientException("Error creating scan.", e);
+            scaResults.setCreateException(ex);
         }
+        return scaResults;
     }
 
     private HttpResponse submitManifestsAndFingerprintsFromLocalDir(String projectId) throws IOException {
@@ -359,14 +365,15 @@ public class AstScaClient extends AstClient implements Scanner {
      */
     @Override
     public Results getLatestScanResults() {
-        AstScaResults result;
+        AstScaResults result = new AstScaResults();
         try {
             log.info("Getting latest scan results.");
             projectId = getRiskManagementProjectId(config.getProjectName());
             scanId = getLatestScanId(projectId);
             result = tryGetScanResults(scanId).orElse(null);
         } catch (IOException e) {
-            throw new CxClientException("Error getting latest scan results.", e);
+            CxClientException ex = new CxClientException("Error getting latest scan results.", e);
+            result.setWaitException(ex);
         }
         return result;
     }

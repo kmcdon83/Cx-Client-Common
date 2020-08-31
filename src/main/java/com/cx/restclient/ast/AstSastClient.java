@@ -99,10 +99,11 @@ public class AstSastClient extends AstClient implements Scanner {
             }
             scanId = extractScanIdFrom(response);
             astResults.setScanId(scanId);
-            return astResults;
         } catch (IOException e) {
-            throw new CxClientException("Error creating scan.", e);
+            CxClientException ex = new CxClientException("Error creating scan.", e);
+            astResults.setCreateException(ex);
         }
+        return astResults;
     }
 
     @Override
@@ -140,8 +141,8 @@ public class AstSastClient extends AstClient implements Scanner {
     }
 
     private AstSastResults retrieveScanResults() {
+        AstSastResults result = new AstSastResults();
         try {
-            AstSastResults result = new AstSastResults();
             result.setScanId(scanId);
 
             AstSastSummaryResults scanSummary = getSummary();
@@ -149,12 +150,12 @@ public class AstSastClient extends AstClient implements Scanner {
 
             List<Finding> findings = getFindings();
             result.setFindings(findings);
-
-            return result;
         } catch (IOException e) {
             String message = String.format("Error getting %s scan results.", getScannerDisplayName());
-            throw new CxClientException(message, e);
+            CxClientException ex = new CxClientException(message, e);
+            result.setWaitException(ex);
         }
+        return result;
     }
 
     private AstSastSummaryResults getSummary() {
@@ -227,16 +228,17 @@ public class AstSastClient extends AstClient implements Scanner {
         if (noFindingsWereDetected(e)) {
             result = new SummaryResponse();
             result.getScansSummaries().add(new SingleScanSummary());
-        }
-        else {
+        } else {
             throw new CxClientException("Error getting scan summary.", e);
         }
         return result;
     }
 
-    /** When no findings are detected, AST-SAST API returns the 404 status with a specific
+    /**
+     * When no findings are detected, AST-SAST API returns the 404 status with a specific
      * error code, which is quite awkward.
      * Response example: {"code":4004,"message":"can't find all the provided scan ids","data":null}
+     *
      * @return true: scan completed successfully and the result contains no findings (normal flow).
      * false: some other error has occurred (error flow).
      */
@@ -324,8 +326,10 @@ public class AstSastClient extends AstClient implements Scanner {
     }
 
     @Override
-    public ScanResults getLatestScanResults() {
-        throw new UnsupportedOperationException();
+    public Results getLatestScanResults() {
+        AstSastResults result = new AstSastResults();
+        result.setWaitException(new UnsupportedOperationException());
+        return result;
     }
 
     @Override

@@ -13,7 +13,7 @@ import java.util.List;
 
 import static com.cx.restclient.common.ShragaUtils.formatDate;
 
-public class DependencyScanResult implements Results {
+public class DependencyScanResult extends Results {
     private ScannerType scannerType;
     private boolean resultReady;
     private int highVulnerability;
