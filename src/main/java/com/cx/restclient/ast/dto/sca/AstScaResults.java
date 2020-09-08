@@ -20,4 +20,20 @@ public class AstScaResults extends Results implements Serializable {
     private List<Finding> findings;
     private List<Package> packages;
     private boolean scaResultReady;
+    private int nonVulnerableLibraries;
+    private int vulnerableAndOutdated;
+
+    public void calculateVulnerableAndOutdatedPackages(){
+        int sum = 0;
+        if(this.packages != null){
+            for (Package pckg:this.packages) {
+                sum = pckg.getHighVulnerabilityCount() + pckg.getMediumVulnerabilityCount() + pckg.getLowVulnerabilityCount();
+                if(sum == 0){
+                    this.nonVulnerableLibraries++;
+                }else if(sum>0 && pckg.isOutdated()){
+                    this.vulnerableAndOutdated++;
+                }
+            }
+        }
+    }
 }

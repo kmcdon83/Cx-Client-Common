@@ -174,15 +174,15 @@ public class AstScaClient extends AstClient implements Scanner {
      */
     @Override
     public Results waitForScanResults() {
-        waitForScanToFinish(scanId);
-
-        return tryGetScanResults(scanId)
-                .orElseGet(() -> {
-                    AstScaResults scaResults = new AstScaResults();
-                    CxClientException e = new CxClientException("Unable to get scan results: scan not found.");
-                    scaResults.setWaitException(e);
-                    return scaResults;
-                });
+        AstScaResults scaResults;
+        try {
+            waitForScanToFinish(scanId);
+            scaResults = tryGetScanResults(scanId).orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
+        } catch (CxClientException e) {
+            scaResults = new AstScaResults();
+            scaResults.setWaitException(e);
+        }
+        return scaResults;
     }
 
     @Override
@@ -216,7 +216,7 @@ public class AstScaClient extends AstClient implements Scanner {
             }
             this.scanId = extractScanIdFrom(response);
             scaResults.setScanId(scanId);
-        } catch (IOException e) {
+        } catch (Exception e) {
             CxClientException ex = new CxClientException("Error creating scan.", e);
             scaResults.setCreateException(ex);
         }
@@ -371,7 +371,7 @@ public class AstScaClient extends AstClient implements Scanner {
             projectId = getRiskManagementProjectId(config.getProjectName());
             scanId = getLatestScanId(projectId);
             result = tryGetScanResults(scanId).orElse(null);
-        } catch (IOException e) {
+        } catch (Exception e) {
             CxClientException ex = new CxClientException("Error getting latest scan results.", e);
             result.setWaitException(ex);
         }
