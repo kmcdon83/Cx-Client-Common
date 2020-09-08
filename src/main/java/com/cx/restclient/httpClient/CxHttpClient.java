@@ -69,6 +69,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 public class CxHttpClient {
 
     private static String HTTP_NO_HOST = System.getProperty("http.nonProxyHosts");
+    private static String HTTPS_NO_HOST = System.getProperty("https.nonProxyHosts");
 
     private static String HTTP_HOST = System.getProperty("http.proxyHost");
     private static String HTTP_PORT = System.getProperty("http.proxyPort");
@@ -177,8 +178,10 @@ public class CxHttpClient {
                     final HttpRequest request,
                     final HttpContext context) throws HttpException {
                 String hostname = host.getHostName();
-                if (StringUtils.isNotEmpty(HTTP_NO_HOST)) {
-                    String[] hosts = HTTP_NO_HOST.split("\\|");
+
+                String noHost = StringUtils.isNotEmpty(HTTP_NO_HOST) ? HTTP_NO_HOST : HTTPS_NO_HOST;
+                if (StringUtils.isNotEmpty(noHost)) {
+                    String[] hosts = noHost.split("\\|");
                     for (String nonHost : hosts) {
                         try {
                             if (hostname.matches(nonHost)) {
