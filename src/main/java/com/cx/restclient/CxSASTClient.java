@@ -199,7 +199,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                 scanId = createRemoteSourceScan(projectId);
             }
             sastResults.setScanId(scanId);
-        } catch (IOException e) {
+        } catch (Exception e) {
             sastResults.setCreateException(e);
         }
     }
@@ -293,16 +293,13 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     //GET SAST results + reports
     @Override
     public Results waitForScanResults() {
-        //SASTResults sastResults;
-
-        log.info("------------------------------------Get CxSAST Results:-----------------------------------");
-        //wait for SAST scan to finish
-        log.info("Waiting for CxSAST scan to finish.");
-        sastWaiter.waitForTaskToFinish(Long.toString(scanId), config.getSastScanTimeoutInMinutes() * 60, log);
-        log.info("Retrieving SAST scan results");
-
-
         try {
+            log.info("------------------------------------Get CxSAST Results:-----------------------------------");
+            //wait for SAST scan to finish
+            log.info("Waiting for CxSAST scan to finish.");
+            sastWaiter.waitForTaskToFinish(Long.toString(scanId), config.getSastScanTimeoutInMinutes() * 60, log);
+            log.info("Retrieving SAST scan results");
+
             //retrieve SAST scan results
             sastResults = retrieveSASTResults(scanId, projectId);
             if (config.getEnablePolicyViolations()) {
@@ -336,7 +333,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             sastResults.setWaitException(e);
         }
 
@@ -382,7 +379,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                     return retrieveSASTResults(s.getId(), projectId);
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             sastResults.setWaitException(e);
         }
         return sastResults;

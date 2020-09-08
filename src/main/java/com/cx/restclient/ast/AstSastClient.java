@@ -99,7 +99,7 @@ public class AstSastClient extends AstClient implements Scanner {
             }
             scanId = extractScanIdFrom(response);
             astResults.setScanId(scanId);
-        } catch (IOException e) {
+        } catch (Exception e) {
             CxClientException ex = new CxClientException("Error creating scan.", e);
             astResults.setCreateException(ex);
         }
@@ -136,13 +136,20 @@ public class AstSastClient extends AstClient implements Scanner {
 
     @Override
     public Results waitForScanResults() {
-        waitForScanToFinish(scanId);
-        return retrieveScanResults();
+        AstSastResults result;
+        try {
+            waitForScanToFinish(scanId);
+            result = retrieveScanResults();
+        } catch (CxClientException e) {
+            result = new AstSastResults();
+            result.setWaitException(e);
+        }
+        return result;
     }
 
     private AstSastResults retrieveScanResults() {
-        AstSastResults result = new AstSastResults();
         try {
+            AstSastResults result = new AstSastResults();
             result.setScanId(scanId);
 
             AstSastSummaryResults scanSummary = getSummary();
@@ -150,12 +157,12 @@ public class AstSastClient extends AstClient implements Scanner {
 
             List<Finding> findings = getFindings();
             result.setFindings(findings);
+
+            return result;
         } catch (IOException e) {
             String message = String.format("Error getting %s scan results.", getScannerDisplayName());
-            CxClientException ex = new CxClientException(message, e);
-            result.setWaitException(ex);
+            throw new CxClientException(message, e);
         }
-        return result;
     }
 
     private AstSastSummaryResults getSummary() {
