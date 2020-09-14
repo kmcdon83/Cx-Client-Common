@@ -16,9 +16,13 @@ public class AstScaConfig extends ASTConfig implements Serializable {
     private String password;
     private String tenant;
     private String webAppUrl;
+
+    //true: upload all sources for scan
+    //false: only upload manifest and fingerprints for scan
     private boolean includeSources;
+    
     private String FingerprintsIncludePattern;
     private String ManifestsIncludePattern;
     private String FingerprintFilePath;
-    private String zipFilePath;
+
 }

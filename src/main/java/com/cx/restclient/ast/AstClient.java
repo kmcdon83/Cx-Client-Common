@@ -2,18 +2,24 @@ package com.cx.restclient.ast;
 
 import com.cx.restclient.ast.dto.common.*;
 import com.cx.restclient.configuration.CxScanConfig;
+import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
+import com.cx.restclient.sast.utils.zip.CxZipUtils;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 
 public abstract class AstClient {
+
     private static final String LOCATION_HEADER = "Location";
     private static final String CREDENTIAL_TYPE_PASSWORD = "password";
 
@@ -29,6 +36,13 @@ public abstract class AstClient {
 
     protected CxHttpClient httpClient;
 
+    public static final String GET_SCAN = "/api/scans/%s";
+    public static final String CREATE_SCAN = "/api/scans";
+    public static final String RISK_MANAGEMENT_API = "/risk-management/";
+    public static final String GET_UPLOAD_URL = "/api/uploads";
+
+    
+    
     public AstClient(CxScanConfig config, Logger log) {
         validate(config, log);
         this.config = config;
@@ -41,7 +55,9 @@ public abstract class AstClient {
 
     protected abstract HandlerRef getBranchToScan(RemoteRepositoryInfo repoInfo);
 
-    protected CxHttpClient createHttpClient(String baseUrl) {
+    protected abstract HttpResponse submitAllSourcesFromLocalDir(String projectId, String zipFilePath) throws IOException ;
+
+        protected CxHttpClient createHttpClient(String baseUrl) {
         log.debug("Creating HTTP client.");
         CxHttpClient client = new CxHttpClient(baseUrl,
                 config.getCxOrigin(),
@@ -85,7 +101,7 @@ public abstract class AstClient {
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
 
         log.info("Sending the 'start scan' request.");
-        return httpClient.postRequest(UrlPaths.CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
+        return httpClient.postRequest(CREATE_SCAN, ContentType.CONTENT_TYPE_APPLICATION_JSON, entity,
                 HttpResponse.class, HttpStatus.SC_CREATED, "start the scan");
     }
 
@@ -187,4 +203,49 @@ public abstract class AstClient {
         String message = String.format("Failed to init %s client.", getScannerDisplayName());
         throw new CxClientException(message, e);
     }
+
+
+
+    protected HttpResponse initiateScanForUpload(String projectId, File zipFile, String zipFilePath) throws IOException {
+        String uploadedArchiveUrl = getSourcesUploadUrl();
+        String cleanPath = uploadedArchiveUrl.split("\\?")[0];
+        log.info("Uploading to: {}", cleanPath);
+        uploadArchive(zipFile, uploadedArchiveUrl);
+
+        //delete only if path not specified in the config
+        //If zipFilePath is specified in config, it means that the user has prepared the zip file themselves. The user obviously doesn't want this file to be deleted.
+        //If zipFilePath is NOT specified, Common Client will create the zip itself. After uploading the zip, Common Client should clean after itself (delete the zip file that it created).
+        if (StringUtils.isEmpty(zipFilePath)) {
+            CxZipUtils.deleteZippedSources(zipFile, config, log);
+        }
+
+        RemoteRepositoryInfo uploadedFileInfo = new RemoteRepositoryInfo();
+        uploadedFileInfo.setUrl(new URL(uploadedArchiveUrl));
+
+        return sendStartScanRequest(uploadedFileInfo, SourceLocationType.LOCAL_DIRECTORY, projectId);
+    }
+
+    private String getSourcesUploadUrl() throws IOException {
+        JsonNode response = httpClient.postRequest(GET_UPLOAD_URL, null, null, JsonNode.class,
+                HttpStatus.SC_OK, "get upload URL for sources");
+
+        if (response == null || response.get("url") == null) {
+            throw new CxClientException("Unable to get the upload URL.");
+        }
+
+        return response.get("url").asText();
+    }
+
+    private void uploadArchive(File source, String uploadUrl) throws IOException {
+        log.info("Uploading the zipped data.");
+
+        HttpEntity request = new FileEntity(source);
+
+        CxHttpClient uploader = createHttpClient(uploadUrl);
+
+        // Relative path is empty, because we use the whole upload URL as the base URL for the HTTP client.
+        // Content type is empty, because the server at uploadUrl throws an error if Content-Type is non-empty.
+        uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
+    }
+
 }
