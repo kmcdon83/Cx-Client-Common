@@ -2,7 +2,6 @@ package com.cx.restclient.ast;
 
 import com.cx.restclient.ast.dto.common.*;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.PathFilter;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
@@ -29,7 +28,7 @@ import java.util.List;
 public abstract class AstClient {
 
     private static final String LOCATION_HEADER = "Location";
-    private static final String CREDENTIAL_TYPE_PASSWORD = "password";
+    private static final String CREDENTIAL_TYPE = "apiKey";
 
     protected final CxScanConfig config;
     protected final Logger log;
@@ -134,12 +133,12 @@ public abstract class AstClient {
         HandlerRef ref = getBranchToScan(repoInfo);
 
         // AST-SAST doesn't allow nulls here.
-        String password = StringUtils.defaultString(repoInfo.getPassword());
+        String accessToken = StringUtils.defaultString(repoInfo.getAccessToken());
         String username = StringUtils.defaultString(repoInfo.getUsername());
 
         GitCredentials credentials = GitCredentials.builder()
-                .type(CREDENTIAL_TYPE_PASSWORD)
-                .value(password)
+                .type(CREDENTIAL_TYPE)
+                .value(accessToken)
                 .build();
 
         URL effectiveRepoUrl = getEffectiveRepoUrl(repoInfo);

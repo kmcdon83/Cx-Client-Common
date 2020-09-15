@@ -115,36 +115,6 @@ public class AstScaClient extends AstClient implements Scanner {
         return null;
     }
 
-    /**
-     * Transforms the repo URL if credentials are specified in repoInfo.
-     */
-    @Override
-    protected URL getEffectiveRepoUrl(RemoteRepositoryInfo repoInfo) {
-        URL result;
-        URL initialUrl = repoInfo.getUrl();
-
-        // Otherwise we may get something like "https://mytoken:null@github.com".
-        String username = StringUtils.defaultString(repoInfo.getUsername());
-        String password = StringUtils.defaultString(repoInfo.getPassword());
-
-        try {
-            if (StringUtils.isNotEmpty(username) || StringUtils.isNotEmpty(password)) {
-                log.info("Adding credentials as the userinfo part of the URL, because {} only supports this kind of authentication.",
-                        getScannerDisplayName());
-
-                result = new URIBuilder(initialUrl.toURI())
-                        .setUserInfo(username, password)
-                        .build()
-                        .toURL();
-            } else {
-                result = repoInfo.getUrl();
-            }
-        } catch (Exception e) {
-            throw new CxClientException("Error getting effective repo URL.");
-        }
-        return result;
-    }
-
     @Override
     public void init() {
         log.debug("Initializing {} client.", getScannerDisplayName());

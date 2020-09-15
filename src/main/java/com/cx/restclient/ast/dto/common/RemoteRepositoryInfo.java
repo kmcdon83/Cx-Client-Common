@@ -19,11 +19,9 @@ public class RemoteRepositoryInfo implements Serializable {
 
     private String branch;
 
-    /**
-     * If access token is used instead of username/password, pass the token into this field.
-     * TODO: add a dedicated field for token.
-     */
     private String username;
 
     private String password;
+
+    private String accessToken;
 }
