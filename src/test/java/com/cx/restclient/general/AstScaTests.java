@@ -1,6 +1,7 @@
 package com.cx.restclient.general;
 
 import com.cx.restclient.CxClientDelegator;
+import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.SourceLocationType;
@@ -13,6 +14,7 @@ import org.junit.*;
 
 import java.io.*;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.*;
 import java.util.UUID;
 
@@ -149,6 +151,14 @@ public class AstScaTests extends ScaTestsBase {
 
     private void scanRemoteRepo(String repoUrlProp, boolean useOnPremAuthentication) throws MalformedURLException {
         CxScanConfig config = initScaConfig(repoUrlProp, useOnPremAuthentication);
+
+        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+        URL repoUrl = new URL(prop("astSast.remoteRepoUrl.public"));
+        repoInfo.setUrl(repoUrl);
+
+        repoInfo.setAccessToken(prop("astSca.remoteRepo.private.token"));
+        config.getAstScaConfig().setRemoteRepositoryInfo(repoInfo);
+
         ScanResults scanResults = runScan(config);
         verifyScanResults(scanResults);
     }

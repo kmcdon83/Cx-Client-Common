@@ -24,9 +24,15 @@ import java.util.List;
 public class AstSastTest extends CommonClientTest {
     //TODO : Fix this test
     @Test
-    @Ignore("this test fails and needs to be fixed")
+//    @Ignore("this test fails and needs to be fixed")
     public void scan_remotePublicRepo() throws MalformedURLException {
         CxScanConfig config = getScanConfig();
+
+        RemoteRepositoryInfo repoInfo = new RemoteRepositoryInfo();
+        URL repoUrl = new URL(prop("astSca.remoteRepoUrl.private"));
+        repoInfo.setUrl(repoUrl);
+        repoInfo.setAccessToken(prop("astSca.remoteRepo.private.token"));
+        config.getAstSastConfig().setRemoteRepositoryInfo(repoInfo);
 
         CxClientDelegator client = new CxClientDelegator(config, log);
         try {
