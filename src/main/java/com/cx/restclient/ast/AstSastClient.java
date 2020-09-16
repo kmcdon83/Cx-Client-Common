@@ -8,12 +8,7 @@ import com.cx.restclient.ast.dto.common.ScanConfigValue;
 import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.ast.dto.sast.AstSastResults;
 import com.cx.restclient.ast.dto.sast.SastScanConfigValue;
-import com.cx.restclient.ast.dto.sast.report.AstSastSummaryResults;
-import com.cx.restclient.ast.dto.sast.report.Finding;
-import com.cx.restclient.ast.dto.sast.report.ScanResultsResponse;
-import com.cx.restclient.ast.dto.sast.report.SeverityCounter;
-import com.cx.restclient.ast.dto.sast.report.SingleScanSummary;
-import com.cx.restclient.ast.dto.sast.report.SummaryResponse;
+import com.cx.restclient.ast.dto.sast.report.*;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
@@ -28,27 +23,28 @@ import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.EnumUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class AstSastClient extends AstClient implements Scanner {
     private static final String ENGINE_TYPE_FOR_API = "sast";
     private static final String REF_TYPE_BRANCH = "branch";
     private static final String SUMMARY_PATH = "/api/scan-summary";     // NOSONAR: changes in these paths are very unlikely
-    private static final String SCAN_RESULTS_PATH = "/api/results";     // NOSONAR
+    private static final String SCAN_RESULTS_PATH = "/api/results";
+    private static final String DESCRIPTIONS_PATH = "/api/queries/descriptions";
     private static final String AUTH_PATH = "/auth/realms/organization/protocol/openid-connect/token";     // NOSONAR
     private static final String URL_PARSING_EXCEPTION = "URL parsing exception.";
 
@@ -57,6 +53,11 @@ public class AstSastClient extends AstClient implements Scanner {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final String API_VERSION = "*/*; version=0.1";
+    private static final String SCAN_ID_PARAM_NAME = "scan-id";
+    private static final String OFFSET_PARAM_NAME = "offset";
+    private static final String LIMIT_PARAM_NAME = "limit";
+    private static final String ID_PARAM_NAME = "ids";
+    private static final int URL_MAX_CHAR_SIZE = 1490;
 
     private String scanId;
 
@@ -240,10 +241,111 @@ public class AstSastClient extends AstClient implements Scanner {
         if (log.isInfoEnabled()) {
             log.info(String.format("Total findings: %d", allFindings.size()));
         }
-
+        
+        populateAdditionalFields(allFindings);
+        
         return allFindings;
     }
 
+    private void populateAdditionalFields(List<Finding> allFindings) throws IOException {
+        
+        Map<String, QueryDescription> allQueryDescriptionMap = new HashMap<>();
+
+        Set<String> queryIDs = allFindings.stream().map(finding -> finding.getQueryID()).collect(Collectors.toSet());
+                
+        while (queryIDs.size()>0) {
+            Set<String> processedQueryIds = new HashSet<String>();
+            List<QueryDescription> queryDescriptionList = processQueryIDs(queryIDs, processedQueryIds);
+            
+            for(String processedId :processedQueryIds){
+                allQueryDescriptionMap.put(processedId, queryDescriptionList.iterator().next());
+            }
+   
+            queryIDs.removeAll(processedQueryIds);
+        }
+
+        if (log.isInfoEnabled()) {
+            log.info(String.format("Total descriptions: %d", allFindings.size()));
+        }
+
+        allFindings.stream().forEach(finding -> {
+            String queryId = finding.getQueryID();
+            QueryDescription query = allQueryDescriptionMap.get(queryId);
+            //finding.setRecommendedFix(query.getBestFixLocation());
+            finding.setResultDescription(query.getResultDescription());
+        } );
+    
+    }
+    private String prepareURL(Set<String> ids, Set<String> processedIds) {
+        try {
+            int lengthOtherParams = new URIBuilder().setPath(DESCRIPTIONS_PATH).setParameter(SCAN_ID_PARAM_NAME, scanId)
+                    .build()
+                    .toString().length();
+            
+            URIBuilder uriBuilder = new URIBuilder();
+            uriBuilder.setPath(DESCRIPTIONS_PATH);
+            
+            int idsAllowedLength = URL_MAX_CHAR_SIZE - lengthOtherParams;
+
+            List<NameValuePair> nameValues = new LinkedList<>();
+
+            for (String id : ids) {
+                idsAllowedLength = idsAllowedLength - ID_PARAM_NAME.length() - 2 - id.length();
+                if (idsAllowedLength > 0) {
+                    processedIds.add(id);
+                    nameValues.add(new BasicNameValuePair(ID_PARAM_NAME, id));
+                }
+            }
+
+            uriBuilder.setParameters(nameValues);
+            String result = uriBuilder.setParameter(SCAN_ID_PARAM_NAME, scanId)
+                    .build()
+                    .toString();
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Getting findings from %s", result));
+            }
+
+            return result;
+        } catch (URISyntaxException e) {
+            throw new CxClientException(URL_PARSING_EXCEPTION, e);
+        }
+    }
+    
+    private String getRelativeResultsUrl(int offset, int limit) {
+        try {
+            String result = new URIBuilder()
+                    .setPath(SCAN_RESULTS_PATH)
+                    .setParameter(SCAN_ID_PARAM_NAME, scanId)
+                    .setParameter(OFFSET_PARAM_NAME, Integer.toString(offset))
+                    .setParameter(LIMIT_PARAM_NAME, Integer.toString(limit))
+                    .build()
+                    .toString();
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Getting findings from %s", result));
+            }
+
+            return result;
+        } catch (URISyntaxException e) {
+            throw new CxClientException(URL_PARSING_EXCEPTION, e);
+        }
+    }
+    
+    private List<QueryDescription> processQueryIDs(Set<String> ids, Set<String> processedIds) throws IOException {
+    
+        String relativeUrl = prepareURL(ids,processedIds);
+
+        List<QueryDescription> result = (List<QueryDescription>) httpClient.getRequest(relativeUrl,
+                ContentType.CONTENT_TYPE_APPLICATION_JSON,
+                QueryDescription.class,
+                HttpStatus.SC_OK,
+                "retrieving queries description",
+                true);
+        
+        return result;
+    }
+    
     private ScanResultsResponse getScanResultsResponse(String relativeUrl) throws IOException {
         return httpClient.getRequest(relativeUrl,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
@@ -304,25 +406,7 @@ public class AstSastClient extends AstClient implements Scanner {
         return result;
     }
 
-    private String getRelativeResultsUrl(int offset, int limit) {
-        try {
-            String result = new URIBuilder()
-                    .setPath(SCAN_RESULTS_PATH)
-                    .setParameter("scan-id", scanId)
-                    .setParameter("offset", Integer.toString(offset))
-                    .setParameter("limit", Integer.toString(limit))
-                    .build()
-                    .toString();
-
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Getting findings from %s", result));
-            }
-
-            return result;
-        } catch (URISyntaxException e) {
-            throw new CxClientException(URL_PARSING_EXCEPTION, e);
-        }
-    }
+    
 
     private String getRelativeSummaryUrl() {
         try {
