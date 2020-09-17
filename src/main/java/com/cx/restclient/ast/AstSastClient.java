@@ -22,6 +22,7 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
@@ -242,7 +243,11 @@ public class AstSastClient extends AstClient implements Scanner {
             log.info(String.format("Total findings: %d", allFindings.size()));
         }
         
-        populateAdditionalFields(allFindings);
+        try {
+            populateAdditionalFields(allFindings);
+        }catch(CxClientException e){
+            log.error(e.getMessage());
+        }
         
         return allFindings;
     }
@@ -257,8 +262,14 @@ public class AstSastClient extends AstClient implements Scanner {
             Set<String> processedQueryIds = new HashSet<String>();
             List<QueryDescription> queryDescriptionList = processQueryIDs(queryIDs, processedQueryIds);
             
+            if(processedQueryIds.size() != queryDescriptionList.size()){
+                throw new CxClientException("The number of queryIds doesn't fit the number of out query descriptions");               
+            }
+            
+            int i = 0;
             for(String processedId :processedQueryIds){
-                allQueryDescriptionMap.put(processedId, queryDescriptionList.iterator().next());
+                allQueryDescriptionMap.put(processedId, queryDescriptionList.get(i));
+                i++;
             }
    
             queryIDs.removeAll(processedQueryIds);
@@ -271,7 +282,6 @@ public class AstSastClient extends AstClient implements Scanner {
         allFindings.stream().forEach(finding -> {
             String queryId = finding.getQueryID();
             QueryDescription query = allQueryDescriptionMap.get(queryId);
-            //finding.setRecommendedFix(query.getBestFixLocation());
             finding.setResultDescription(query.getResultDescription());
         } );
     
