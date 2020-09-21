@@ -8,12 +8,13 @@ import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.ast.dto.sca.AstScaResults;
 import com.cx.restclient.ast.dto.sca.report.Finding;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.cx.restclient.common.ShragaUtils.formatDate;
 
-public class DependencyScanResult extends Results {
+public class DependencyScanResult extends Results implements Serializable {
     private ScannerType scannerType;
     private boolean resultReady;
     private int highVulnerability;
