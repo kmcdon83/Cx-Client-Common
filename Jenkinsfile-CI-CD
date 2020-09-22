@@ -59,6 +59,9 @@ pipeline {
                         env.cxCommonVersion = "${BUILD_TAG}"
                     }
                     workspace = pwd()
+                    if (env.automationBranch == null) {
+                        env.automationBranch = automationBranch
+                    }
                     sh 'printenv'
                 }
             }
