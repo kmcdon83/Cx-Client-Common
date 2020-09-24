@@ -17,7 +17,11 @@ import com.cx.restclient.ast.dto.sast.report.SummaryResponse;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.*;
+import com.cx.restclient.dto.LoginSettings;
+import com.cx.restclient.dto.PathFilter;
+import com.cx.restclient.dto.Results;
+import com.cx.restclient.dto.ScannerType;
+import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.dto.scansummary.Severity;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
@@ -28,7 +32,6 @@ import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.EnumUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
@@ -38,8 +41,10 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -47,9 +52,10 @@ import java.util.Optional;
 public class AstSastClient extends AstClient implements Scanner {
     private static final String ENGINE_TYPE_FOR_API = "sast";
     private static final String REF_TYPE_BRANCH = "branch";
-    private static final String SUMMARY_PATH = "/api/scan-summary";     // NOSONAR: changes in these paths are very unlikely
-    private static final String SCAN_RESULTS_PATH = "/api/results";     // NOSONAR
-    private static final String AUTH_PATH = "/auth/realms/organization/protocol/openid-connect/token";     // NOSONAR
+    private static final String SUMMARY_PATH = properties.get("astSast.scanSummary");
+    private static final String SCAN_RESULTS_PATH = properties.get("astSast.scanResults");
+    private static final String AUTH_PATH = properties.get("astSast.authentication");
+    private static final String WEB_PROJECT_PATH = properties.get("astSast.webProject");
     private static final String URL_PARSING_EXCEPTION = "URL parsing exception.";
 
     private static final int DEFAULT_PAGE_SIZE = 1000;
@@ -196,11 +202,20 @@ public class AstSastClient extends AstClient implements Scanner {
             List<Finding> findings = getFindings();
             result.setFindings(findings);
 
+            String projectLink = getWebReportLink(config.getAstSastConfig().getWebAppUrl());
+            result.setWebReportLink(projectLink);
+
             return result;
         } catch (IOException e) {
             String message = String.format("Error getting %s scan results.", getScannerDisplayName());
             throw new CxClientException(message, e);
         }
+    }
+
+    @Override
+    protected String getWebReportPath() throws UnsupportedEncodingException {
+        return String.format(WEB_PROJECT_PATH,
+                URLEncoder.encode(config.getProjectName(), ENCODING));
     }
 
     private AstSastSummaryResults getSummary() {
