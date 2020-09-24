@@ -662,6 +662,7 @@ public class SCAClient implements DependencyScanner {
                 config.isDisableCertificateValidation(),
                 config.isUseSSOLogin(),
                 null,
+                config.isProxy(),
                 config.getProxyConfig(),
                 log);
     }

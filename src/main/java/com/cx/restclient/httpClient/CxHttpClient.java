@@ -75,16 +75,6 @@ import static com.cx.restclient.httpClient.utils.HttpClientHelper.*;
  */
 public class CxHttpClient {
 
-    private static String HTTP_HOST = System.getProperty("http.proxyHost");
-    private static String HTTP_PORT = System.getProperty("http.proxyPort");
-    private static String HTTP_USERNAME = System.getProperty("http.proxyUser");
-    private static String HTTP_PASSWORD = System.getProperty("http.proxyPassword");
-
-    private static String HTTPS_HOST = System.getProperty("https.proxyHost");
-    private static String HTTPS_PORT = System.getProperty("https.proxyPort");
-    private static String HTTPS_USERNAME = System.getProperty("https.proxyUser");
-    private static String HTTPS_PASSWORD = System.getProperty("https.proxyPassword");
-
     private static final String LOGIN_FAILED_MSG = "Fail to login with windows authentication: ";
 
     private static HttpClient apacheClient;
@@ -99,8 +89,51 @@ public class CxHttpClient {
     private String teamPath;
     private CookieStore cookieStore = new BasicCookieStore();
     private HttpClientBuilder cb = HttpClients.custom();
-    private final Map<String,String> customHeaders = new HashMap<>();
+    private final Map<String, String> customHeaders = new HashMap<>();
 
+    public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
+                        boolean isProxy, @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
+        this.log = log;
+        this.rootUri = rootUri;
+        this.refreshToken = refreshToken;
+        this.cxOrigin = origin;
+        this.useSSo = isSSO;
+        //create httpclient
+        cb.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
+        setSSLTls("TLSv1.2", log);
+        if (disableSSLValidation) {
+            try {
+                cb.setSSLSocketFactory(getTrustAllSSLSocketFactory());
+                cb.setConnectionManager(getHttpConnectionManager(true));
+            } catch (CxClientException e) {
+                log.warn("Failed to disable certificate verification: " + e.getMessage());
+            }
+        } else {
+            cb.setConnectionManager(getHttpConnectionManager(false));
+        }
+        cb.setConnectionManagerShared(true);
+
+        if (isProxy) {
+            if (proxyConfig == null ||
+                    StringUtils.isEmpty(proxyConfig.getHost()) ||
+                    proxyConfig.getPort() == 0) {
+                setCustomProxy(cb, proxyConfig, log);
+            } else {
+                cb.useSystemProperties();
+            }
+        }
+
+        if (useSSo) {
+            cb.setDefaultCredentialsProvider(new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider()));
+            cb.setDefaultCookieStore(cookieStore);
+        } else {
+            cb.setConnectionReuseStrategy(new NoConnectionReuseStrategy());
+        }
+        cb.setDefaultAuthSchemeRegistry(getAuthSchemeProviderRegistry());
+        apacheClient = cb.build();
+    }
+
+    @Deprecated
     public CxHttpClient(String rootUri, String origin, boolean disableSSLValidation, boolean isSSO, String refreshToken,
                         @Nullable ProxyConfig proxyConfig, Logger log) throws CxClientException {
         this.log = log;
@@ -199,15 +232,14 @@ public class CxHttpClient {
     public void login(LoginSettings settings) throws IOException, CxClientException {
         lastLoginSettings = settings;
 
-        if(!settings.getSessionCookies().isEmpty()){
+        if (!settings.getSessionCookies().isEmpty()) {
             setSessionCookies(settings.getSessionCookies());
             return;
         }
 
         if (settings.getRefreshToken() != null) {
             token = getAccessTokenFromRefreshToken(settings);
-        }
-        else if (useSSo) {
+        } else if (useSSo) {
             if (settings.getVersion().equals("lower than 9.0")) {
                 ssoLegacyLogin();
             } else {
@@ -243,7 +275,7 @@ public class CxHttpClient {
         return new ArrayList<>(cookieStore.getCookies());
     }
 
-    private void setSessionCookies(List<Cookie> cookies){
+    private void setSessionCookies(List<Cookie> cookies) {
         String cxCookie = null;
         String csrfToken = null;
 
@@ -545,7 +577,7 @@ public class CxHttpClient {
         }
     }
 
-    public void setToken(TokenLoginResponse token){
+    public void setToken(TokenLoginResponse token) {
         this.token = token;
     }
 

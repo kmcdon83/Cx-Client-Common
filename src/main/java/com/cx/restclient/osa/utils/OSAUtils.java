@@ -113,7 +113,7 @@ public abstract class OSAUtils {
     private static String getSbtTargetFolder(String sourceFolder) {
         List<File> files = new ArrayList<File>();
         files = getBuildSbtFiles(sourceFolder, files);
-        if(!files.isEmpty()) {
+        if (!files.isEmpty()) {
             return files.get(0).getAbsolutePath().replace("build.sbt", "target");
         }
         return "target";
@@ -124,11 +124,10 @@ public abstract class OSAUtils {
         List<File> files = Arrays.asList(folder.listFiles());
         for (File file : files) {
             if (file.isFile()) {
-                if(file.getName().endsWith("build.sbt")) {
+                if (file.getName().endsWith("build.sbt")) {
                     inputFiles.add(file);
                 }
-            }
-            else if (file.isDirectory()) {
+            } else if (file.isDirectory()) {
                 inputFiles = getBuildSbtFiles(file.getAbsolutePath(), inputFiles);
             }
         }
@@ -171,8 +170,7 @@ public abstract class OSAUtils {
         File workDirectory;
         if (!filePath.isAbsolute()) {
             workDirectory = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION);
-        }
-        else {
+        } else {
             workDirectory = filePath.getParentFile();
         }
         if (!workDirectory.exists()) {
@@ -187,7 +185,7 @@ public abstract class OSAUtils {
             ObjectMapper objectMapper = new ObjectMapper();
             String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObj);
 
-            if(cliOsaGenerateJsonReport) {
+            if (cliOsaGenerateJsonReport) {
                 workDirectory = new File(workDirectory.getPath().replace(".json", "_" + name + ".json"));
                 if (!workDirectory.isAbsolute()) {
                     workDirectory = new File(System.getProperty("user.dir") + CX_REPORT_LOCATION + File.separator + workDirectory);
@@ -195,11 +193,11 @@ public abstract class OSAUtils {
                 if (!workDirectory.getParentFile().exists()) {
                     workDirectory.getParentFile().mkdirs();
                 }
+                name = name.endsWith(".json") ? name : name + ".json";
                 File jsonFile = new File(workDirectory + File.separator + name);
-                FileUtils.writeStringToFile(jsonFile , json);
+                FileUtils.writeStringToFile(jsonFile, json);
                 log.info(name + " json location: " + jsonFile);
-            }
-            else {
+            } else {
                 String now = new SimpleDateFormat("dd_MM_yyyy-HH_mm_ss").format(new Date());
                 String fileName = name + "_" + now + ".json";
                 File jsonFile = new File(workDirectory + CX_REPORT_LOCATION, fileName);
@@ -210,4 +208,5 @@ public abstract class OSAUtils {
             log.warn("Failed to write OSA JSON report (" + name + ") to file: " + ex.getMessage());
         }
     }
+
 }

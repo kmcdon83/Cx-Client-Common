@@ -107,6 +107,7 @@ public class CxScanConfig implements Serializable {
     private SCAConfig scaConfig;
     private DependencyScannerType dependencyScannerType;
     private List<Cookie> sessionCookies = new ArrayList<>();
+    private Boolean isProxy = true;
     private ProxyConfig proxyConfig;
 
     public CxScanConfig() {
@@ -739,6 +740,14 @@ public class CxScanConfig implements Serializable {
      */
     public boolean isSastOrOSAEnabled() {
         return sastEnabled || dependencyScannerType == DependencyScannerType.OSA;
+    }
+
+    public Boolean isProxy() {
+        return isProxy;
+    }
+
+    public void setProxy(Boolean proxy) {
+        isProxy = proxy;
     }
 
     public ProxyConfig getProxyConfig() {

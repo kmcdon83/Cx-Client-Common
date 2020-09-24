@@ -26,7 +26,7 @@ import java.util.Properties;
 
 import static com.cx.restclient.common.CxPARAM.*;
 import static com.cx.restclient.cxArm.utils.CxARMUtils.getPoliciesNames;
-import static com.cx.restclient.httpClient.utils.ContentType.*;
+import static com.cx.restclient.httpClient.utils.ContentType.CONTENT_TYPE_APPLICATION_JSON_V1;
 import static com.cx.restclient.httpClient.utils.HttpClientHelper.convertToJson;
 import static com.cx.restclient.sast.utils.SASTParam.*;
 
@@ -65,6 +65,7 @@ public class CxShragaClient {
                     config.isDisableCertificateValidation(),
                     config.isUseSSOLogin(),
                     config.getRefreshToken(),
+                    config.isProxy(),
                     config.getProxyConfig(),
                     log);
         }
@@ -273,7 +274,7 @@ public class CxShragaClient {
         // perform login to server
         log.info("Logging into the Checkmarx service.");
 
-        if(config.getToken() != null){
+        if (config.getToken() != null) {
             httpClient.setToken(config.getToken());
             return;
         }
@@ -481,7 +482,7 @@ public class CxShragaClient {
         return projects;
     }
 
-    public Project getProjectById(String projectId,String contentType) throws IOException, CxClientException {
+    public Project getProjectById(String projectId, String contentType) throws IOException, CxClientException {
         String projectNamePath = SAST_GET_PROJECT_BY_ID.replace("{projectId}", projectId);
         Project projects = null;
         try {
@@ -551,7 +552,7 @@ public class CxShragaClient {
         return sastClient.getLatestSASTStatus(projectId);
     }
 
-    public List<Cookie> ssoLegacyLogin(){
+    public List<Cookie> ssoLegacyLogin() {
         return httpClient.ssoLegacyLogin();
     }
 
