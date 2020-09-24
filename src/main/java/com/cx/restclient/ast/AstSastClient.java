@@ -43,6 +43,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.net.URLEncoder;
+import java.util.stream.Collectors;
 
 public class AstSastClient extends AstClient implements Scanner {
     private static final String ENGINE_TYPE_FOR_API = "sast";
@@ -52,6 +53,7 @@ public class AstSastClient extends AstClient implements Scanner {
     private static final String AUTH_PATH = properties.get("astSast.authentication");
     private static final String WEB_PROJECT_PATH = properties.get("astSast.webProject");
     private static final String URL_PARSING_EXCEPTION = "URL parsing exception.";
+    private static final String DESCRIPTIONS_PATH = "/api/queries/descriptions";
 
     private static final int DEFAULT_PAGE_SIZE = 1000;
     private static final int NO_FINDINGS_CODE = 4004;
