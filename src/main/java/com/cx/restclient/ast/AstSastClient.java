@@ -255,9 +255,8 @@ public class AstSastClient extends AstClient implements Scanner {
             }
         }
 
-        if (log.isInfoEnabled()) {
-            log.info(String.format("Total findings: %d", allFindings.size()));
-        }
+        log.info(String.format("Total findings: %d", allFindings.size()));
+        
         
         try {
             populateAdditionalFields(allFindings);
@@ -270,36 +269,28 @@ public class AstSastClient extends AstClient implements Scanner {
 
     private void populateAdditionalFields(List<Finding> allFindings) throws IOException {
         
-        Map<String, QueryDescription> allQueryDescriptionMap = new HashMap<>();
+        final Map<String, QueryDescription> allQueryDescriptionMap = new HashMap<>();
 
         Set<String> queryIDs = allFindings.stream().map(finding -> finding.getQueryID()).collect(Collectors.toSet());
                 
         while (queryIDs.size()>0) {
             Set<String> processedQueryIds = new HashSet<String>();
             List<QueryDescription> queryDescriptionList = processQueryIDs(queryIDs, processedQueryIds);
-            
-            if(processedQueryIds.size() != queryDescriptionList.size()){
-                throw new CxClientException("The number of queryIds doesn't fit the number of out query descriptions");               
-            }
-            
-            int i = 0;
-            for(String processedId :processedQueryIds){
-                allQueryDescriptionMap.put(processedId, queryDescriptionList.get(i));
-                i++;
-            }
+
+            allQueryDescriptionMap.putAll(
+                    queryDescriptionList.stream().collect(Collectors.toMap(QueryDescription::getQueryId, queryDescription -> queryDescription)));
    
             queryIDs.removeAll(processedQueryIds);
         }
-
-        if (log.isInfoEnabled()) {
-            log.info(String.format("Total descriptions: %d", allFindings.size()));
-        }
+        
+        log.info(String.format("QueryIds with descriptions size: {} ",allQueryDescriptionMap.size()));
 
         allFindings.stream().forEach(finding -> {
             String queryId = finding.getQueryID();
             QueryDescription query = allQueryDescriptionMap.get(queryId);
             finding.setResultDescription(query.getResultDescription());
         } );
+
     
     }
     private String prepareURL(Set<String> ids, Set<String> processedIds) {
