@@ -105,7 +105,7 @@ public class AstSastTest extends CommonClientTest {
         Assert.assertTrue("Status is missing.", StringUtils.isNotEmpty(finding.getStatus()));
         Assert.assertTrue("Severity is missing.", StringUtils.isNotEmpty(finding.getSeverity()));
         Assert.assertTrue("Query name is missing.", StringUtils.isNotEmpty(finding.getQueryName()));
-        Assert.assertTrue("Description is mssing. ", StringUtils.isNotEmpty(finding.getDescription()));
+        Assert.assertTrue("Description is missing. ", StringUtils.isNotEmpty(finding.getDescription()));
     }
 
     private void logFinding(Finding finding) {
