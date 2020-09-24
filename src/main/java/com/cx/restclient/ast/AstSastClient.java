@@ -288,7 +288,7 @@ public class AstSastClient extends AstClient implements Scanner {
         allFindings.stream().forEach(finding -> {
             String queryId = finding.getQueryID();
             QueryDescription query = allQueryDescriptionMap.get(queryId);
-            finding.setResultDescription(query.getResultDescription());
+            finding.setDescription(query.getResultDescription());
         } );
 
     
