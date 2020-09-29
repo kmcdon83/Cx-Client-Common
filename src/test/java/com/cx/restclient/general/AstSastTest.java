@@ -20,7 +20,7 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 public class AstSastTest extends CommonClientTest {
@@ -95,8 +95,37 @@ public class AstSastTest extends CommonClientTest {
         boolean someNodeListsAreEmpty = findings.stream().anyMatch(finding -> finding.getNodes().isEmpty());
         Assert.assertFalse("Some of the finding node lists are empty.", someNodeListsAreEmpty);
 
+                
         log.info("Validating each finding.");
+
         findings.forEach(this::validateFinding);
+
+        validateDescriptions(findings);
+    }
+
+    private void validateDescriptions(List<Finding> findings) {
+
+        Map<String, Set<String>> mapDescriptions = new HashMap<>();
+        
+        findings.forEach(finding -> {
+            Set<String> listDescriptions = mapDescriptions.get(finding.getQueryID());
+            if(listDescriptions == null){
+                listDescriptions = new HashSet<>();
+            }
+            listDescriptions.add(finding.getDescription());
+            mapDescriptions.put(finding.getQueryID(), listDescriptions);
+        });
+
+        Set<String> uniqueDescriptions = new HashSet<>();
+        
+        //validate for each queryId there is exactly one corresponding description
+        for( Map.Entry<String, Set<String>> entry :mapDescriptions.entrySet()){
+            Assert.assertEquals( 1, entry.getValue().size());
+            uniqueDescriptions.add((String)entry.getValue().toArray()[0]);
+        }
+        
+        //validate all descriptions are unique
+        Assert.assertEquals(uniqueDescriptions.size(),mapDescriptions.size() );
     }
 
     private void validateFinding(Finding finding) {
@@ -105,6 +134,7 @@ public class AstSastTest extends CommonClientTest {
         Assert.assertTrue("Status is missing.", StringUtils.isNotEmpty(finding.getStatus()));
         Assert.assertTrue("Severity is missing.", StringUtils.isNotEmpty(finding.getSeverity()));
         Assert.assertTrue("Query name is missing.", StringUtils.isNotEmpty(finding.getQueryName()));
+        Assert.assertTrue("Description is missing. ", StringUtils.isNotEmpty(finding.getDescription()));
     }
 
     private void logFinding(Finding finding) {

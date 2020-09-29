@@ -22,5 +22,6 @@ public class Finding implements Serializable {
     private String firstFoundAt;
     private String foundAt;
     private String status;
+    private String description;
     private String state;
 }
