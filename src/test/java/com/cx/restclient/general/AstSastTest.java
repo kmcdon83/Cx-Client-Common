@@ -103,7 +103,7 @@ public class AstSastTest extends CommonClientTest {
         validateDescriptions(findings);
     }
 
-    public static void validateDescriptions(List<Finding> findings) {
+    private void validateDescriptions(List<Finding> findings) {
 
         Map<String, Set<String>> mapDescriptions = new HashMap<>();
         
