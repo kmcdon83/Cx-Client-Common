@@ -319,9 +319,8 @@ public class AstSastClient extends AstClient implements Scanner {
                     .build()
                     .toString();
 
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Getting findings from %s", result));
-            }
+
+            log.debug(String.format("Getting descriptions from %s", result));
 
             return result;
         } catch (URISyntaxException e) {
