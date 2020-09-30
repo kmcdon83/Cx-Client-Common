@@ -15,6 +15,7 @@ import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
+import com.cx.restclient.osa.utils.OSAUtils;
 import com.cx.restclient.sast.utils.zip.*;
 import com.cx.restclient.sca.dto.CxSCAResolvingConfiguration;
 import com.cx.restclient.sca.utils.CxSCAFileSystemUtils;
@@ -53,6 +54,10 @@ public class AstScaClient extends AstClient implements Scanner {
     public static final String LATEST_SCAN = RISK_MANAGEMENT_API + "riskReports?size=1&projectId=%s";
     public static final String WEB_REPORT = "/#/projects/%s/reports/%s";
     public static final String RESOLVING_CONFIGURATION_API = "/settings/projects/%s/resolving-configuration";
+
+    public static final String REPORT_SCA_PACKAGES = "cxSCAPackages";
+    public static final String REPORT_SCA_FINDINGS = "cxSCAVulnerabilities";
+    public static final String REPORT_SCA_SUMMARY = "cxSCASummary";
 
 
     private static final String ENGINE_TYPE_FOR_API = "sca";
@@ -178,6 +183,11 @@ public class AstScaClient extends AstClient implements Scanner {
         try {
             waitForScanToFinish(scanId);
             scaResults = tryGetScanResults(scanId).orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
+            if(config.getScaJsonReport() != null){
+                OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS+".json",scaResults.getFindings(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES+".json",scaResults.getPackages(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_SUMMARY+".json",scaResults.getSummary(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+            }
         } catch (CxClientException e) {
             scaResults = new AstScaResults();
             scaResults.setWaitException(e);
