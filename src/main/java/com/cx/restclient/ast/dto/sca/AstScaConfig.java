@@ -1,8 +1,6 @@
 package com.cx.restclient.ast.dto.sca;
 
 import com.cx.restclient.ast.dto.common.ASTConfig;
-import com.cx.restclient.dto.SourceLocationType;
-import com.cx.restclient.sca.dto.RemoteRepositoryInfo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,14 +13,16 @@ public class AstScaConfig extends ASTConfig implements Serializable {
     private String username;
     private String password;
     private String tenant;
-    private String webAppUrl;
 
-    //true: upload all sources for scan
-    //false: only upload manifest and fingerprints for scan
+    /**
+     * true: upload all sources for scan
+     * <br>
+     * false: only upload manifest and fingerprints for scan. Useful for customers that don't want their proprietary
+     * code to be uploaded into the cloud.
+     */
     private boolean includeSources;
     
-    private String FingerprintsIncludePattern;
-    private String ManifestsIncludePattern;
-    private String FingerprintFilePath;
-
+    private String fingerprintsIncludePattern;
+    private String manifestsIncludePattern;
+    private String fingerprintFilePath;
 }

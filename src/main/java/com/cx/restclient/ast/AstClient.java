@@ -1,8 +1,9 @@
 package com.cx.restclient.ast;
 
 import com.cx.restclient.ast.dto.common.*;
+import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.PathFilter;
+import com.cx.restclient.configuration.PropertyFileLoader;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
@@ -21,28 +22,30 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public abstract class AstClient {
 
     private static final String LOCATION_HEADER = "Location";
     private static final String CREDENTIAL_TYPE_PASSWORD = "password";
+    protected static final String ENCODING = StandardCharsets.UTF_8.name();
 
     protected final CxScanConfig config;
     protected final Logger log;
 
     protected CxHttpClient httpClient;
 
-    public static final String GET_SCAN = "/api/scans/%s";
-    public static final String CREATE_SCAN = "/api/scans";
-    public static final String RISK_MANAGEMENT_API = "/risk-management/";
-    public static final String GET_UPLOAD_URL = "/api/uploads";
+    protected static final PropertyFileLoader properties = PropertyFileLoader.getDefaultInstance();
+    public static final String GET_SCAN = properties.get("ast.getScan");
+    public static final String CREATE_SCAN = properties.get("ast.createScan");
+    public static final String GET_UPLOAD_URL = properties.get("ast.getUploadUrl");
 
-    
-    
     public AstClient(CxScanConfig config, Logger log) {
         validate(config, log);
         this.config = config;
@@ -55,9 +58,11 @@ public abstract class AstClient {
 
     protected abstract HandlerRef getBranchToScan(RemoteRepositoryInfo repoInfo);
 
-    protected abstract HttpResponse submitAllSourcesFromLocalDir(String projectId, String zipFilePath) throws IOException ;
+    protected abstract HttpResponse submitAllSourcesFromLocalDir(String projectId, String zipFilePath) throws IOException;
 
-        protected CxHttpClient createHttpClient(String baseUrl) {
+    protected abstract String getWebReportPath() throws UnsupportedEncodingException;
+
+    protected CxHttpClient createHttpClient(String baseUrl) {
         log.debug("Creating HTTP client.");
         CxHttpClient client = new CxHttpClient(baseUrl,
                 config.getCxOrigin(),
@@ -155,6 +160,28 @@ public abstract class AstClient {
 
     protected URL getEffectiveRepoUrl(RemoteRepositoryInfo repoInfo) {
         return repoInfo.getUrl();
+    }
+
+    protected String getWebReportLink(String baseUrl) {
+        String result = null;
+        String warning = null;
+        try {
+            if (StringUtils.isNotEmpty(baseUrl)) {
+                String path = getWebReportPath();
+                result = UrlUtils.parseURLToString(baseUrl, path);
+            } else {
+                warning = "Web app URL is not specified.";
+            }
+        } catch (MalformedURLException e) {
+            warning = "Invalid web app URL.";
+        } catch (Exception e) {
+            warning = "General error.";
+        }
+
+        Optional.ofNullable(warning)
+                .ifPresent(warn -> log.warn("Unable to generate web report link. {}", warn));
+
+        return result;
     }
 
     /**

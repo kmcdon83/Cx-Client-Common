@@ -1,15 +1,17 @@
 package com.cx.restclient.general;
 
 import com.cx.restclient.CxClientDelegator;
+import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
+import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.ast.dto.sast.AstSastResults;
 import com.cx.restclient.ast.dto.sast.report.AstSastSummaryResults;
-import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.ast.dto.sast.report.Finding;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.dto.SourceLocationType;
-import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
@@ -18,10 +20,12 @@ import org.junit.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 public class AstSastTest extends CommonClientTest {
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     //TODO : Fix this test
     @Test
     @Ignore("this test fails and needs to be fixed")
@@ -47,6 +51,7 @@ public class AstSastTest extends CommonClientTest {
         AstSastResults astSastResults = finalResults.getAstResults();
         Assert.assertNotNull("AST-SAST results are null.", astSastResults);
         Assert.assertTrue("Scan ID is missing.", StringUtils.isNotEmpty(astSastResults.getScanId()));
+        Assert.assertTrue("Web report link is missing.", StringUtils.isNotEmpty(astSastResults.getWebReportLink()));
 
         validateFindings(astSastResults);
         validateSummary(astSastResults);
@@ -89,7 +94,57 @@ public class AstSastTest extends CommonClientTest {
 
         boolean someNodeListsAreEmpty = findings.stream().anyMatch(finding -> finding.getNodes().isEmpty());
         Assert.assertFalse("Some of the finding node lists are empty.", someNodeListsAreEmpty);
+
+                
+        log.info("Validating each finding.");
+
+        findings.forEach(this::validateFinding);
+
+        validateDescriptions(findings);
     }
+
+    private void validateDescriptions(List<Finding> findings) {
+
+        Map<String, Set<String>> mapDescriptions = new HashMap<>();
+        
+        findings.forEach(finding -> {
+            Set<String> listDescriptions = mapDescriptions.get(finding.getQueryID());
+            if(listDescriptions == null){
+                listDescriptions = new HashSet<>();
+            }
+            listDescriptions.add(finding.getDescription());
+            mapDescriptions.put(finding.getQueryID(), listDescriptions);
+        });
+
+        Set<String> uniqueDescriptions = new HashSet<>();
+        
+        //validate for each queryId there is exactly one corresponding description
+        for( Map.Entry<String, Set<String>> entry :mapDescriptions.entrySet()){
+            Assert.assertEquals( 1, entry.getValue().size());
+            uniqueDescriptions.add((String)entry.getValue().toArray()[0]);
+        }
+        
+        //validate all descriptions are unique
+        Assert.assertEquals(uniqueDescriptions.size(),mapDescriptions.size() );
+    }
+
+    private void validateFinding(Finding finding) {
+        logFinding(finding);
+        Assert.assertTrue("State is missing.", StringUtils.isNotEmpty(finding.getState()));
+        Assert.assertTrue("Status is missing.", StringUtils.isNotEmpty(finding.getStatus()));
+        Assert.assertTrue("Severity is missing.", StringUtils.isNotEmpty(finding.getSeverity()));
+        Assert.assertTrue("Query name is missing.", StringUtils.isNotEmpty(finding.getQueryName()));
+        Assert.assertTrue("Description is missing. ", StringUtils.isNotEmpty(finding.getDescription()));
+    }
+
+    private void logFinding(Finding finding) {
+        try {
+            log.info("Validating finding: {}", objectMapper.writeValueAsString(finding));
+        } catch (JsonProcessingException e) {
+            Assert.fail("Error serializing finding to JSON.");
+        }
+    }
+
 
     private void validateInitialResults(ScanResults initialResults) {
         Assert.assertNotNull("Initial scan results are null.", initialResults);
@@ -97,9 +152,10 @@ public class AstSastTest extends CommonClientTest {
         Assert.assertTrue("Scan ID is missing.", StringUtils.isNotEmpty(initialResults.getAstResults().getScanId()));
     }
 
-    private static CxScanConfig getScanConfig() throws MalformedURLException {
+    private CxScanConfig getScanConfig() throws MalformedURLException {
         AstSastConfig astConfig = AstSastConfig.builder()
                 .apiUrl(prop("astSast.apiUrl"))
+                .webAppUrl(prop("astSast.webAppUrl"))
                 .clientSecret(prop("astSast.clientSecret"))
                 .clientId("CxFlow")
                 .sourceLocationType(SourceLocationType.REMOTE_REPOSITORY)
