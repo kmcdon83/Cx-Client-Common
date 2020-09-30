@@ -506,6 +506,22 @@ pipeline {
                         }
                     }
                 }
+
+                stage('cx-artifactory') {
+                    steps {
+                        script {
+                            kit.Upload_To_Artifactory("./target/cx-client-common-${env.cxCommonVersion}.jar", "libs-release-local/com/checkmarx/cx-client-common/${env.cxCommonVersion}/cx-client-common-${env.cxCommonVersion}.jar")
+                        }
+                    }
+                    post {
+                        failure {
+                            script {
+                                env.PIPELINE_STATUS = "Failure"
+                                env.STAGE_NAME_FAILED="${STAGE_NAME}"
+                            }
+                        }
+                    }
+                }
             }
         }
     }
