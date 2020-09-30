@@ -197,7 +197,7 @@ public class AstScaClient extends AstClient implements Scanner {
         AstScaResults scaResults;
         try {
             waitForScanToFinish(scanId);
-            scaResults = tryGetScanResults(scanId).orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
+            scaResults = tryGetScanResults().orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
             if(config.getScaJsonReport() != null){
                 OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS+".json",scaResults.getFindings(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
                 OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES+".json",scaResults.getPackages(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
