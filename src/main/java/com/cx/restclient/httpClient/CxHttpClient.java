@@ -98,7 +98,7 @@ public class CxHttpClient {
     private static final String PASSWORD_PROP = "password";
     public static final String CLIENT_ID_PROP = "client_id";
 
-    private static HttpClient apacheClient;
+    private HttpClient apacheClient;
 
     private Logger log;
     private TokenLoginResponse token;
@@ -390,7 +390,7 @@ public class CxHttpClient {
             return request(post, ContentType.APPLICATION_FORM_URLENCODED.toString(), requestEntity,
                     TokenLoginResponse.class, HttpStatus.SC_OK, AUTH_MESSAGE, false, false);
         } catch (CxClientException e) {
-            throw new CxClientException(String.format("Failed to generate access token from refresh token failure error was: %s", e.getMessage()), e);
+            throw new CxClientException(String.format("Failed to generate access token from refresh token. The error was: %s", e.getMessage()), e);
         }
     }
 
@@ -439,6 +439,7 @@ public class CxHttpClient {
         List<BasicNameValuePair> parameters = new ArrayList<>();
         parameters.add(new BasicNameValuePair("grant_type", REFRESH_TOKEN_PROP));
         parameters.add(new BasicNameValuePair(CLIENT_ID_PROP, clientType.getClientId()));
+        parameters.add(new BasicNameValuePair(CLIENT_SECRET_PROP, clientType.getClientSecret()));
         parameters.add(new BasicNameValuePair(REFRESH_TOKEN_PROP, settings.getRefreshToken()));
 
         return new UrlEncodedFormEntity(parameters, StandardCharsets.UTF_8.name());
