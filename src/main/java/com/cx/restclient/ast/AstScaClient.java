@@ -24,9 +24,8 @@ import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
-import com.cx.restclient.sast.utils.zip.CxZipUtils;
-import com.cx.restclient.sast.utils.zip.NewCxZipFile;
-import com.cx.restclient.sast.utils.zip.Zipper;
+import com.cx.restclient.osa.utils.OSAUtils;
+import com.cx.restclient.sast.utils.zip.*;
 import com.cx.restclient.sca.dto.CxSCAResolvingConfiguration;
 import com.cx.restclient.sca.utils.CxSCAFileSystemUtils;
 import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
@@ -64,15 +63,19 @@ import static com.cx.restclient.sast.utils.SASTParam.TEMP_FILE_NAME_TO_ZIP;
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 public class AstScaClient extends AstClient implements Scanner {
-   private static final String RISK_MANAGEMENT_API = properties.get("astSca.riskManagementApi");
-    public static final String PROJECTS = RISK_MANAGEMENT_API + properties.get("astSca.projects");
-    public static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + properties.get("astSca.summaryReport");
-    public static final String FINDINGS = RISK_MANAGEMENT_API + properties.get("astSca.findings");
-    public static final String PACKAGES = RISK_MANAGEMENT_API + properties.get("astSca.packages");
-    public static final String LATEST_SCAN = RISK_MANAGEMENT_API + properties.get("astSca.latestScan");
-    public static final String WEB_REPORT = properties.get("astSca.webReport");
-    public static final String RESOLVING_CONFIGURATION_API = properties.get("astSca.resolvingConfigurationApi");
+    private static final String RISK_MANAGEMENT_API = properties.get("astSca.riskManagementApi");
+    private static final String PROJECTS = RISK_MANAGEMENT_API + properties.get("astSca.projects");
+    private static final String SUMMARY_REPORT = RISK_MANAGEMENT_API + properties.get("astSca.summaryReport");
+    private static final String FINDINGS = RISK_MANAGEMENT_API + properties.get("astSca.findings");
+    private static final String PACKAGES = RISK_MANAGEMENT_API + properties.get("astSca.packages");
+    private static final String LATEST_SCAN = RISK_MANAGEMENT_API + properties.get("astSca.latestScan");
+    private static final String WEB_REPORT = properties.get("astSca.webReport");
+    private static final String RESOLVING_CONFIGURATION_API = properties.get("astSca.resolvingConfigurationApi");
 
+    private static final String REPORT_SCA_PACKAGES = "cxSCAPackages";
+    private static final String REPORT_SCA_FINDINGS = "cxSCAVulnerabilities";
+    private static final String REPORT_SCA_SUMMARY = "cxSCASummary";
+    private static final String JSON_EXTENSION = ".json";
 
     private static final String ENGINE_TYPE_FOR_API = "sca";
 
@@ -195,6 +198,11 @@ public class AstScaClient extends AstClient implements Scanner {
         try {
             waitForScanToFinish(scanId);
             scaResults = tryGetScanResults().orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
+            if(config.getScaJsonReport() != null){
+                OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS+JSON_EXTENSION,scaResults.getFindings(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES+JSON_EXTENSION,scaResults.getPackages(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_SUMMARY+JSON_EXTENSION,scaResults.getSummary(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+            }
         } catch (CxClientException e) {
             scaResults = new AstScaResults();
             scaResults.setWaitException(e);

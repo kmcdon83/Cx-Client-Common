@@ -104,6 +104,8 @@ public class CxScanConfig implements Serializable {
     private Integer maxZipSize;
     private String defaultProjectName;
 
+    private String scaJsonReport;
+
     private AstScaConfig astScaConfig;
     private AstSastConfig astSastConfig;
 
@@ -236,6 +238,14 @@ public class CxScanConfig implements Serializable {
 
     public String getUrl() {
         return url;
+    }
+
+    public String getScaJsonReport() {
+        return scaJsonReport;
+    }
+
+    public void setScaJsonReport(String scaJsonReport) {
+        this.scaJsonReport = scaJsonReport;
     }
 
     public void setUrl(String url) {
