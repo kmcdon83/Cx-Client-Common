@@ -1,6 +1,5 @@
 package com.cx.restclient.sast.utils.zip;
 
-import com.cx.restclient.dto.PathFilter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.tools.ant.DirectoryScanner;
@@ -12,7 +11,7 @@ import java.io.*;
 import java.util.List;
 
 
-public class NewCxZipFile {
+public class NewCxZipFile implements Closeable {
 
     private static final double AVERAGE_ZIP_COMPRESSION_RATIO = 4.0D;
 
@@ -42,34 +41,29 @@ public class NewCxZipFile {
     }
 
 
-
     public void zipContentAsFile(String pathInZip, byte[] content) throws IOException {
 
         validateNextFileWillNotReachMaxCompressedSize((double) content.length);
 
 
         ByteArrayInputStream inputStream = null;
-        try
-        {
+        try {
             inputStream = new ByteArrayInputStream(content);
             compressedSize += InsertZipEntry(zipOutputStream, pathInZip, inputStream);
             if (listener != null) {
                 listener.updateProgress(pathInZip, compressedSize);
             }
-        }
-        catch (IOException ioException){
+        } catch (IOException ioException) {
             log.warn(String.format("Failed to add file to archive: %s", pathInZip), ioException);
-        }
-        finally {
+        } finally {
             IOUtils.closeQuietly(inputStream);
         }
     }
 
-    public void close(){
+    public void close() {
         IOUtils.closeQuietly(zipOutputStream);
         IOUtils.closeQuietly(outputStream);
     }
-
 
     public void addMultipleFilesToArchive(File baseDir, List<String> relativePaths) throws IOException {
         assert baseDir != null : "baseDir must not be null";
@@ -88,18 +82,15 @@ public class NewCxZipFile {
             validateNextFileWillNotReachMaxCompressedSize((double) file.length());
 
             FileInputStream fileInputStream = null;
-            try
-            {
+            try {
                 fileInputStream = new FileInputStream(file);
                 compressedSize += InsertZipEntry(zipOutputStream, fileName, fileInputStream);
                 if (listener != null) {
                     listener.updateProgress(fileName, compressedSize);
                 }
-            }
-            catch (IOException ioException){
+            } catch (IOException ioException) {
                 log.warn(String.format("Failed to add file to archive: %s", fileName), ioException);
-            }
-            finally {
+            } finally {
                 IOUtils.closeQuietly(fileInputStream);
             }
         }

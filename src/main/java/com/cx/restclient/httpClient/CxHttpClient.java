@@ -52,6 +52,7 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.UnknownHostException;
@@ -73,7 +74,7 @@ import static com.cx.restclient.httpClient.utils.HttpClientHelper.*;
 /**
  * Created by Galn on 05/02/2018.
  */
-public class CxHttpClient {
+public class CxHttpClient implements Closeable {
 
     private static final String LOGIN_FAILED_MSG = "Fail to login with windows authentication: ";
 

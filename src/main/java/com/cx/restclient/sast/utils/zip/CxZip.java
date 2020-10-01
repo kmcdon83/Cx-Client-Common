@@ -5,10 +5,9 @@ import com.cx.restclient.dto.PathFilter;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 
 public class CxZip {
@@ -24,7 +23,7 @@ public class CxZip {
         this.maxZipSizeInBytes = maxZipSizeInBytes;
     }
 
-    public File zipWorkspaceFolder(File baseDir, PathFilter filter)
+    public byte[] zipWorkspaceFolder(File baseDir, PathFilter filter)
             throws IOException {
         log.info("Zipping workspace: '" + baseDir + "'");
 
@@ -35,22 +34,22 @@ public class CxZip {
             }
         };
 
-        File tempFile = File.createTempFile(tempFileName, ".bin");
+        byte[] zipFileBA;
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+            try {
+                new Zipper(log).zip(baseDir, filter.getIncludes(), filter.getExcludes(), byteArrayOutputStream, maxZipSizeInBytes, zipListener);
+            } catch (Zipper.MaxZipSizeReached e) {
+                throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeInBytes));
+            } catch (Zipper.NoFilesToZip e) {
+                throw new IOException("No files to zip");
+            }
 
-        try (OutputStream fileOutputStream = new FileOutputStream(tempFile)) {
-            new Zipper(log).zip(baseDir, filter.getIncludes(), filter.getExcludes(), fileOutputStream, maxZipSizeInBytes, zipListener);
-        } catch (Zipper.MaxZipSizeReached e) {
-            tempFile.delete();
-            throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeInBytes));
-        } catch (Zipper.NoFilesToZip e) {
-            throw new IOException("No files to zip");
+            log.info("Zipping complete with " + numOfZippedFiles + " files, total compressed size: " +
+                    FileUtils.byteCountToDisplaySize(byteArrayOutputStream.size()));
+
+            zipFileBA = byteArrayOutputStream.toByteArray();
         }
-
-        log.info("Zipping complete with " + numOfZippedFiles + " files, total compressed size: " +
-                FileUtils.byteCountToDisplaySize(tempFile.length()));
-        log.info("Temporary file with zipped sources was created at: '" + tempFile.getAbsolutePath() + "'");
-
-        return tempFile;
+        return zipFileBA;
     }
 
     public CxZip setMaxZipSizeInBytes(long maxZipSizeInBytes) {

@@ -32,52 +32,52 @@ public class Zipper {
         DirectoryScanner ds = this.createDirectoryScanner(baseDir, filterIncludePatterns, filterExcludePatterns);
         ds.setFollowSymlinks(true);
         ds.scan();
-       // this.printDebug(ds);
+        // this.printDebug(ds);
         if (ds.getIncludedFiles().length == 0) {
             outputStream.close();
             log.info("No files to zip");
             throw new Zipper.NoFilesToZip();
-        } else {
-            this.zipFile(baseDir, ds.getIncludedFiles(), outputStream, maxZipSize, listener);
         }
+        this.zipFile(baseDir, ds.getIncludedFiles(), outputStream, maxZipSize, listener);
     }
 
     private void zipFile(File baseDir, String[] files, OutputStream outputStream, long maxZipSize, ZipListener listener) throws IOException {
-        ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream);
-        zipOutputStream.setEncoding("UTF8");
-        long compressedSize = 0L;
-        double AVERAGE_ZIP_COMPRESSION_RATIO = 4.0D;
-        String[] arr$ = files;
-        int len$ = files.length;
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
+            zipOutputStream.setEncoding("UTF8");
+            long compressedSize = 0L;
+            double AVERAGE_ZIP_COMPRESSION_RATIO = 4.0D;
+            String[] arr$ = files;
+            int len$ = files.length;
 
-        for (int i$ = 0; i$ < len$; ++i$) {
-            String fileName = arr$[i$];
-          //  log.debug("Adding file to zip: " + fileName);
-            File file = new File(baseDir, fileName);
-            if (!file.canRead()) {
-                log.warn("Skipping unreadable file: " + file);
-            } else {
-                if (maxZipSize > 0L && (double) compressedSize + (double) file.length() / 4.0D > (double) maxZipSize) {
-                    log.info("Maximum zip file size reached. Zip size: " + compressedSize + " bytes Limit: " + maxZipSize + " bytes");
-                    zipOutputStream.close();
-                    throw new Zipper.MaxZipSizeReached(compressedSize, maxZipSize);
+            for (int i$ = 0; i$ < len$; ++i$) {
+                String fileName = arr$[i$];
+                //  log.debug("Adding file to zip: " + fileName);
+                File file = new File(baseDir, fileName);
+                if (!file.canRead()) {
+                    log.warn("Skipping unreadable file: " + file);
+                } else {
+                    if (maxZipSize > 0L && (double) compressedSize + (double) file.length() / AVERAGE_ZIP_COMPRESSION_RATIO > (double) maxZipSize) {
+                        log.info("Maximum zip file size reached. Zip size: " + compressedSize + " bytes Limit: " + maxZipSize + " bytes");
+                        zipOutputStream.close();
+                        throw new Zipper.MaxZipSizeReached(compressedSize, maxZipSize);
+                    }
+
+                    if (listener != null) {
+                        listener.updateProgress(fileName, compressedSize);
+                    }
+
+                    ZipEntry zipEntry = new ZipEntry(fileName);
+                    zipOutputStream.putNextEntry(zipEntry);
+                    try (FileInputStream fileInputStream = new FileInputStream(file);) {
+                        IOUtils.copy(fileInputStream, zipOutputStream);
+                    } finally {
+                        zipOutputStream.closeEntry();
+                    }
+
+                    compressedSize += zipEntry.getCompressedSize();
                 }
-
-                if (listener != null) {
-                    listener.updateProgress(fileName, compressedSize);
-                }
-
-                ZipEntry zipEntry = new ZipEntry(fileName);
-                zipOutputStream.putNextEntry(zipEntry);
-                FileInputStream fileInputStream = new FileInputStream(file);
-                IOUtils.copy(fileInputStream, zipOutputStream);
-                fileInputStream.close();
-                zipOutputStream.closeEntry();
-                compressedSize += zipEntry.getCompressedSize();
             }
         }
-
-        zipOutputStream.close();
     }
 
     private DirectoryScanner createDirectoryScanner(File baseDir, String[] filterIncludePatterns, String[] filterExcludePatterns) {

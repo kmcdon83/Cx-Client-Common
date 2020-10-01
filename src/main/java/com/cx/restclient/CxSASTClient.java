@@ -23,9 +23,9 @@ import org.apache.http.entity.mime.content.InputStreamBody;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -131,9 +131,8 @@ class CxSASTClient {
         configureScanSettings(projectId);
         //prepare sources for scan
         PathFilter filter = new PathFilter(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
-        File zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
+        byte[] zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
         uploadZipFile(zipFile, projectId);
-        CxZipUtils.deleteZippedSources(zipFile, config, log);
 
         return createScan(projectId);
     }
@@ -351,15 +350,17 @@ class CxSASTClient {
         httpClient.putRequest(String.format(SAST_EXCLUDE_FOLDERS_FILES_PATTERNS, projectId), CONTENT_TYPE_APPLICATION_JSON_V1, entity, null, 200, "exclude project's settings");
     }
 
-    private void uploadZipFile(File zipFile, long projectId) throws CxClientException, IOException {
+    private void uploadZipFile(byte[] zipFile, long projectId) throws CxClientException, IOException {
         log.info("Uploading zip file");
 
-        InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
-        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-        builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-        builder.addPart("zippedSource", streamBody);
-        HttpEntity entity = builder.build();
-        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
+        try (InputStream is = new ByteArrayInputStream(zipFile)) {
+            InputStreamBody streamBody = new InputStreamBody(is, ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
+            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+            builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+            builder.addPart("zippedSource", streamBody);
+            HttpEntity entity = builder.build();
+            httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
+        }
     }
 
     private long createScan(long projectId) throws CxClientException, IOException {
@@ -374,7 +375,7 @@ class CxSASTClient {
     }
 
     private CxID createRemoteSourceRequest(long projectId, HttpEntity entity, String sourceType, boolean isSSH) throws IOException, CxClientException {
-        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), isSSH? null : CONTENT_TYPE_APPLICATION_JSON_V1,
+        final CxID cxID = httpClient.postRequest(String.format(SAST_CREATE_REMOTE_SOURCE_SCAN, projectId, sourceType, isSSH ? "ssh" : ""), isSSH ? null : CONTENT_TYPE_APPLICATION_JSON_V1,
                 entity, CxID.class, 204, "create " + sourceType + " remote source scan setting");
 
         return cxID;
@@ -436,14 +437,14 @@ class CxSASTClient {
     }
 
     private ResponseQueueScanStatus resolveSASTStatus(ResponseQueueScanStatus scanStatus) throws CxClientException {
-        if(scanStatus != null ) {
+        if (scanStatus != null) {
             if (Status.SUCCEEDED == scanStatus.getBaseStatus()) {
                 log.info("SAST scan finished successfully.");
                 return scanStatus;
             } else {
                 throw new CxClientException("SAST scan cannot be completed. status [" + scanStatus.getStage().getValue() + "]: " + scanStatus.getStageDetails());
             }
-        }else{
+        } else {
             throw new CxClientException("SAST scan cannot be completed.");
         }
     }
@@ -470,13 +471,13 @@ class CxSASTClient {
     }
 
     private ReportStatus resolveReportStatus(ReportStatus reportStatus) throws CxClientException {
-        if(reportStatus != null ) {
+        if (reportStatus != null) {
             if (Status.SUCCEEDED == reportStatus.getBaseStatus()) {
                 return reportStatus;
             } else {
                 throw new CxClientException("Generation of scan report [id=" + reportStatus.getBaseId() + "] failed.");
             }
-        }else{
+        } else {
             throw new CxClientException("Generation of scan report failed.");
         }
     }
@@ -512,7 +513,7 @@ class CxSASTClient {
             } else {
                 throw new CxClientException("Getting policy violations of project [id=" + cxARMStatus.getBaseId() + "] failed.");
             }
-        }else{
+        } else {
             throw new CxClientException("Getting policy violations of project failed.");
         }
     }

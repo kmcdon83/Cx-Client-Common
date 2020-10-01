@@ -20,8 +20,8 @@ import com.cx.restclient.sca.dto.report.Finding;
 import com.cx.restclient.sca.dto.report.Package;
 import com.cx.restclient.sca.dto.report.SCASummaryResults;
 import com.cx.restclient.sca.utils.CxSCAFileSystemUtils;
-import com.cx.restclient.sca.utils.fingerprints.FingerprintCollector;
 import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
+import com.cx.restclient.sca.utils.fingerprints.FingerprintCollector;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -33,7 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
@@ -113,7 +113,6 @@ public class SCAClient implements DependencyScanner {
         this.isManifestAndFingerprintsOnly = !getScaConfig().isIncludeSources();
 
 
-
         httpClient = createHttpClient(scaConfig.getApiUrl());
 
         // Pass tenant name in a custom header. This will allow to get token from on-premise  access control server
@@ -128,7 +127,7 @@ public class SCAClient implements DependencyScanner {
         try {
             login();
             resolveProject();
-            if (isManifestAndFingerprintsOnly){
+            if (isManifestAndFingerprintsOnly) {
                 this.resolvingConfiguration = getCxSCAResolvingConfigurationForProject(this.projectId);
                 log.info(String.format("Got the following manifest patterns %s", this.resolvingConfiguration.getManifests()));
                 log.info(String.format("Got the following fingerprint patterns %s", this.resolvingConfiguration.getFingerprints()));
@@ -170,7 +169,7 @@ public class SCAClient implements DependencyScanner {
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
                 response = submitSourcesFromRemoteRepo();
             } else {
-                if (scaConfig.isIncludeSources()){
+                if (scaConfig.isIncludeSources()) {
                     response = submitAllSourcesFromLocalDir();
                 } else {
                     response = submitManifestsAndFingerprintsFromLocalDir();
@@ -223,15 +222,10 @@ public class SCAClient implements DependencyScanner {
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
-        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
+        byte[] zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
         uploadArchive(zipFile, uploadedArchiveUrl);
-
-        //delete only if path not specified in the config
-        if (StringUtils.isEmpty(scaConfig.getZipFilePath())) {
-            CxZipUtils.deleteZippedSources(zipFile, config, log);
-        }
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
@@ -245,14 +239,14 @@ public class SCAClient implements DependencyScanner {
         Set<String> scannedFileSet = new HashSet<String>(Arrays.asList(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir, userFilter)));
 
         PathFilter manifestIncludeFilter = new PathFilter(null, getManifestsIncludePattern(), log);
-        if (manifestIncludeFilter.getIncludes().length == 0){
+        if (manifestIncludeFilter.getIncludes().length == 0) {
             throw new CxClientException(String.format("Using manifest only mode requires include filter. Resolving config does not have include patterns defined: %s", getManifestsIncludePattern()));
         }
 
         List<String> filesToZip =
-            Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,manifestIncludeFilter))
-                .filter(scannedFileSet::contains).
-                collect(Collectors.toList());
+                Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir, manifestIncludeFilter))
+                        .filter(scannedFileSet::contains).
+                        collect(Collectors.toList());
 
         List<String> filesToFingerprint =
                 Arrays.stream(CxSCAFileSystemUtils.scanAndGetIncludedFiles(sourceDir,
@@ -269,18 +263,14 @@ public class SCAClient implements DependencyScanner {
 
         String uploadedArchiveUrl = getSourcesUploadUrl();
         log.info(String.format("Uploading to: %s", uploadedArchiveUrl.split("\\?")[0]));
-        uploadArchive(zipFile, uploadedArchiveUrl);
+        uploadArchive(FileUtils.readFileToByteArray(zipFile), uploadedArchiveUrl);
 
-        //delete only if path not specified in the config
-        if (StringUtils.isEmpty(scaConfig.getZipFilePath())) {
-            CxZipUtils.deleteZippedSources(zipFile, config, log);
-        }
 
         return sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
     private String getFingerprintsIncludePattern() {
-        if (StringUtils.isNotEmpty(scaConfig.getFingerprintsIncludePattern())){
+        if (StringUtils.isNotEmpty(scaConfig.getFingerprintsIncludePattern())) {
             return scaConfig.getFingerprintsIncludePattern();
         }
 
@@ -288,7 +278,7 @@ public class SCAClient implements DependencyScanner {
     }
 
     private String getManifestsIncludePattern() {
-        if (StringUtils.isNotEmpty(scaConfig.getManifestsIncludePattern())){
+        if (StringUtils.isNotEmpty(scaConfig.getManifestsIncludePattern())) {
             return scaConfig.getManifestsIncludePattern();
         }
 
@@ -303,51 +293,41 @@ public class SCAClient implements DependencyScanner {
 
     private File zipDirectoryAndFingerprints(String sourceDir, List<String> paths, CxSCAScanFingerprints fingerprints) throws IOException {
         File result = config.getZipFile();
-        if (result != null){
+        if (result != null) {
             return result;
         }
         File tempFile = getZipFile();
         log.info(String.format("Collecting files to zip archive: %s", tempFile.getAbsolutePath()));
         long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
 
-        NewCxZipFile zipper = null;
-        try {
-            zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
+        try (NewCxZipFile zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log)) {
             zipper.addMultipleFilesToArchive(new File(sourceDir), paths);
-            if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0){
+            if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().size() == 0) {
                 tempFile.delete();
                 throw new CxClientException("No files found to zip and no supported fingerprints found");
             }
-            if (fingerprints.getFingerprints().size() > 0){
+            if (fingerprints.getFingerprints().size() > 0) {
                 zipper.zipContentAsFile(FINGERPRINT_FILE_NAME, FingerprintCollector.getFingerprintsAsJsonString(fingerprints).getBytes());
-            } else{
+            } else {
                 log.info("No supported fingerprints found to zip");
             }
 
             log.debug("The sources were zipped to " + tempFile.getAbsolutePath());
             return tempFile;
-        }
-        catch (Zipper.MaxZipSizeReached e) {
+        } catch (Zipper.MaxZipSizeReached e) {
             tempFile.delete();
             throw new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes));
-        }
-        catch (IOException ioException) {
+        } catch (IOException ioException) {
             tempFile.delete();
             throw new CxClientException("Error creating zip file", ioException);
         }
-        finally {
-            if (zipper != null) {
-                zipper.close();
-            }
-        }
-
     }
 
     private File getZipFile() throws IOException {
-        if (StringUtils.isNotEmpty(scaConfig.getZipFilePath())){
+        if (StringUtils.isNotEmpty(scaConfig.getZipFilePath())) {
             return new File(scaConfig.getZipFilePath());
         }
-        return File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin");
+        return File.createTempFile(TEMP_FILE_NAME_TO_ZIP, ".bin", new File(System.getProperty("user.dir")));
     }
 
     private void optionallyWriteFingerprintsToFile(CxSCAScanFingerprints fingerprints) {
@@ -406,7 +386,11 @@ public class SCAClient implements DependencyScanner {
                 .build();
 
         GetUploadUrlRequest request = GetUploadUrlRequest.builder()
-                .config(new ArrayList<ScanAPIConfigEntry>() { { add(scanAPIConfig); } } )
+                .config(new ArrayList<ScanAPIConfigEntry>() {
+                    {
+                        add(scanAPIConfig);
+                    }
+                })
                 .build();
 
         StringEntity entity = HttpClientHelper.convertToStringEntity(request);
@@ -421,10 +405,10 @@ public class SCAClient implements DependencyScanner {
         return response.get("url").asText();
     }
 
-    private void uploadArchive(File source, String uploadUrl) throws IOException {
+    private void uploadArchive(byte[] source, String uploadUrl) throws IOException {
         log.info("Uploading the zipped sources.");
 
-        HttpEntity request = new FileEntity(source);
+        HttpEntity request = new ByteArrayEntity(source);
 
         CxHttpClient uploader = createHttpClient(uploadUrl);
 
@@ -667,11 +651,11 @@ public class SCAClient implements DependencyScanner {
                 log);
     }
 
-    public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException{
+    public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException {
         log.info(String.format("Getting CxSCA Resolving configuration for project: %s", projectId));
         String path = String.format(UrlPaths.RESOLVING_CONFIGURATION_API, URLEncoder.encode(projectId, ENCODING));
 
-        return  httpClient.getRequest(path,
+        return httpClient.getRequest(path,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
                 CxSCAResolvingConfiguration.class,
                 HttpStatus.SC_OK,
@@ -680,7 +664,7 @@ public class SCAClient implements DependencyScanner {
 
     }
 
-    public String getProjectId(){
+    public String getProjectId() {
         return projectId;
     }
 

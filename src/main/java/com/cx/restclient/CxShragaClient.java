@@ -17,7 +17,9 @@ import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +37,8 @@ import static com.cx.restclient.sast.utils.SASTParam.*;
  */
 //SHRAGA
 //System Holistic Rest Api Generic Application
-public class CxShragaClient {
+public class CxShragaClient implements Closeable {
+
     private static final String DEFAULT_AUTH_API_PATH = "CxRestApi/auth/";
     private static final String PRINT_LINE = "-----------------------------------------------------------------------------------------";
 
@@ -100,15 +103,13 @@ public class CxShragaClient {
     //API Scans methods
     public String getClientVersion() {
         String version = "";
-        try {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("common.properties")) {
             Properties properties = new Properties();
-            java.io.InputStream is = getClass().getClassLoader().getResourceAsStream("common.properties");
             if (is != null) {
                 properties.load(is);
                 version = properties.getProperty("version");
             }
         } catch (Exception e) {
-
         }
         return version;
     }
@@ -261,9 +262,6 @@ public class CxShragaClient {
     public void close() {
         httpClient.close();
     }
-
-    //HELP config  Methods
-
 
     public void login() throws IOException {
         String version = getCxVersion();
