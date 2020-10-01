@@ -76,6 +76,8 @@ public class AstScaClient extends AstClient implements Scanner {
     public static final String REPORT_SCA_FINDINGS = "cxSCAVulnerabilities";
     public static final String REPORT_SCA_SUMMARY = "cxSCASummary";
 
+    public static final String JSON_EXTENSION = ".json";
+
 
     private static final String ENGINE_TYPE_FOR_API = "sca";
 
@@ -199,9 +201,9 @@ public class AstScaClient extends AstClient implements Scanner {
             waitForScanToFinish(scanId);
             scaResults = tryGetScanResults().orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
             if(config.getScaJsonReport() != null){
-                OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS+".json",scaResults.getFindings(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
-                OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES+".json",scaResults.getPackages(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
-                OSAUtils.writeJsonToFile(REPORT_SCA_SUMMARY+".json",scaResults.getSummary(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS+JSON_EXTENSION,scaResults.getFindings(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES+JSON_EXTENSION,scaResults.getPackages(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_SUMMARY+JSON_EXTENSION,scaResults.getSummary(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
             }
         } catch (CxClientException e) {
             scaResults = new AstScaResults();
