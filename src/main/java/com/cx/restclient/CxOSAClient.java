@@ -169,6 +169,7 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         } catch (Exception e) {
             if (e instanceof IOException)
                 e = new CxClientException("Failed to retrieve OSA results.", e);
+            log.error(e.getMessage());
             osaResults.setWaitException(e);
         }
 
@@ -212,6 +213,7 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         } catch (Exception e) {
             if (e instanceof IOException)
                 e = new CxClientException("Error getting last scan results.");
+            log.error(e.getMessage());
             osaResults.setWaitException(e);
         }
 

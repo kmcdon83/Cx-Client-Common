@@ -188,6 +188,7 @@ public class AstSastClient extends AstClient implements Scanner {
             waitForScanToFinish(scanId);
             result = retrieveScanResults();
         } catch (CxClientException e) {
+            log.error(e.getMessage());
             result = new AstSastResults();
             result.setWaitException(e);
         }
@@ -472,6 +473,7 @@ public class AstSastClient extends AstClient implements Scanner {
 
     @Override
     public Results getLatestScanResults() {
+        log.error("Unsupported Operation.");
         AstSastResults result = new AstSastResults();
         result.setWaitException(new UnsupportedOperationException());
         return result;
