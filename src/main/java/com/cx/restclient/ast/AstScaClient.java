@@ -198,12 +198,13 @@ public class AstScaClient extends AstClient implements Scanner {
         try {
             waitForScanToFinish(scanId);
             scaResults = tryGetScanResults().orElseThrow(() -> new CxClientException("Unable to get scan results: scan not found."));
-            if(config.getScaJsonReport() != null){
-                OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS+JSON_EXTENSION,scaResults.getFindings(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
-                OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES+JSON_EXTENSION,scaResults.getPackages(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
-                OSAUtils.writeJsonToFile(REPORT_SCA_SUMMARY+JSON_EXTENSION,scaResults.getSummary(),config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+            if (config.getScaJsonReport() != null) {
+                OSAUtils.writeJsonToFile(REPORT_SCA_FINDINGS + JSON_EXTENSION, scaResults.getFindings(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_PACKAGES + JSON_EXTENSION, scaResults.getPackages(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
+                OSAUtils.writeJsonToFile(REPORT_SCA_SUMMARY + JSON_EXTENSION, scaResults.getSummary(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
             }
         } catch (CxClientException e) {
+            log.error(e.getMessage());
             scaResults = new AstScaResults();
             scaResults.setWaitException(e);
         }
@@ -257,7 +258,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
         return initiateScanForUpload(projectId, zipFile, zipFilePath);
     }
-    
+
     private HttpResponse submitManifestsAndFingerprintsFromLocalDir(String projectId) throws IOException {
         log.info("Using manifest only and fingerprint flow");
 
@@ -398,6 +399,7 @@ public class AstScaClient extends AstClient implements Scanner {
             result = tryGetScanResults().orElse(null);
         } catch (Exception e) {
             CxClientException ex = new CxClientException("Error getting latest scan results.", e);
+            log.error(ex.getMessage());
             result.setWaitException(ex);
         }
         return result;
@@ -435,7 +437,7 @@ public class AstScaClient extends AstClient implements Scanner {
         return result;
     }
 
-   
+
     private void printWebReportLink(AstScaResults scaResult) {
         if (!StringUtils.isEmpty(scaResult.getWebReportLink())) {
             log.info("{} scan results location: {}", getScannerDisplayName(), scaResult.getWebReportLink());

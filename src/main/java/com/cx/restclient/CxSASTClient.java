@@ -334,6 +334,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                 }
             }
         } catch (Exception e) {
+            log.error(e.getMessage());
             sastResults.setWaitException(e);
         }
 
@@ -380,6 +381,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                 }
             }
         } catch (Exception e) {
+            log.error(e.getMessage());
             sastResults.setWaitException(e);
         }
         return sastResults;
