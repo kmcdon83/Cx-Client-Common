@@ -9,18 +9,16 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
-import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.slf4j.Logger;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -69,6 +67,7 @@ public abstract class AstClient {
                 config.isDisableCertificateValidation(),
                 false,      // AST clients don't support SSO.
                 null,
+                config.isProxy(),
                 config.getProxyConfig(),
                 log);
         //initializing Team Path to prevent null pointer in login when called from automation
@@ -127,7 +126,7 @@ public abstract class AstClient {
 
         AstWaiter waiter = new AstWaiter(httpClient, config, getScannerDisplayName());
         waiter.waitForScanToFinish(scanId);
-        log.info("{} scan finished successfully. Retrieving {} scan results.", getScannerDisplayName(),getScannerDisplayName());
+        log.info("{} scan finished successfully. Retrieving {} scan results.", getScannerDisplayName(), getScannerDisplayName());
     }
 
     /**
@@ -231,9 +230,7 @@ public abstract class AstClient {
         throw new CxClientException(message, e);
     }
 
-
-
-    protected HttpResponse initiateScanForUpload(String projectId, File zipFile, String zipFilePath) throws IOException {
+    protected HttpResponse initiateScanForUpload(String projectId, byte[] zipFile, String zipFilePath) throws IOException {
         String uploadedArchiveUrl = getSourcesUploadUrl();
         String cleanPath = uploadedArchiveUrl.split("\\?")[0];
         log.info("Uploading to: {}", cleanPath);
@@ -242,9 +239,6 @@ public abstract class AstClient {
         //delete only if path not specified in the config
         //If zipFilePath is specified in config, it means that the user has prepared the zip file themselves. The user obviously doesn't want this file to be deleted.
         //If zipFilePath is NOT specified, Common Client will create the zip itself. After uploading the zip, Common Client should clean after itself (delete the zip file that it created).
-        if (StringUtils.isEmpty(zipFilePath)) {
-            CxZipUtils.deleteZippedSources(zipFile, config, log);
-        }
 
         RemoteRepositoryInfo uploadedFileInfo = new RemoteRepositoryInfo();
         uploadedFileInfo.setUrl(new URL(uploadedArchiveUrl));
@@ -263,10 +257,10 @@ public abstract class AstClient {
         return response.get("url").asText();
     }
 
-    private void uploadArchive(File source, String uploadUrl) throws IOException {
+    private void uploadArchive(byte[] source, String uploadUrl) throws IOException {
         log.info("Uploading the zipped data.");
 
-        HttpEntity request = new FileEntity(source);
+        HttpEntity request = new ByteArrayEntity(source);
 
         CxHttpClient uploader = createHttpClient(uploadUrl);
 

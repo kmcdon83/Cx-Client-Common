@@ -14,18 +14,16 @@ import com.cx.restclient.common.CxPARAM;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.LoginSettings;
-import com.cx.restclient.dto.PathFilter;
-import com.cx.restclient.dto.Results;
-import com.cx.restclient.dto.ScannerType;
-import com.cx.restclient.dto.SourceLocationType;
+import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.osa.utils.OSAUtils;
-import com.cx.restclient.sast.utils.zip.*;
+import com.cx.restclient.sast.utils.zip.CxZipUtils;
+import com.cx.restclient.sast.utils.zip.NewCxZipFile;
+import com.cx.restclient.sast.utils.zip.Zipper;
 import com.cx.restclient.sca.dto.CxSCAResolvingConfiguration;
 import com.cx.restclient.sca.utils.CxSCAFileSystemUtils;
 import com.cx.restclient.sca.utils.fingerprints.CxSCAScanFingerprints;
@@ -49,11 +47,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.cx.restclient.sast.utils.SASTParam.MAX_ZIP_SIZE_BYTES;
@@ -254,7 +248,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
         PathFilter filter = new PathFilter(config.getOsaFolderExclusions(), config.getOsaFilterPattern(), log);
         String sourceDir = config.getEffectiveSourceDirForDependencyScan();
-        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
+        byte[] zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
         return initiateScanForUpload(projectId, zipFile, zipFilePath);
     }
@@ -290,7 +284,7 @@ public class AstScaClient extends AstClient implements Scanner {
 
         optionallyWriteFingerprintsToFile(fingerprints);
 
-        return initiateScanForUpload(projectId, zipFile, astScaConfig.getZipFilePath());
+        return initiateScanForUpload(projectId, FileUtils.readFileToByteArray(zipFile), astScaConfig.getZipFilePath());
     }
 
 
@@ -303,9 +297,7 @@ public class AstScaClient extends AstClient implements Scanner {
         log.info("Collecting files to zip archive: {}", tempFile.getAbsolutePath());
         long maxZipSizeBytes = config.getMaxZipSize() != null ? config.getMaxZipSize() * 1024 * 1024 : MAX_ZIP_SIZE_BYTES;
 
-        NewCxZipFile zipper = null;
-        try {
-            zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log);
+        try (NewCxZipFile zipper = new NewCxZipFile(tempFile, maxZipSizeBytes, log)) {
             zipper.addMultipleFilesToArchive(new File(sourceDir), paths);
             if (zipper.getFileCount() == 0 && fingerprints.getFingerprints().isEmpty()) {
                 throw handleFileDeletion(tempFile);
@@ -322,12 +314,7 @@ public class AstScaClient extends AstClient implements Scanner {
             throw handleFileDeletion(tempFile, new IOException("Reached maximum upload size limit of " + FileUtils.byteCountToDisplaySize(maxZipSizeBytes)));
         } catch (IOException ioException) {
             throw handleFileDeletion(tempFile, ioException);
-        } finally {
-            if (zipper != null) {
-                zipper.close();
-            }
         }
-
     }
 
     private CxClientException handleFileDeletion(File file, IOException ioException) {

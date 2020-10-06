@@ -6,10 +6,8 @@ import com.cx.restclient.common.Waiter;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.dto.*;
 import com.cx.restclient.exception.CxClientException;
-
 import com.cx.restclient.sast.dto.*;
 import com.cx.restclient.sast.utils.LegacyClient;
-
 import com.cx.restclient.sast.utils.SASTUtils;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.google.gson.Gson;
@@ -23,9 +21,9 @@ import org.apache.http.entity.mime.content.InputStreamBody;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -208,9 +206,8 @@ public class CxSASTClient extends LegacyClient implements Scanner {
         configureScanSettings(projectId);
         //prepare sources for scan
         PathFilter filter = new PathFilter(config.getSastFolderExclusions(), config.getSastFilterPattern(), log);
-        File zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
+        byte[] zipFile = CxZipUtils.getZippedSources(config, filter, config.getSourceDir(), log);
         uploadZipFile(zipFile, projectId);
-        CxZipUtils.deleteZippedSources(zipFile, config, log);
 
         return createScan(projectId);
     }
@@ -442,15 +439,17 @@ public class CxSASTClient extends LegacyClient implements Scanner {
         httpClient.putRequest(String.format(SAST_EXCLUDE_FOLDERS_FILES_PATTERNS, projectId), CONTENT_TYPE_APPLICATION_JSON_V1, entity, null, 200, "exclude project's settings");
     }
 
-    private void uploadZipFile(File zipFile, long projectId) throws IOException {
+    private void uploadZipFile(byte[] zipFile, long projectId) throws CxClientException, IOException {
         log.info("Uploading zip file");
 
-        InputStreamBody streamBody = new InputStreamBody(new FileInputStream(zipFile.getAbsoluteFile()), ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
-        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-        builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-        builder.addPart("zippedSource", streamBody);
-        HttpEntity entity = builder.build();
-        httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
+        try (InputStream is = new ByteArrayInputStream(zipFile)) {
+            InputStreamBody streamBody = new InputStreamBody(is, ContentType.APPLICATION_OCTET_STREAM, "zippedSource");
+            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+            builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+            builder.addPart("zippedSource", streamBody);
+            HttpEntity entity = builder.build();
+            httpClient.postRequest(SAST_ZIP_ATTACHMENTS.replace(PROJECT_ID_PATH_PARAM, Long.toString(projectId)), null, new BufferedHttpEntity(entity), null, 204, "upload ZIP file");
+        }
     }
 
     private long createScan(long projectId) throws IOException {

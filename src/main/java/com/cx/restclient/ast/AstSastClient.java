@@ -1,10 +1,6 @@
 package com.cx.restclient.ast;
 
-import com.cx.restclient.ast.dto.common.ASTConfig;
-import com.cx.restclient.ast.dto.common.HandlerRef;
-import com.cx.restclient.ast.dto.common.RemoteRepositoryInfo;
-import com.cx.restclient.ast.dto.common.ScanConfig;
-import com.cx.restclient.ast.dto.common.ScanConfigValue;
+import com.cx.restclient.ast.dto.common.*;
 import com.cx.restclient.ast.dto.sast.AstSastConfig;
 import com.cx.restclient.ast.dto.sast.AstSastResults;
 import com.cx.restclient.ast.dto.sast.SastScanConfigValue;
@@ -12,11 +8,7 @@ import com.cx.restclient.ast.dto.sast.report.*;
 import com.cx.restclient.common.Scanner;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
-import com.cx.restclient.dto.LoginSettings;
-import com.cx.restclient.dto.PathFilter;
-import com.cx.restclient.dto.Results;
-import com.cx.restclient.dto.ScannerType;
-import com.cx.restclient.dto.SourceLocationType;
+import com.cx.restclient.dto.*;
 import com.cx.restclient.dto.scansummary.Severity;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
@@ -26,7 +18,6 @@ import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
@@ -37,13 +28,12 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.util.*;
 import java.net.URLEncoder;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class AstSastClient extends AstClient implements Scanner {
@@ -148,7 +138,7 @@ public class AstSastClient extends AstClient implements Scanner {
 
         PathFilter filter = new PathFilter("", "", log);
         String sourceDir = config.getSourceDir();
-        File zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
+        byte[] zipFile = CxZipUtils.getZippedSources(config, filter, sourceDir, log);
 
         return initiateScanForUpload(projectId, zipFile, zipFilePath);
     }

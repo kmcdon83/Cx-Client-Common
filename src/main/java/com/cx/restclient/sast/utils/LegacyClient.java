@@ -9,7 +9,6 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.osa.dto.ClientType;
-
 import com.cx.restclient.sast.dto.CreateProjectRequest;
 import com.cx.restclient.sast.dto.CxNameObj;
 import com.cx.restclient.sast.dto.Preset;
@@ -145,6 +144,7 @@ public abstract class LegacyClient {
                     config.isDisableCertificateValidation(),
                     config.isUseSSOLogin(),
                     config.getRefreshToken(),
+                    config.isProxy(),
                     config.getProxyConfig(),
                     log);
         }
