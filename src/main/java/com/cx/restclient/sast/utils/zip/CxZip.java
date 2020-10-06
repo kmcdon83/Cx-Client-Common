@@ -23,8 +23,7 @@ public class CxZip {
         this.maxZipSizeInBytes = maxZipSizeInBytes;
     }
 
-    public byte[] zipWorkspaceFolder(File baseDir, PathFilter filter)
-            throws IOException {
+    public byte[] zipWorkspaceFolder(File baseDir, PathFilter filter) throws IOException {
         log.info("Zipping workspace: '" + baseDir + "'");
 
         ZipListener zipListener = new ZipListener() {
