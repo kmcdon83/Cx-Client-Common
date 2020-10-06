@@ -210,9 +210,39 @@
                     <artifactId>plexus-utils</artifactId>
                     <groupId>org.codehaus.plexus</groupId>
                 </exclusion>
+                <!--causing vulnerabilities in the osa scan of the project, excluded and newer dependencies imported instead -->
+                <!-- TODO: remove these excludes once its solved in the fsa-->
+                <exclusion>
+                    <groupId>com.beust</groupId>
+                    <artifactId>jcommander</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.ant</groupId>
+                    <artifactId>ant</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-web</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
-
+        <!-- excluded dependencies from fsa -->
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.78</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.10.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>5.2.9.RELEASE</version>
+        </dependency>
+        <!-- end of excluded dependencies -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
