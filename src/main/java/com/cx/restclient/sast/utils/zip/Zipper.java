@@ -42,7 +42,7 @@ public class Zipper {
         zipFile(baseDir, ds.getIncludedFiles(), outputStream, maxZipSize, listener);
     }
 
-    private void zipFile(File baseDir, String[] files, OutputStream outputStream, long maxZipSize, ZipListener listener) throws IOException {
+    private synchronized void zipFile(File baseDir, String[] files, OutputStream outputStream, long maxZipSize, ZipListener listener) throws IOException {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
             zipOutputStream.setEncoding("UTF8");
             long compressedSize = 0;
@@ -63,10 +63,6 @@ public class Zipper {
                     throw new MaxZipSizeReached(compressedSize, maxZipSize);
                 }
 
-                if (listener != null) {
-                    listener.updateProgress(fileName, compressedSize);
-                }
-
                 ZipEntry zipEntry = new ZipEntry(fileName);
                 zipOutputStream.putNextEntry(zipEntry);
 
@@ -75,6 +71,10 @@ public class Zipper {
                 fileInputStream.close();
                 zipOutputStream.closeEntry();
                 compressedSize += zipEntry.getCompressedSize();
+
+                if (listener != null) {
+                    listener.updateProgress(fileName, compressedSize);
+                }
             }
         }
     }
@@ -97,42 +97,26 @@ public class Zipper {
     }
 
     private void printDebug(DirectoryScanner ds) {
-        if (log.isDebugEnabled()) {
-            log.debug("Base Directory: " + ds.getBasedir());
-            String[] arr$ = ds.getIncludedFiles();
-            int len$ = arr$.length;
+        if (!log.isDebugEnabled()) {
+            return;
+        }
 
-            int i$;
-            String file;
-            for (i$ = 0; i$ < len$; ++i$) {
-                file = arr$[i$];
-                log.debug("Included: " + file);
-            }
+        log.debug("Base Directory: " + ds.getBasedir());
 
-            arr$ = ds.getExcludedFiles();
-            len$ = arr$.length;
+        for (String file : ds.getIncludedFiles()) {
+            log.debug("Included: " + file);
+        }
 
-            for (i$ = 0; i$ < len$; ++i$) {
-                file = arr$[i$];
-                log.debug("Excluded File: " + file);
-            }
+        for (String file : ds.getExcludedFiles()) {
+            log.debug("Excluded File: " + file);
+        }
 
-            arr$ = ds.getExcludedDirectories();
-            len$ = arr$.length;
+        for (String file : ds.getExcludedDirectories()) {
+            log.debug("Excluded Dir: " + file);
+        }
 
-            for (i$ = 0; i$ < len$; ++i$) {
-                file = arr$[i$];
-                log.debug("Excluded Dir: " + file);
-            }
-
-            arr$ = ds.getNotFollowedSymlinks();
-            len$ = arr$.length;
-
-            for (i$ = 0; i$ < len$; ++i$) {
-                file = arr$[i$];
-                log.debug("Not followed symbolic link: " + file);
-            }
-
+        for (String file : ds.getNotFollowedSymlinks()) {
+            log.debug("Not followed symbolic link: " + file);
         }
     }
 
@@ -158,4 +142,5 @@ public class Zipper {
             return this.maxZipSize;
         }
     }
+
 }
