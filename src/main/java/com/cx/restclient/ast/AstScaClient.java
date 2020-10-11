@@ -21,6 +21,7 @@ import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
 import com.cx.restclient.osa.dto.ClientType;
 import com.cx.restclient.osa.utils.OSAUtils;
+import com.cx.restclient.sast.utils.State;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.cx.restclient.sast.utils.zip.NewCxZipFile;
 import com.cx.restclient.sast.utils.zip.Zipper;
@@ -160,13 +161,15 @@ public class AstScaClient extends AstClient implements Scanner {
     }
 
     @Override
-    public void init() {
+    public Results init() {
         log.debug("Initializing {} client.", getScannerDisplayName());
+        AstScaResults scaResults = new AstScaResults();
         try {
             login();
-        } catch (IOException e) {
-            super.handleInitError(e);
+        } catch (Exception e) {
+            super.handleInitError(e, scaResults);
         }
+        return scaResults;
     }
 
     public CxSCAResolvingConfiguration getCxSCAResolvingConfigurationForProject(String projectId) throws IOException {
@@ -200,7 +203,7 @@ public class AstScaClient extends AstClient implements Scanner {
         } catch (CxClientException e) {
             log.error(e.getMessage());
             scaResults = new AstScaResults();
-            scaResults.setWaitException(e);
+            scaResults.setException(e);
         }
         return scaResults;
     }
@@ -237,8 +240,9 @@ public class AstScaClient extends AstClient implements Scanner {
             this.scanId = extractScanIdFrom(response);
             scaResults.setScanId(scanId);
         } catch (Exception e) {
-            CxClientException ex = new CxClientException("Error creating scan.", e);
-            scaResults.setCreateException(ex);
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            scaResults.setException(new CxClientException("Error creating scan.", e));
         }
         return scaResults;
     }
@@ -385,9 +389,8 @@ public class AstScaClient extends AstClient implements Scanner {
             scanId = getLatestScanId(projectId);
             result = tryGetScanResults().orElse(null);
         } catch (Exception e) {
-            CxClientException ex = new CxClientException("Error getting latest scan results.", e);
-            log.error(ex.getMessage());
-            result.setWaitException(ex);
+            log.error(e.getMessage());
+            result.setException(new CxClientException("Error getting latest scan results.", e));
         }
         return result;
     }

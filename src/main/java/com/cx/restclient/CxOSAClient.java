@@ -10,6 +10,7 @@ import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.osa.dto.*;
 import com.cx.restclient.osa.utils.OSAUtils;
 import com.cx.restclient.sast.utils.LegacyClient;
+import com.cx.restclient.sast.utils.State;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.entity.StringEntity;
@@ -66,6 +67,18 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         };
     }
 
+    @Override
+    public Results init() {
+        OSAResults initOsaResults = new OSAResults();
+        try {
+            initiate();
+        } catch (CxClientException e) {
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            initOsaResults.setException(e);
+        }
+        return initOsaResults;
+    }
 
     @Override
     public Results initiateScan() {
@@ -73,7 +86,9 @@ public class CxOSAClient extends LegacyClient implements Scanner {
         try {
             ensureProjectIdSpecified();
         } catch (CxClientException e) {
-            osaResults.setCreateException(e);
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            osaResults.setException(e);
             return osaResults;
         }
 
@@ -84,8 +99,9 @@ public class CxOSAClient extends LegacyClient implements Scanner {
             try {
                 osaDependenciesJson = resolveOSADependencies();
             } catch (Exception e) {
-                CxClientException ex = new CxClientException("Failed to resolve dependencies for OSA scan: " + e.getMessage(), e);
-                osaResults.setCreateException(ex);
+                log.error(e.getMessage());
+                setState(State.FAILED);
+                osaResults.setException(new CxClientException("Failed to resolve dependencies for OSA scan: " + e.getMessage(), e));
                 return osaResults;
             }
         }
@@ -94,8 +110,9 @@ public class CxOSAClient extends LegacyClient implements Scanner {
             scanId = sendOSAScan(osaDependenciesJson, projectId);
         } catch (IOException e) {
             scanId = null;
-            CxClientException ex = new CxClientException("Error sending OSA scan request.", e);
-            osaResults.setCreateException(ex);
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            osaResults.setException(new CxClientException("Error sending OSA scan request.", e));
             return osaResults;
         }
 
@@ -167,10 +184,8 @@ public class CxOSAClient extends LegacyClient implements Scanner {
                 writeJsonToFile(OSA_VULNERABILITIES_NAME, osaResults.getOsaVulnerabilities(), config.getReportsDir(), config.getOsaGenerateJsonReport(), log);
             }
         } catch (Exception e) {
-            if (e instanceof IOException)
-                e = new CxClientException("Failed to retrieve OSA results.", e);
             log.error(e.getMessage());
-            osaResults.setWaitException(e);
+            osaResults.setException(new CxClientException("Failed to retrieve OSA results.", e));
         }
 
         return osaResults;
@@ -211,10 +226,8 @@ public class CxOSAClient extends LegacyClient implements Scanner {
                 }
             }
         } catch (Exception e) {
-            if (e instanceof IOException)
-                e = new CxClientException("Error getting last scan results.");
             log.error(e.getMessage());
-            osaResults.setWaitException(e);
+            osaResults.setException(new CxClientException("Error getting last scan results.", e));
         }
 
         return osaResults;

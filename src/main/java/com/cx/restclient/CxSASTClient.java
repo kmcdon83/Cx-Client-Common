@@ -9,6 +9,7 @@ import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.sast.dto.*;
 import com.cx.restclient.sast.utils.LegacyClient;
 import com.cx.restclient.sast.utils.SASTUtils;
+import com.cx.restclient.sast.utils.State;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.google.gson.Gson;
 import org.apache.http.HttpEntity;
@@ -181,6 +182,18 @@ public class CxSASTClient extends LegacyClient implements Scanner {
         };
     }
 
+    @Override
+    public Results init() {
+        SASTResults initSastResults = new SASTResults();
+        try {
+            initiate();
+        } catch (CxClientException e) {
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            initSastResults.setException(e);
+        }
+        return initSastResults;
+    }
 
     //**------ API  ------**//
 
@@ -197,8 +210,11 @@ public class CxSASTClient extends LegacyClient implements Scanner {
                 scanId = createRemoteSourceScan(projectId);
             }
             sastResults.setScanId(scanId);
+            sastResults.setSastScanLink(config.getUrl(), scanId, projectId);
         } catch (Exception e) {
-            sastResults.setCreateException(e);
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            sastResults.setException(new CxClientException(e));
         }
     }
 
@@ -332,7 +348,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             }
         } catch (Exception e) {
             log.error(e.getMessage());
-            sastResults.setWaitException(e);
+            sastResults.setException(new CxClientException(e));
         }
 
         return sastResults;
@@ -379,7 +395,7 @@ public class CxSASTClient extends LegacyClient implements Scanner {
             }
         } catch (Exception e) {
             log.error(e.getMessage());
-            sastResults.setWaitException(e);
+            sastResults.setException(new CxClientException(e));
         }
         return sastResults;
     }
@@ -541,7 +557,6 @@ public class CxSASTClient extends LegacyClient implements Scanner {
     public Results initiateScan() {
         sastResults = new SASTResults();
         createSASTScan(projectId);
-        sastResults.setSastScanLink(config.getUrl(), scanId, projectId);
         return sastResults;
     }
 }

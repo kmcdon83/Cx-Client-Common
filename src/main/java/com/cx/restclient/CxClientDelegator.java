@@ -12,6 +12,7 @@ import com.cx.restclient.dto.ScanResults;
 import com.cx.restclient.dto.ScannerType;
 import com.cx.restclient.osa.dto.OSAResults;
 import com.cx.restclient.sast.dto.SASTResults;
+import com.cx.restclient.sast.utils.State;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 
@@ -64,9 +65,16 @@ public class CxClientDelegator implements Scanner {
     }
 
     @Override
-    public void init() {
+    public ScanResults init() {
         log.info("Initializing Cx client [{}]", properties.get("version"));
-        scannersMap.values().forEach(Scanner::init);
+        ScanResults scanResultsCombined = new ScanResults();
+
+        scannersMap.forEach((key, scanner) -> {
+            Results scanResults = scanner.init();
+            scanResultsCombined.put(key, scanResults);
+        });
+
+        return scanResultsCombined;
     }
 
 
@@ -76,8 +84,10 @@ public class CxClientDelegator implements Scanner {
         ScanResults scanResultsCombined = new ScanResults();
 
         scannersMap.forEach((key, scanner) -> {
-            Results scanResults = scanner.initiateScan();
-            scanResultsCombined.put(key, scanResults);
+            if (scanner.getState() == State.SUCCESS) {
+                Results scanResults = scanner.initiateScan();
+                scanResultsCombined.put(key, scanResults);
+            }
         });
 
         return scanResultsCombined;
@@ -90,8 +100,10 @@ public class CxClientDelegator implements Scanner {
         ScanResults scanResultsCombined = new ScanResults();
 
         scannersMap.forEach((key, scanner) -> {
-            Results scanResults = scanner.waitForScanResults();
-            scanResultsCombined.put(key, scanResults);
+            if (scanner.getState() == State.SUCCESS) {
+                Results scanResults = scanner.waitForScanResults();
+                scanResultsCombined.put(key, scanResults);
+            }
         });
 
         return scanResultsCombined;
@@ -103,8 +115,10 @@ public class CxClientDelegator implements Scanner {
         ScanResults scanResultsCombined = new ScanResults();
 
         scannersMap.forEach((key, scanner) -> {
-            Results scanResults = scanner.getLatestScanResults();
-            scanResultsCombined.put(key, scanResults);
+            if (scanner.getState() == State.SUCCESS) {
+                Results scanResults = scanner.getLatestScanResults();
+                scanResultsCombined.put(key, scanResults);
+            }
         });
 
         return scanResultsCombined;

@@ -139,11 +139,7 @@ public class CxHttpClient implements Closeable {
         cb.setConnectionManagerShared(true);
 
         if (isProxy) {
-            if (proxyConfig == null ||
-                    StringUtils.isEmpty(proxyConfig.getHost()) ||
-                    proxyConfig.getPort() == 0) {
-                setCustomProxy(cb, proxyConfig, log);
-            } else {
+            if (!setCustomProxy(cb, proxyConfig, log)) {
                 cb.useSystemProperties();
             }
         }
@@ -206,11 +202,11 @@ public class CxHttpClient implements Closeable {
         apacheClient = cb.build();
     }
 
-    private static void setCustomProxy(HttpClientBuilder cb, ProxyConfig proxyConfig, Logger logi) {
+    private static boolean setCustomProxy(HttpClientBuilder cb, ProxyConfig proxyConfig, Logger logi) {
         if (proxyConfig == null ||
                 StringUtils.isEmpty(proxyConfig.getHost()) ||
                 proxyConfig.getPort() == 0) {
-            return;
+            return false;
         }
 
         String scheme = proxyConfig.isUseHttps() ? HTTPS : "http";
@@ -227,6 +223,7 @@ public class CxHttpClient implements Closeable {
         cb.setProxy(proxy);
         cb.setRoutePlanner(new DefaultProxyRoutePlanner(proxy));
         cb.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
+        return true;
     }
 
     private static SSLConnectionSocketFactory getTrustAllSSLSocketFactory() {
