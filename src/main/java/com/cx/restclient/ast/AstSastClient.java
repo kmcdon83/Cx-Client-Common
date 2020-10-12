@@ -15,6 +15,7 @@ import com.cx.restclient.exception.CxHTTPClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.osa.dto.ClientType;
+import com.cx.restclient.sast.utils.State;
 import com.cx.restclient.sast.utils.zip.CxZipUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,7 +45,7 @@ public class AstSastClient extends AstClient implements Scanner {
     private static final String AUTH_PATH = properties.get("astSast.authentication");
     private static final String WEB_PROJECT_PATH = properties.get("astSast.webProject");
     private static final String URL_PARSING_EXCEPTION = "URL parsing exception.";
-    private static final String DESCRIPTIONS_PATH =  properties.get("astSast.descriptionPath"); 
+    private static final String DESCRIPTIONS_PATH = properties.get("astSast.descriptionPath");
 
     private static final int DEFAULT_PAGE_SIZE = 1000;
     private static final int NO_FINDINGS_CODE = 4004;
@@ -73,15 +74,17 @@ public class AstSastClient extends AstClient implements Scanner {
     }
 
     @Override
-    public void init() {
+    public Results init() {
         log.debug("Initializing {} client.", getScannerDisplayName());
+        AstSastResults astResults = new AstSastResults();
         try {
             ClientType clientType = getClientType();
             LoginSettings settings = getLoginSettings(clientType);
             httpClient.login(settings);
-        } catch (IOException e) {
-            super.handleInitError(e);
+        } catch (Exception e) {
+            super.handleInitError(e, astResults);
         }
+        return astResults;
     }
 
     private LoginSettings getLoginSettings(ClientType clientType) throws MalformedURLException {
@@ -122,13 +125,15 @@ public class AstSastClient extends AstClient implements Scanner {
             if (locationType == SourceLocationType.REMOTE_REPOSITORY) {
                 response = submitSourcesFromRemoteRepo(astConfig, config.getProjectName());
             } else {
-                
-                response = submitAllSourcesFromLocalDir(config.getProjectName(), astConfig.getZipFilePath());            }
+
+                response = submitAllSourcesFromLocalDir(config.getProjectName(), astConfig.getZipFilePath());
+            }
             scanId = extractScanIdFrom(response);
             astResults.setScanId(scanId);
         } catch (Exception e) {
-            CxClientException ex = new CxClientException("Error creating scan.", e);
-            astResults.setCreateException(ex);
+            log.error(e.getMessage());
+            setState(State.FAILED);
+            astResults.setException(new CxClientException("Error creating scan.", e));
         }
         return astResults;
     }
@@ -142,7 +147,7 @@ public class AstSastClient extends AstClient implements Scanner {
 
         return initiateScanForUpload(projectId, zipFile, zipFilePath);
     }
-    
+
     @Override
     protected ScanConfig getScanConfig() {
         String presetName = config.getAstSastConfig().getPresetName();
@@ -180,7 +185,7 @@ public class AstSastClient extends AstClient implements Scanner {
         } catch (CxClientException e) {
             log.error(e.getMessage());
             result = new AstSastResults();
-            result.setWaitException(e);
+            result.setException(e);
         }
         return result;
     }
@@ -247,52 +252,53 @@ public class AstSastClient extends AstClient implements Scanner {
         }
 
         log.info(String.format("Total findings: %d", allFindings.size()));
-        
-        
+
+
         try {
             populateAdditionalFields(allFindings);
-        }catch(CxClientException e){
+        } catch (CxClientException e) {
             log.error(e.getMessage());
         }
-        
+
         return allFindings;
     }
 
     private void populateAdditionalFields(List<Finding> allFindings) throws IOException {
-        
+
         final Map<String, QueryDescription> allQueryDescriptionMap = new HashMap<>();
 
         Set<String> queryIDs = allFindings.stream().map(finding -> finding.getQueryID()).collect(Collectors.toSet());
-                
-        while (queryIDs.size()>0) {
+
+        while (queryIDs.size() > 0) {
             Set<String> processedQueryIds = new HashSet<String>();
             List<QueryDescription> queryDescriptionList = processQueryIDs(queryIDs, processedQueryIds);
 
             allQueryDescriptionMap.putAll(
                     queryDescriptionList.stream().collect(Collectors.toMap(QueryDescription::getQueryId, queryDescription -> queryDescription)));
-   
+
             queryIDs.removeAll(processedQueryIds);
         }
-        
-        log.info(String.format("QueryIds with descriptions size: {} ",allQueryDescriptionMap.size()));
+
+        log.info(String.format("QueryIds with descriptions size: {} ", allQueryDescriptionMap.size()));
 
         allFindings.stream().forEach(finding -> {
             String queryId = finding.getQueryID();
             QueryDescription query = allQueryDescriptionMap.get(queryId);
             finding.setDescription(query.getResultDescription());
-        } );
+        });
 
-    
+
     }
+
     private String prepareURL(Set<String> ids, Set<String> processedIds) {
         try {
             int lengthOtherParams = new URIBuilder().setPath(DESCRIPTIONS_PATH).setParameter(SCAN_ID_PARAM_NAME, scanId)
                     .build()
                     .toString().length();
-            
+
             URIBuilder uriBuilder = new URIBuilder();
             uriBuilder.setPath(DESCRIPTIONS_PATH);
-            
+
             int idsAllowedLength = URL_MAX_CHAR_SIZE - lengthOtherParams;
 
             List<NameValuePair> nameValues = new LinkedList<>();
@@ -318,7 +324,7 @@ public class AstSastClient extends AstClient implements Scanner {
             throw new CxClientException(URL_PARSING_EXCEPTION, e);
         }
     }
-    
+
     private String getRelativeResultsUrl(int offset, int limit) {
         try {
             String result = new URIBuilder()
@@ -338,10 +344,10 @@ public class AstSastClient extends AstClient implements Scanner {
             throw new CxClientException(URL_PARSING_EXCEPTION, e);
         }
     }
-    
+
     private List<QueryDescription> processQueryIDs(Set<String> ids, Set<String> processedIds) throws IOException {
-    
-        String relativeUrl = prepareURL(ids,processedIds);
+
+        String relativeUrl = prepareURL(ids, processedIds);
 
         List<QueryDescription> result = (List<QueryDescription>) httpClient.getRequest(relativeUrl,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
@@ -349,10 +355,10 @@ public class AstSastClient extends AstClient implements Scanner {
                 HttpStatus.SC_OK,
                 "retrieving queries description",
                 true);
-        
+
         return result;
     }
-    
+
     private ScanResultsResponse getScanResultsResponse(String relativeUrl) throws IOException {
         return httpClient.getRequest(relativeUrl,
                 ContentType.CONTENT_TYPE_APPLICATION_JSON,
@@ -413,7 +419,6 @@ public class AstSastClient extends AstClient implements Scanner {
         return result;
     }
 
-    
 
     private String getRelativeSummaryUrl() {
         try {
@@ -465,7 +470,7 @@ public class AstSastClient extends AstClient implements Scanner {
     public Results getLatestScanResults() {
         log.error("Unsupported Operation.");
         AstSastResults result = new AstSastResults();
-        result.setWaitException(new UnsupportedOperationException());
+        result.setException(new CxClientException(new UnsupportedOperationException()));
         return result;
     }
 

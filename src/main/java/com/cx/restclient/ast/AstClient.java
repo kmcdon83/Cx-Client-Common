@@ -4,11 +4,13 @@ import com.cx.restclient.ast.dto.common.*;
 import com.cx.restclient.common.UrlUtils;
 import com.cx.restclient.configuration.CxScanConfig;
 import com.cx.restclient.configuration.PropertyFileLoader;
+import com.cx.restclient.dto.Results;
 import com.cx.restclient.dto.SourceLocationType;
 import com.cx.restclient.exception.CxClientException;
 import com.cx.restclient.httpClient.CxHttpClient;
 import com.cx.restclient.httpClient.utils.ContentType;
 import com.cx.restclient.httpClient.utils.HttpClientHelper;
+import com.cx.restclient.sast.utils.State;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -38,6 +40,8 @@ public abstract class AstClient {
     protected final Logger log;
 
     protected CxHttpClient httpClient;
+
+    private State state = State.SUCCESS;
 
     protected static final PropertyFileLoader properties = PropertyFileLoader.getDefaultInstance();
     public static final String GET_SCAN = properties.get("ast.getScan");
@@ -225,9 +229,11 @@ public abstract class AstClient {
         return result;
     }
 
-    protected void handleInitError(IOException e) {
-        String message = String.format("Failed to init %s client.", getScannerDisplayName());
-        throw new CxClientException(message, e);
+    protected void handleInitError(Exception e, Results results) {
+        String message = String.format("Failed to init %s client. %s", getScannerDisplayName(), e.getMessage());
+        log.error(message);
+        setState(State.FAILED);
+        results.setException(new CxClientException(message, e));
     }
 
     protected HttpResponse initiateScanForUpload(String projectId, byte[] zipFile, String zipFilePath) throws IOException {
@@ -269,4 +275,11 @@ public abstract class AstClient {
         uploader.putRequest("", "", request, JsonNode.class, HttpStatus.SC_OK, "upload ZIP file");
     }
 
+    public State getState() {
+        return state;
+    }
+
+    public void setState(State state) {
+        this.state = state;
+    }
 }
